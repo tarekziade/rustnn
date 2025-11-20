@@ -20,8 +20,11 @@ The Rust validator matches Chromium's C++ flow:
 ```
 rustnn/
 ├── Cargo.toml
+├── Cargo.lock
 ├── README.md
 ├── Makefile                # helper targets (viz/onnx/coreml/validate)
+├── build.rs                # prost build script for ONNX/CoreML protos
+├── protos/                 # vendored ONNX/CoreML protobuf definitions
 ├── examples/
 │   └── sample_graph.json   # tiny graph with a constant weight
 ├── scripts/
