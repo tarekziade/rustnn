@@ -62,18 +62,14 @@ def build_model(data: dict) -> onnx.ModelProto:
 
     nodes = []
     for node_json in graph_json["node"]:
-        attrs = []
-        for attr in node_json.get("attribute", []):
-            if "s" in attr:
-                attrs.append(helper.make_attribute(attr["name"], attr["s"]))
-            elif "i" in attr:
-                attrs.append(helper.make_attribute(attr["name"], int(attr["i"])))
+        op_type = node_json["op_type"]
+        if op_type.islower():
+            op_type = op_type.capitalize()
         node = helper.make_node(
-            node_json["op_type"],
+            op_type,
             inputs=node_json["input"],
             outputs=node_json["output"],
             name=node_json.get("name", ""),
-            attribute=attrs,
         )
         nodes.append(node)
 
@@ -89,9 +85,10 @@ def build_model(data: dict) -> onnx.ModelProto:
     model = helper.make_model(
         graph,
         producer_name=data.get("producer_name", "rust-webnn-graph"),
-        opset_import=[helper.make_operatorsetid("", 13)],
         ir_version=int(data.get("ir_version", onnx.IR_VERSION)),
     )
+    model.opset_import.clear()
+    model.opset_import.extend([helper.make_operatorsetid("", 13)])
     return model
 
 
@@ -112,11 +109,17 @@ def try_run_inference(model_path: Path) -> None:
         TensorProto.INT32: "int32",
         TensorProto.FLOAT16: "float16",
         TensorProto.UINT32: "uint32",
+        "tensor(float)": "float32",
+        "tensor(uint8)": "uint8",
+        "tensor(int8)": "int8",
+        "tensor(int32)": "int32",
+        "tensor(float16)": "float16",
+        "tensor(uint32)": "uint32",
     }
 
     feeds = {}
     for inp in sess.get_inputs():
-        dtype = type_map.get(inp.type) or type_map.get(inp.type)  # fallback
+        dtype = type_map.get(inp.type) or type_map.get(inp.type)
         if dtype is None:
             raise RuntimeError(f"Unsupported input dtype for inference: {inp.type}")
         shape = [dim if dim is not None else 1 for dim in inp.shape]
