@@ -1,0 +1,47 @@
+{
+  "operands": [
+    {
+      "kind": "input",
+      "descriptor": {
+        "data_type": "float32",
+        "shape": [2, 2],
+        "pending_permutation": []
+      },
+      "name": "lhs"
+    },
+    {
+      "kind": "constant",
+      "descriptor": {
+        "data_type": "float32",
+        "shape": [2, 2],
+        "pending_permutation": []
+      }
+    },
+    {
+      "kind": "output",
+      "descriptor": {
+        "data_type": "float32",
+        "shape": [2, 2],
+        "pending_permutation": []
+      },
+      "name": "sum"
+    }
+  ],
+  "input_operands": [0],
+  "output_operands": [2],
+  "operations": [
+    {
+      "type": "add",
+      "input_operands": [0, 1],
+      "output_operand": 2,
+      "label": "add_lhs_rhs"
+    }
+  ],
+  "constant_operand_ids_to_handles": {
+    "1": {
+      "data": "AACAPwAAAEAAAEBAAACAQA==",
+      "label": "rhs_weights"
+    }
+  },
+  "id_to_constant_tensor_operand_map": {}
+}
