@@ -1,43 +1,46 @@
-# rust-webnn-graph
+# rustnn
 
-This standalone crate mirrors the validation flow implemented in Chromium's
-`WebNNGraphBuilderImpl` (`services/webnn/webnn_graph_builder_impl.cc:3037`).
-The C++ builder reads a `mojom::GraphInfo`, checks operand metadata,
-verifies constants (`webnn_graph_builder_impl.cc:3083`), ensures the input and
-output operand lists match the operand table (`webnn_graph_builder_impl.cc:3220`)
-and finally walks the operations in topological order to verify dependencies
-(`webnn_graph_builder_impl.cc:3249`).
+This standalone crate mirrors Chromium's WebNN graph handling while adding
+pluggable format converters (ONNX/CoreML) and helper tooling to visualize and
+validate exported graphs.
 
-The Rust version focuses on those same invariants:
+The Rust validator matches Chromium's C++ flow:
 
-* JSON files model the `GraphInfo` mojo structure (operands, operations,
+- JSON files model the `GraphInfo` mojo structure (operands, operations,
   constants, tensor handles).
-* `GraphValidator` replicates the operand bookkeeping, data type checks,
-  constant byte-length verification, and operation dependency tracking.
-* `ContextProperties` exposes the knobs that the C++ builder reads from
-  `WebNNContextImpl::properties()` so tensor limits or supported IO data types
-  can be adjusted.
+- `GraphValidator` replicates operand bookkeeping, data type checks, constant
+  byte-length verification, and operation dependency tracking.
+- `ContextProperties` exposes knobs that mirror `WebNNContextImpl::properties()`
+  so tensor limits or supported IO data types can be adjusted.
+- A converter registry emits ONNX/CoreML variants of the graph for downstream
+  consumption.
 
 ## Layout
 
 ```
-rust-webnn-graph/
+rustnn/
 ├── Cargo.toml
 ├── README.md
+├── Makefile                # helper targets (viz/onnx/coreml/validate)
 ├── examples/
-│   └── sample_graph.json  # tiny add graph that exercises parsing
+│   └── sample_graph.json   # tiny graph with a constant weight
+├── scripts/
+│   ├── validate_coreml.py  # builds/executes CoreML from exported JSON
+│   └── validate_onnx.py    # rebuilds/runs ONNX from exported JSON
 └── src/
-    ├── error.rs          # GraphError mirrors ReportBadMessage paths
-    ├── graph.rs          # DataType/Operand/Operation/GraphInfo structs
-    ├── loader.rs         # JSON loader
-    ├── validator.rs      # GraphValidator + ContextProperties
-    └── main.rs           # CLI entrypoint
+    ├── converters/         # ONNX/CoreML converters + registry
+    ├── error.rs            # GraphError mirrors Chromium paths
+    ├── graph.rs            # DataType/Operand/Operation/GraphInfo structs
+    ├── graphviz.rs         # DOT exporter
+    ├── loader.rs           # JSON loader
+    ├── main.rs             # CLI entrypoint
+    └── validator.rs        # GraphValidator + ContextProperties
 ```
 
 ## Running the validator
 
 ```
-cd rust-webnn-graph
+cd rustnn
 cargo run -- examples/sample_graph.json
 ```
 
