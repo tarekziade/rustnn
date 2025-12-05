@@ -123,12 +123,16 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install dependencies
-        run: |
-          pip install maturin pytest numpy
+      - name: Install maturin
+        run: pip install maturin
 
-      - name: Build and install package
-        run: maturin develop --features python
+      - name: Build wheel
+        run: maturin build --features python --out dist
+
+      - name: Install package and test dependencies
+        run: |
+          pip install dist/*.whl
+          pip install pytest numpy
 
       - name: Run Python tests
         run: pytest tests/ -v
