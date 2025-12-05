@@ -1,0 +1,29 @@
+# Include essential files
+include LICENSE
+include README.md
+include README_PYTHON.md
+include CLAUDE.md
+include TODO.txt
+include pyproject.toml
+include Cargo.toml
+include Cargo.lock
+include build.rs
+include Makefile
+
+# Include Rust source files
+recursive-include src *.rs
+recursive-include protos *.proto
+
+# Include Python source and stubs
+recursive-include python *.py *.pyi
+
+# Include examples and tests
+recursive-include examples *.py *.json
+recursive-include tests *.py
+
+# Exclude build artifacts and caches
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store
+global-exclude *.swp
+global-exclude *~

@@ -2,6 +2,76 @@
 
 This directory contains GitHub Actions workflows for the project.
 
+## PyPI Publishing Workflow
+
+### `publish-pypi.yml` - Build and Publish to PyPI
+
+Builds wheels for multiple platforms and publishes the PyWebNN package to PyPI.
+
+**Triggers:**
+- GitHub releases (automatic publish on new release)
+- Manual trigger via workflow_dispatch (with publish flag)
+
+**What it does:**
+1. **Builds wheels** for multiple platforms:
+   - Linux: x86_64 and aarch64 (manylinux)
+   - macOS: x86_64 (Intel) and aarch64 (Apple Silicon)
+   - Windows: x64 and x86
+2. **Builds source distribution** (sdist)
+3. **Publishes to PyPI** (only on releases or manual trigger with publish=true)
+
+**Setup Requirements:**
+
+To enable PyPI publishing, configure trusted publishing:
+
+1. Go to [PyPI](https://pypi.org) and create an account
+2. Create a new project named `pywebnn`
+3. Go to project settings → Publishing → Add trusted publisher
+4. Configure the trusted publisher:
+   - **Owner**: your-github-username
+   - **Repository**: rustnn
+   - **Workflow**: publish-pypi.yml
+   - **Environment**: pypi
+5. In your GitHub repository:
+   - Go to Settings → Environments → New environment
+   - Name it `pypi`
+   - Add protection rules as needed
+
+**Publishing a New Release:**
+
+1. Update version in `pyproject.toml`
+2. Create a new Git tag:
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+3. Create a GitHub release from the tag
+4. The workflow will automatically build and publish to PyPI
+
+**Manual Publishing:**
+
+For testing or manual releases:
+
+1. Go to Actions → Publish to PyPI
+2. Click "Run workflow"
+3. Set `publish` to `true` to actually publish (or `false` for testing builds)
+4. Click "Run workflow"
+
+**Testing Locally:**
+
+Before publishing, test the build locally:
+
+```bash
+# Build wheels
+maturin build --release --features python
+
+# Check the built wheel
+pip install target/wheels/pywebnn-*.whl
+
+# Test the package
+python -c "import webnn; print(webnn.__version__)"
+```
+
 ## Documentation Workflows
 
 ### `docs.yml` - Build and Deploy Documentation
