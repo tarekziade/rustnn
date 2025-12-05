@@ -28,12 +28,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install protobuf compiler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-          protoc --version
-
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -42,12 +36,18 @@ jobs:
           sccache: 'true'
           manylinux: auto
           before-script-linux: |
-            # Install protobuf in the manylinux container
-            yum install -y wget
+            # Install protobuf compiler in the manylinux container
+            yum install -y wget unzip
             PROTOC_VERSION=21.12
-            wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
-            unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local
+            if [ "${{ matrix.target }}" = "aarch64" ]; then
+              PROTOC_ARCH=aarch_64
+            else
+              PROTOC_ARCH=x86_64
+            fi
+            wget https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip
+            unzip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip -d /usr/local
             chmod +x /usr/local/bin/protoc
+            protoc --version
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
