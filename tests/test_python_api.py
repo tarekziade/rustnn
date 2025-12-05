@@ -1,5 +1,6 @@
 """Tests for the Python WebNN API"""
 
+import sys
 import pytest
 import numpy as np
 
@@ -178,7 +179,7 @@ def test_onnx_conversion(context, builder, tmp_path):
     assert output_path.stat().st_size > 0
 
 
-@pytest.mark.skipif(not pytest.config.getoption("--run-macos", default=False),
+@pytest.mark.skipif(sys.platform != "darwin",
                     reason="CoreML tests only run on macOS")
 def test_coreml_conversion(context, builder, tmp_path):
     """Test CoreML conversion (macOS only)"""
