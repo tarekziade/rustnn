@@ -6,7 +6,7 @@ use pyo3::types::PyDict;
 use std::collections::HashMap;
 
 #[cfg(feature = "onnx-runtime")]
-use crate::executors::onnx::{run_onnx_with_inputs, OnnxInput};
+use crate::executors::onnx::{OnnxInput, run_onnx_with_inputs};
 
 #[cfg(all(target_os = "macos", feature = "coreml-runtime"))]
 use crate::executors::coreml::run_coreml_zeroed_cached;
@@ -134,10 +134,8 @@ impl PyMLContext {
             // Convert outputs back to numpy arrays
             let result = PyDict::new_bound(py);
             for output in onnx_outputs {
-                let shape_tuple = pyo3::types::PyTuple::new_bound(
-                    py,
-                    output.shape.iter().map(|&d| d as i64),
-                );
+                let shape_tuple =
+                    pyo3::types::PyTuple::new_bound(py, output.shape.iter().map(|&d| d as i64));
                 let array = numpy.call_method1("array", (output.data,))?;
                 let reshaped = array.call_method1("reshape", (shape_tuple,))?;
                 result.set_item(output.name, reshaped)?;

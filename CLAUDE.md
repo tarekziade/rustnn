@@ -469,7 +469,15 @@ Before creating any git commit:
    - All tests must pass or be explicitly skipped (when dependencies unavailable)
    - Skipped tests are acceptable if the skip reason is valid (e.g., ONNX runtime not available)
 
-3. **Fix Any Failures:**
+3. **Format Rust Code (if Rust code changed):**
+   ```bash
+   cargo fmt
+   ```
+   - MUST be run after any Rust code changes
+   - CI will fail if code is not formatted
+   - This ensures consistent code style across the project
+
+4. **Fix Any Failures:**
    - Never commit code with failing tests
    - If tests fail, fix the code or update the tests
    - Document any intentional test skips with clear skip conditions
