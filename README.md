@@ -93,6 +93,11 @@ output = builder.relu(add_result)
 # Compile the graph
 graph = builder.build({"output": output})
 
+# Execute the graph with actual data
+input_data = np.array([[1.0, 2.0, 3.0, 4.0]], dtype=np.float32)
+results = context.compute(graph, {"input": input_data})
+print(f"✓ Computation result: {results['output']}")
+
 # Convert to ONNX
 context.convert_to_onnx(graph, "model.onnx")
 print(f"✓ ONNX model saved: model.onnx")
@@ -165,7 +170,7 @@ The Python API implements the [W3C WebNN specification](https://www.w3.org/TR/we
 | Format | Status | Platform | Features |
 |--------|--------|----------|----------|
 | **ONNX** | ✅ Full | All | All operations, cross-platform |
-| **CoreML** | ⚠️ Basic | macOS | Basic ops (add, matmul) - activations coming soon |
+| **CoreML** | ✅ Good | macOS | add, matmul, relu, sigmoid, tanh, softmax |
 
 See [TODO.txt](TODO.txt) for planned features and improvements.
 

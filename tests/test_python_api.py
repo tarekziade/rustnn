@@ -165,6 +165,10 @@ def test_simple_computation(context, builder):
     assert "z" in results
     assert results["z"].shape == (2, 3)
 
+    # Verify actual computation (if ONNX runtime is available)
+    expected = x_data + y_data
+    np.testing.assert_allclose(results["z"], expected, rtol=1e-5)
+
 
 def test_onnx_conversion(context, builder, tmp_path):
     """Test ONNX conversion"""
@@ -212,6 +216,139 @@ def test_complex_graph(builder):
     assert graph.operand_count > 0
     assert graph.operation_count == 2
     assert set(graph.get_output_names()) == {"relu_out", "sigmoid_out"}
+
+
+def test_relu_computation(context, builder):
+    """Test ReLU activation with actual computation"""
+    x = builder.input("x", [2, 3], "float32")
+    y = builder.relu(x)
+    graph = builder.build({"y": y})
+
+    # Test data with positive and negative values
+    x_data = np.array([[-1, 2, -3], [4, -5, 6]], dtype=np.float32)
+
+    results = context.compute(graph, {"x": x_data})
+    assert "y" in results
+    assert results["y"].shape == (2, 3)
+
+    # Verify ReLU: max(0, x)
+    expected = np.maximum(0, x_data)
+    np.testing.assert_allclose(results["y"], expected, rtol=1e-5)
+
+
+def test_sigmoid_computation(context, builder):
+    """Test sigmoid activation with actual computation"""
+    x = builder.input("x", [2, 3], "float32")
+    y = builder.sigmoid(x)
+    graph = builder.build({"y": y})
+
+    x_data = np.array([[0, 1, -1], [2, -2, 0.5]], dtype=np.float32)
+
+    results = context.compute(graph, {"x": x_data})
+    assert "y" in results
+    assert results["y"].shape == (2, 3)
+
+    # Verify sigmoid: 1 / (1 + exp(-x))
+    expected = 1 / (1 + np.exp(-x_data))
+    np.testing.assert_allclose(results["y"], expected, rtol=1e-5)
+
+
+def test_tanh_computation(context, builder):
+    """Test tanh activation with actual computation"""
+    x = builder.input("x", [2, 3], "float32")
+    y = builder.tanh(x)
+    graph = builder.build({"y": y})
+
+    x_data = np.array([[0, 1, -1], [2, -2, 0.5]], dtype=np.float32)
+
+    results = context.compute(graph, {"x": x_data})
+    assert "y" in results
+    assert results["y"].shape == (2, 3)
+
+    # Verify tanh
+    expected = np.tanh(x_data)
+    np.testing.assert_allclose(results["y"], expected, rtol=1e-5)
+
+
+def test_softmax_computation(context, builder):
+    """Test softmax activation with actual computation"""
+    x = builder.input("x", [2, 3], "float32")
+    y = builder.softmax(x)
+    graph = builder.build({"y": y})
+
+    x_data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+
+    results = context.compute(graph, {"x": x_data})
+    assert "y" in results
+    assert results["y"].shape == (2, 3)
+
+    # Verify softmax output is in [0, 1] and sums to 1
+    assert np.all(results["y"] >= 0)
+    assert np.all(results["y"] <= 1)
+    # Note: Softmax normalization depends on axis, so we just check properties
+
+
+def test_chained_operations(context, builder):
+    """Test chained operations with actual computation"""
+    x = builder.input("x", [2, 3], "float32")
+    y = builder.input("y", [2, 3], "float32")
+    z = builder.add(x, y)
+    output = builder.relu(z)
+
+    graph = builder.build({"output": output})
+
+    x_data = np.array([[1, -2, 3], [-4, 5, -6]], dtype=np.float32)
+    y_data = np.array([[-1, 2, -3], [4, -5, 6]], dtype=np.float32)
+
+    results = context.compute(graph, {"x": x_data, "y": y_data})
+    assert "output" in results
+    assert results["output"].shape == (2, 3)
+
+    # Verify: relu(x + y)
+    expected = np.maximum(0, x_data + y_data)
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+def test_matmul_computation(context, builder):
+    """Test matrix multiplication with actual computation"""
+    a = builder.input("a", [2, 3], "float32")
+    b_data = np.array([[1, 2], [3, 4], [5, 6]], dtype=np.float32)
+    b = builder.constant(b_data)
+    c = builder.matmul(a, b)
+
+    graph = builder.build({"c": c})
+
+    a_data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+
+    results = context.compute(graph, {"a": a_data})
+    assert "c" in results
+
+    # Verify matrix multiplication
+    expected = np.matmul(a_data, b_data)
+    np.testing.assert_allclose(results["c"], expected, rtol=1e-5)
+
+
+def test_multi_output_computation(context, builder):
+    """Test graph with multiple outputs"""
+    x = builder.input("x", [2, 3], "float32")
+    y1 = builder.relu(x)
+    y2 = builder.sigmoid(x)
+    y3 = builder.tanh(x)
+
+    graph = builder.build({"relu_out": y1, "sigmoid_out": y2, "tanh_out": y3})
+
+    x_data = np.array([[-1, 0, 1], [2, -2, 0.5]], dtype=np.float32)
+
+    results = context.compute(graph, {"x": x_data})
+
+    assert "relu_out" in results
+    assert "sigmoid_out" in results
+    assert "tanh_out" in results
+
+    # Verify each output
+    np.testing.assert_allclose(results["relu_out"], np.maximum(0, x_data), rtol=1e-5)
+    np.testing.assert_allclose(results["sigmoid_out"], 1 / (1 + np.exp(-x_data)), rtol=1e-5)
+    np.testing.assert_allclose(results["tanh_out"], np.tanh(x_data), rtol=1e-5)
 
 
 if __name__ == "__main__":

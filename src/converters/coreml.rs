@@ -2,10 +2,11 @@ use crate::converters::ConvertedGraph;
 use crate::error::GraphError;
 use crate::graph::{DataType, GraphInfo};
 use crate::protos::coreml::specification::{
-    AddLayerParams, ArrayFeatureType, FeatureDescription, FeatureType, InnerProductLayerParams,
-    LoadConstantLayerParams, Model, ModelDescription, NeuralNetwork, NeuralNetworkLayer,
-    WeightParams, array_feature_type::ArrayDataType, feature_type, model,
-    neural_network_layer::Layer,
+    ActivationParams, ActivationReLu, ActivationSigmoid, AddLayerParams, ArrayFeatureType,
+    FeatureDescription, FeatureType, InnerProductLayerParams, LoadConstantLayerParams, Model,
+    ModelDescription, NeuralNetwork, NeuralNetworkLayer, SoftmaxLayerParams, TanhLayerParams,
+    WeightParams, activation_params::NonlinearityType, array_feature_type::ArrayDataType,
+    feature_type, model, neural_network_layer::Layer,
 };
 use prost::Message;
 use prost::bytes::Bytes;
@@ -228,6 +229,42 @@ impl crate::converters::GraphConverter for CoremlConverter {
                         int8_dynamic_quantize: false,
                         ..Default::default()
                     })),
+                    ..Default::default()
+                }
+            } else if op.op_type.eq_ignore_ascii_case("relu") {
+                NeuralNetworkLayer {
+                    name: layer_name,
+                    input: input_names,
+                    output: output_names,
+                    layer: Some(Layer::Activation(ActivationParams {
+                        nonlinearity_type: Some(NonlinearityType::ReLu(ActivationReLu {})),
+                    })),
+                    ..Default::default()
+                }
+            } else if op.op_type.eq_ignore_ascii_case("sigmoid") {
+                NeuralNetworkLayer {
+                    name: layer_name,
+                    input: input_names,
+                    output: output_names,
+                    layer: Some(Layer::Activation(ActivationParams {
+                        nonlinearity_type: Some(NonlinearityType::Sigmoid(ActivationSigmoid {})),
+                    })),
+                    ..Default::default()
+                }
+            } else if op.op_type.eq_ignore_ascii_case("tanh") {
+                NeuralNetworkLayer {
+                    name: layer_name,
+                    input: input_names,
+                    output: output_names,
+                    layer: Some(Layer::Tanh(TanhLayerParams {})),
+                    ..Default::default()
+                }
+            } else if op.op_type.eq_ignore_ascii_case("softmax") {
+                NeuralNetworkLayer {
+                    name: layer_name,
+                    input: input_names,
+                    output: output_names,
+                    layer: Some(Layer::Softmax(SoftmaxLayerParams {})),
                     ..Default::default()
                 }
             } else {

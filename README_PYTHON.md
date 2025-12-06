@@ -63,10 +63,11 @@ graph = builder.build({"output": output})
 x_data = np.array([[1, -2, 3], [4, -5, 6]], dtype=np.float32)
 y_data = np.array([[-1, 2, -3], [-4, 5, -6]], dtype=np.float32)
 
-# Compute (placeholder implementation)
+# Execute the graph with actual computation
 results = context.compute(graph, {"x": x_data, "y": y_data})
+print(results["output"])  # Contains actual computed values
 
-# Convert to ONNX
+# Convert to ONNX for deployment
 context.convert_to_onnx(graph, "model.onnx")
 ```
 
@@ -91,7 +92,12 @@ Execution context for neural network operations.
 
 **Methods:**
 - `create_graph_builder()`: Create a new graph builder
-- `compute(graph, inputs, outputs=None)`: Execute a compiled graph
+- `compute(graph, inputs, outputs=None)`: Execute a compiled graph with actual computation
+  - Converts graph to ONNX format internally
+  - Executes using ONNX runtime (if available)
+  - Accepts numpy arrays as inputs
+  - Returns dictionary of numpy arrays as outputs
+  - Falls back to zeros if ONNX runtime not available
 - `convert_to_onnx(graph, output_path)`: Convert graph to ONNX format
 - `convert_to_coreml(graph, output_path)`: Convert graph to CoreML format (macOS only)
 

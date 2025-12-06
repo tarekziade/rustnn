@@ -6,7 +6,7 @@ use pyo3::types::PyDict;
 use std::collections::HashMap;
 
 #[cfg(feature = "onnx-runtime")]
-use crate::executors::onnx::run_onnx_zeroed;
+use crate::executors::onnx::{run_onnx_with_inputs, OnnxInput};
 
 #[cfg(all(target_os = "macos", feature = "coreml-runtime"))]
 use crate::executors::coreml::run_coreml_zeroed_cached;
@@ -73,45 +73,114 @@ impl PyMLContext {
         inputs: &Bound<'_, PyDict>,
         outputs: Option<&Bound<'_, PyDict>>,
     ) -> PyResult<Py<PyDict>> {
-        // For now, we'll implement a basic version that uses the converters
-        // A full implementation would need to handle actual tensor computation
+        #[cfg(feature = "onnx-runtime")]
+        {
+            // Convert graph to ONNX
+            let converter = crate::converters::OnnxConverter;
+            let converted = converter.convert(&graph.graph_info).map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("ONNX conversion failed: {}", e))
+            })?;
 
-        let result = PyDict::new_bound(py);
+            // Convert Python inputs to OnnxInput structs
+            let numpy = py.import_bound("numpy")?;
+            let mut onnx_inputs = Vec::new();
 
-        // For each output, create a placeholder result
-        // In a real implementation, this would execute the graph
-        for output_id in &graph.graph_info.output_operands {
-            // Find the output operand
-            let output_op = graph
-                .graph_info
-                .operands
-                .get(*output_id as usize)
-                .ok_or_else(|| {
+            for input_id in &graph.graph_info.input_operands {
+                let input_op = graph
+                    .graph_info
+                    .operands
+                    .get(*input_id as usize)
+                    .ok_or_else(|| {
+                        pyo3::exceptions::PyValueError::new_err(format!(
+                            "Input operand {} not found in graph",
+                            input_id
+                        ))
+                    })?;
+
+                let input_name = input_op.name.as_deref().unwrap_or(&format!("input_{}", input_id));
+
+                // Get the numpy array from inputs dict
+                let array = inputs.get_item(input_name)?.ok_or_else(|| {
                     pyo3::exceptions::PyValueError::new_err(format!(
-                        "Output operand {} not found in graph",
-                        output_id
+                        "Missing input: {}",
+                        input_name
                     ))
                 })?;
 
-            let output_name = output_op.name.as_deref().unwrap_or("output");
+                // Convert to float32 array
+                let array_f32 = array.call_method1("astype", ("float32",))?;
 
-            // Create a numpy array with zeros for now
-            let numpy = py.import_bound("numpy")?;
-            let shape = output_op.descriptor.shape.clone();
-            let dtype_str = match output_op.descriptor.data_type {
-                crate::graph::DataType::Float32 => "float32",
-                crate::graph::DataType::Float16 => "float16",
-                crate::graph::DataType::Int32 => "int32",
-                crate::graph::DataType::Uint32 => "uint32",
-                crate::graph::DataType::Int8 => "int8",
-                crate::graph::DataType::Uint8 => "uint8",
-            };
+                // Get shape
+                let shape_obj = array_f32.getattr("shape")?;
+                let shape: Vec<usize> = shape_obj.extract()?;
 
-            let zeros = numpy.call_method1("zeros", (shape, dtype_str))?;
-            result.set_item(output_name, zeros)?;
+                // Get flattened data
+                let flat = array_f32.call_method0("flatten")?;
+                let data: Vec<f32> = flat.call_method0("tolist")?.extract()?;
+
+                onnx_inputs.push(OnnxInput {
+                    name: input_name.to_string(),
+                    shape,
+                    data,
+                });
+            }
+
+            // Execute with ONNX runtime
+            let onnx_outputs = run_onnx_with_inputs(&converted.data, onnx_inputs).map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("ONNX execution failed: {}", e))
+            })?;
+
+            // Convert outputs back to numpy arrays
+            let result = PyDict::new_bound(py);
+            for output in onnx_outputs {
+                let shape_tuple = pyo3::types::PyTuple::new_bound(
+                    py,
+                    output.shape.iter().map(|&d| d as i64),
+                );
+                let array = numpy.call_method1("array", (output.data,))?;
+                let reshaped = array.call_method1("reshape", (shape_tuple,))?;
+                result.set_item(output.name, reshaped)?;
+            }
+
+            Ok(result.into())
         }
 
-        Ok(result.into())
+        #[cfg(not(feature = "onnx-runtime"))]
+        {
+            // Fallback: return zeros if ONNX runtime is not available
+            let result = PyDict::new_bound(py);
+
+            for output_id in &graph.graph_info.output_operands {
+                let output_op = graph
+                    .graph_info
+                    .operands
+                    .get(*output_id as usize)
+                    .ok_or_else(|| {
+                        pyo3::exceptions::PyValueError::new_err(format!(
+                            "Output operand {} not found in graph",
+                            output_id
+                        ))
+                    })?;
+
+                let output_name = output_op.name.as_deref().unwrap_or("output");
+
+                let numpy = py.import_bound("numpy")?;
+                let shape = output_op.descriptor.shape.clone();
+                let dtype_str = match output_op.descriptor.data_type {
+                    crate::graph::DataType::Float32 => "float32",
+                    crate::graph::DataType::Float16 => "float16",
+                    crate::graph::DataType::Int32 => "int32",
+                    crate::graph::DataType::Uint32 => "uint32",
+                    crate::graph::DataType::Int8 => "int8",
+                    crate::graph::DataType::Uint8 => "uint8",
+                };
+
+                let zeros = numpy.call_method1("zeros", (shape, dtype_str))?;
+                result.set_item(output_name, zeros)?;
+            }
+
+            Ok(result.into())
+        }
     }
 
     /// Convert graph to ONNX format

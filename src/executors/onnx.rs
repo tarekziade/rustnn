@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use onnxruntime::environment::Environment;
-use onnxruntime::ndarray::ArrayD;
+use onnxruntime::ndarray::{ArrayD, IxDyn};
 use onnxruntime::session::Session;
 use onnxruntime::tensor::OrtOwnedTensor;
 use onnxruntime::{GraphOptimizationLevel, LoggingLevel};
@@ -16,6 +16,20 @@ pub struct OnnxOutput {
     pub name: String,
     pub shape: Vec<i64>,
     pub data_type: String,
+}
+
+/// Input tensor data for ONNX execution
+pub struct OnnxInput {
+    pub name: String,
+    pub shape: Vec<usize>,
+    pub data: Vec<f32>,
+}
+
+/// Output tensor with actual data
+pub struct OnnxOutputWithData {
+    pub name: String,
+    pub shape: Vec<usize>,
+    pub data: Vec<f32>,
 }
 
 pub fn run_onnx_zeroed(
@@ -88,4 +102,60 @@ fn build_feeds<'a>(session: &'a Session) -> Result<Vec<(&'a str, ArrayD<f32>)>, 
         feeds.push((name, array));
     }
     Ok(feeds)
+}
+
+/// Run ONNX model with actual input tensors and return output tensors with data
+pub fn run_onnx_with_inputs(
+    model_bytes: &[u8],
+    inputs: Vec<OnnxInput>,
+) -> Result<Vec<OnnxOutputWithData>, GraphError> {
+    let env = Environment::builder()
+        .with_name("rustnn")
+        .with_log_level(LoggingLevel::Warning)
+        .build()
+        .map_err(|e| GraphError::OnnxRuntimeFailed {
+            reason: format!("env build failed: {e}"),
+        })?;
+
+    let mut session = build_session(&env, model_bytes)?;
+
+    // Build feeds from provided inputs
+    let mut feeds = Vec::new();
+    for input in inputs {
+        let array = ArrayD::from_shape_vec(IxDyn(&input.shape), input.data).map_err(|e| {
+            GraphError::OnnxRuntimeFailed {
+                reason: format!("shape build failed for {}: {e}", input.name),
+            }
+        })?;
+        feeds.push((input.name.as_str(), array));
+    }
+
+    // Run inference
+    let outputs: Vec<OrtOwnedTensor<f32, _>> = session
+        .run(feeds.into_iter().map(|(_, arr)| arr).collect::<Vec<_>>())
+        .map_err(|e| GraphError::OnnxRuntimeFailed {
+            reason: format!("run failed: {e}"),
+        })?;
+
+    // Extract output tensors with data
+    let mut results = Vec::new();
+    let output_names: Vec<String> = session
+        .outputs
+        .iter()
+        .map(|o| o.name.clone())
+        .collect();
+
+    for (idx, tensor) in outputs.into_iter().enumerate() {
+        let shape: Vec<usize> = tensor.view().shape().iter().map(|d| *d as usize).collect();
+        let data: Vec<f32> = tensor.view().iter().copied().collect();
+        let name = output_names.get(idx).cloned().unwrap_or_else(|| format!("output_{}", idx));
+
+        results.push(OnnxOutputWithData {
+            name,
+            shape,
+            data,
+        });
+    }
+
+    Ok(results)
 }
