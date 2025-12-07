@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="../logo/rustnn.png" alt="rustnn logo" width="200"/>
+</div>
+
 # WebNN Python API Documentation
 
 Welcome to the WebNN Python API documentation. This library provides Python bindings for the [W3C WebNN (Web Neural Network) API](https://www.w3.org/TR/webnn/), enabling you to build, validate, and execute neural network graphs in Python.

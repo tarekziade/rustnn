@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg22"
+   sodipodi:docname="rustnn.svg"
+   inkscape:version="1.4 (e7c3feb1, 2024-10-09)"
+   inkscape:export-filename="rustnn.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs22" />
+  <sodipodi:namedview
+     id="namedview22"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.4361356"
+     inkscape:cx="269.12501"
+     inkscape:cy="255.89506"
+     inkscape:window-width="1512"
+     inkscape:window-height="830"
+     inkscape:window-x="0"
+     inkscape:window-y="38"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg22" />
+  <!-- Background -->
+  <!-- Rust-like gear -->
+  <g
+     transform="translate(256,190)"
+     fill="#CE422B"
+     id="g22">
+    <!-- Outer gear circle -->
+    <!-- WebNN-style irregular neural network inside -->
+    <g
+       stroke="#CE422B"
+       stroke-width="5"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       fill="#CE422B"
+       id="g21">
+      <!-- Connections (drawn first) -->
+      <line
+         x1="-60"
+         y1="-20"
+         x2="-20"
+         y2="-60"
+         id="line1" />
+      <line
+         x1="-60"
+         y1="-20"
+         x2="-10"
+         y2="-5"
+         id="line2" />
+      <line
+         x1="-20"
+         y1="-60"
+         x2="35"
+         y2="-55"
+         id="line3" />
+      <line
+         x1="-20"
+         y1="-60"
+         x2="-10"
+         y2="35"
+         id="line4" />
+      <line
+         x1="-10"
+         y1="-5"
+         x2="35"
+         y2="-55"
+         id="line5" />
+      <line
+         x1="-10"
+         y1="-5"
+         x2="65"
+         y2="-5"
+         id="line6" />
+      <line
+         x1="-10"
+         y1="-5"
+         x2="-40"
+         y2="50"
+         id="line7" />
+      <line
+         x1="-40"
+         y1="50"
+         x2="-10"
+         y2="35"
+         id="line8" />
+      <line
+         x1="-10"
+         y1="35"
+         x2="35"
+         y2="40"
+         id="line9" />
+      <line
+         x1="35"
+         y1="40"
+         x2="65"
+         y2="-5"
+         id="line10" />
+      <line
+         x1="35"
+         y1="40"
+         x2="40"
+         y2="75"
+         id="line11" />
+      <line
+         x1="-40"
+         y1="50"
+         x2="40"
+         y2="75"
+         id="line12" />
+      <line
+         x1="35"
+         y1="-55"
+         x2="65"
+         y2="-5"
+         id="line13" />
+      <!-- Nodes (slightly varied sizes like WebNN logo) -->
+      <circle
+         cx="-60"
+         cy="-20"
+         r="11"
+         id="circle13" />
+      <circle
+         cx="-20"
+         cy="-60"
+         r="10"
+         id="circle14" />
+      <circle
+         cx="-10"
+         cy="-5"
+         r="9"
+         id="circle15" />
+      <circle
+         cx="35"
+         cy="-55"
+         r="11"
+         id="circle16" />
+      <circle
+         cx="65"
+         cy="-5"
+         r="10"
+         id="circle17" />
+      <circle
+         cx="-40"
+         cy="50"
+         r="10"
+         id="circle18" />
+      <circle
+         cx="-10"
+         cy="35"
+         r="9"
+         id="circle19" />
+      <circle
+         cx="35"
+         cy="40"
+         r="10"
+         id="circle20" />
+      <circle
+         cx="40"
+         cy="75"
+         r="11"
+         id="circle21" />
+    </g>
+  </g>
+  <!-- "rustnn" text -->
+  <text
+     x="265.84616"
+     y="379.53845"
+     text-anchor="middle"
+     font-family="system-ui, '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif"
+     font-size="72px"
+     font-weight="600"
+     fill="#ce422b"
+     id="text22">rustnn</text>
+  <!-- rust style wheel -->
+  <path
+     d="M 375.08264,194.02693 A 110.80187,112.96657 0 0 1 264.28078,306.99349 110.80187,112.96657 0 0 1 153.47889,194.02693 110.80187,112.96657 0 0 1 264.28078,81.060357 110.80187,112.96657 0 0 1 375.08264,194.02693 Z m -2.08546,-10.90939 17.27944,10.90939 -17.27944,10.90938 14.84642,14.14929 -19.01731,7.2645 11.8672,16.83233 -20.08485,3.34117 8.44111,18.8826 -20.33315,-0.73403 4.66745,20.1988 -19.81177,-4.75861 0.71999,20.73036 -18.52078,-8.60601 -3.27715,20.47724 -16.50979,-12.09903 -7.12527,19.38883 -13.87818,-15.13645 -10.70032,17.61702 -10.70034,-17.61702 -13.87817,15.13645 -7.12529,-19.38883 -16.5098,12.09903 -3.27713,-20.47724 -18.52076,8.60601 0.71998,-20.73036 -19.81178,4.75861 4.66744,-20.1988 -20.33312,0.73403 8.44109,-18.8826 -20.08485,-3.34117 11.8672,-16.83233 -19.0173,-7.2645 14.8464,-14.14929 -17.27942,-10.90938 17.27942,-10.90939 -14.8464,-14.14929 19.0173,-7.2645 -11.8672,-16.83234 20.08485,-3.34116 -8.44109,-18.8826 20.33312,0.73404 -4.66744,-20.19882 19.81178,4.75861 -0.71998,-20.730358 18.52076,8.606013 3.27713,-20.477248 16.5098,12.099032 7.12529,-19.388832 13.87817,15.136453 10.70034,-17.617009 10.70032,17.617009 13.87818,-15.136453 7.12527,19.388832 16.50979,-12.099032 3.27715,20.477248 18.52078,-8.606013 -0.71999,20.730358 19.81177,-4.75861 -4.66745,20.19882 20.33315,-0.73404 -8.44111,18.8826 20.08485,3.34116 -11.8672,16.83234 19.01731,7.2645 z"
+     fill-rule="evenodd"
+     stroke="#ce422b"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     stroke-width="2.95775"
+     id="path22"
+     style="fill:#ce422b;fill-opacity:1" />
+</svg>

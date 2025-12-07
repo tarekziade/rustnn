@@ -9,6 +9,8 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
+  logo: logo/rustnn.png
+  favicon: logo/rustnn.png
   palette:
     # Palette toggle for light mode
     - scheme: default

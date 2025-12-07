@@ -1,6 +1,10 @@
-# rustnn / PyWebNN
+<div align="center">
+  <img src="logo/rustnn.png" alt="rustnn logo" width="200"/>
 
-A Rust implementation of WebNN graph handling with Python bindings that implement the W3C WebNN API specification.
+  # rustnn / PyWebNN
+
+  A Rust implementation of WebNN graph handling with Python bindings that implement the W3C WebNN API specification.
+</div>
 
 ---
 
