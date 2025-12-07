@@ -574,6 +574,99 @@ def test_tensor_repr(context):
     assert "float32" in repr_str
 
 
+def test_tensor_descriptor_flags(context):
+    """Test MLTensor descriptor flags per W3C MLTensor Explainer"""
+    # Test default flags (readable=True, writable=True, exportable_to_gpu=False)
+    tensor_default = context.create_tensor([2, 3], "float32")
+    assert tensor_default.readable == True
+    assert tensor_default.writable == True
+    assert tensor_default.exportable_to_gpu == False
+
+    # Test custom flags
+    tensor_readonly = context.create_tensor([2, 3], "float32", readable=True, writable=False)
+    assert tensor_readonly.readable == True
+    assert tensor_readonly.writable == False
+
+    tensor_writeonly = context.create_tensor([2, 3], "float32", readable=False, writable=True)
+    assert tensor_writeonly.readable == False
+    assert tensor_writeonly.writable == True
+
+    tensor_gpu_exportable = context.create_tensor([2, 3], "float32", exportable_to_gpu=True)
+    assert tensor_gpu_exportable.exportable_to_gpu == True
+
+
+def test_tensor_destroy(context):
+    """Test explicit tensor resource cleanup with destroy()"""
+    tensor = context.create_tensor([2, 3], "float32")
+
+    # Write some data
+    data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+    context.write_tensor(tensor, data)
+
+    # Read data should work
+    result = context.read_tensor(tensor)
+    np.testing.assert_array_equal(result, data)
+
+    # Destroy the tensor
+    tensor.destroy()
+
+    # Further operations should fail
+    with pytest.raises(RuntimeError, match="destroyed"):
+        context.read_tensor(tensor)
+
+    # Destroy again should also fail
+    with pytest.raises(RuntimeError, match="already destroyed"):
+        tensor.destroy()
+
+
+def test_tensor_read_write_permissions(context):
+    """Test that tensor flags are enforced"""
+    # Create read-only tensor
+    tensor_readonly = context.create_tensor([2, 3], "float32", readable=True, writable=False)
+
+    # Writing should fail
+    data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+    with pytest.raises(RuntimeError, match="not writable"):
+        context.write_tensor(tensor_readonly, data)
+
+    # Create write-only tensor
+    tensor_writeonly = context.create_tensor([2, 3], "float32", readable=False, writable=True)
+
+    # Writing should work
+    context.write_tensor(tensor_writeonly, data)
+
+    # Reading should fail
+    with pytest.raises(RuntimeError, match="not readable"):
+        context.read_tensor(tensor_writeonly)
+
+
+@requires_onnx_runtime
+def test_dispatch_method(context, builder):
+    """Test dispatch() method for async execution per W3C MLTensor Explainer"""
+    # Build a simple graph
+    x = builder.input("x", [2, 3], "float32")
+    y = builder.relu(x)
+    graph = builder.build({"output": y})
+
+    # Create input and output tensors
+    input_tensor = context.create_tensor([2, 3], "float32")
+    output_tensor = context.create_tensor([2, 3], "float32")
+
+    # Write input data
+    input_data = np.array([[1, -2, 3], [-4, 5, -6]], dtype=np.float32)
+    context.write_tensor(input_tensor, input_data)
+
+    # Dispatch graph execution
+    context.dispatch(graph, {"x": input_tensor}, {"output": output_tensor})
+
+    # Read output
+    result = context.read_tensor(output_tensor)
+
+    # Verify result (relu should zero out negative values)
+    expected = np.maximum(input_data, 0)
+    np.testing.assert_array_equal(result, expected)
+
+
 @requires_onnx_runtime
 def test_tensor_workflow(context, builder):
     """Test complete tensor workflow with graph execution"""

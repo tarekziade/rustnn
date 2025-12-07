@@ -128,6 +128,21 @@
   - `compute_onnx()` - ONNX Runtime execution (feature-gated)
   - `compute_coreml()` - CoreML execution (feature-gated)
   - `compute_fallback()` - Fallback when no backend available
+- **Tensor Management**: Implements [WebNN MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md)
+  - `create_tensor()` - Creates MLTensor with descriptor flags
+  - `read_tensor()` / `write_tensor()` - Synchronous I/O with permission checks
+  - `dispatch()` - Async execution with MLTensor inputs/outputs
+
+#### **python/tensor.rs** - MLTensor Implementation
+- **MLTensorDescriptor**: Descriptor with usage flags following [WebNN MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md)
+  - `readable` - Can read tensor data back to CPU
+  - `writable` - Can write tensor data from CPU
+  - `exportable_to_gpu` - Can export as GPU texture (future use)
+- **PyMLTensor**: Opaque typed tensor with explicit resource management
+  - Properties: `shape`, `data_type`, `size`, `readable`, `writable`, `exportable_to_gpu`
+  - Methods: `destroy()` for explicit cleanup
+  - Permission enforcement: read/write operations check descriptor flags
+  - Lifecycle tracking: prevents use after destroy()
 
 #### **graphviz.rs** - Visualization
 - Generates DOT format for graph visualization
@@ -380,12 +395,13 @@ make clean
 ## Key Technical Decisions
 
 1. **WebNN Device Selection Explainer**: Follows [W3C WebNN Device Selection spec](https://github.com/webmachinelearning/webnn/blob/main/device-selection-explainer.md) for platform-autonomous device selection using hints
-2. **Protobuf for interop**: Native format for ONNX and CoreML
-3. **Compile-time codegen**: Protobufs compiled at build time
-4. **Feature flags**: Optional runtimes to minimize dependencies
-5. **Objective-C FFI**: Direct CoreML access on macOS
-6. **Zero-copy where possible**: `Bytes` type for efficiency
-7. **Registry pattern**: Pluggable converters without core changes
+2. **WebNN MLTensor Explainer**: Follows [W3C WebNN MLTensor spec](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md) for explicit tensor management with descriptor flags (readable, writable, exportableToGPU), destroy() for resource cleanup, and dispatch() for async execution
+3. **Protobuf for interop**: Native format for ONNX and CoreML
+4. **Compile-time codegen**: Protobufs compiled at build time
+5. **Feature flags**: Optional runtimes to minimize dependencies
+6. **Objective-C FFI**: Direct CoreML access on macOS
+7. **Zero-copy where possible**: `Bytes` type for efficiency
+8. **Registry pattern**: Pluggable converters without core changes
 
 ## Future Extension Points
 

@@ -144,6 +144,167 @@ Converts the graph to CoreML format (macOS only).
 context.convert_to_coreml(graph, "model.mlmodel")
 ```
 
+#### `create_tensor(shape, data_type, readable=True, writable=True, exportable_to_gpu=False)`
+
+Creates an MLTensor for explicit tensor management.
+
+Following the [W3C WebNN MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md).
+
+**Parameters:**
+
+- `shape` (list[int]): Shape of the tensor
+- `data_type` (str): Data type (e.g., "float32")
+- `readable` (bool): If True, tensor data can be read back to CPU. Default: `True`
+- `writable` (bool): If True, tensor data can be written from CPU. Default: `True`
+- `exportable_to_gpu` (bool): If True, tensor can be exported for use as GPU texture. Default: `False`
+
+**Returns:** `MLTensor`
+
+**Example:**
+
+```python
+# Create default tensor (readable and writable)
+tensor = context.create_tensor([2, 3], "float32")
+
+# Create read-only tensor
+ro_tensor = context.create_tensor([2, 3], "float32", readable=True, writable=False)
+
+# Create write-only tensor
+wo_tensor = context.create_tensor([2, 3], "float32", readable=False, writable=True)
+
+# Create GPU-exportable tensor
+gpu_tensor = context.create_tensor([2, 3], "float32", exportable_to_gpu=True)
+```
+
+#### `read_tensor(tensor)`
+
+Reads data from an MLTensor into a numpy array.
+
+**Parameters:**
+
+- `tensor` (MLTensor): The tensor to read from (must have `readable=True`)
+
+**Returns:** `numpy.ndarray`
+
+**Raises:**
+
+- `RuntimeError`: If tensor is not readable or has been destroyed
+
+**Example:**
+
+```python
+tensor = context.create_tensor([2, 3], "float32")
+result = context.read_tensor(tensor)
+```
+
+#### `write_tensor(tensor, data)`
+
+Writes data from a numpy array into an MLTensor.
+
+**Parameters:**
+
+- `tensor` (MLTensor): The tensor to write to (must have `writable=True`)
+- `data` (numpy.ndarray): Data to write
+
+**Raises:**
+
+- `RuntimeError`: If tensor is not writable or has been destroyed
+- `ValueError`: If data shape doesn't match tensor shape
+
+**Example:**
+
+```python
+tensor = context.create_tensor([2, 3], "float32")
+data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+context.write_tensor(tensor, data)
+```
+
+#### `dispatch(graph, inputs, outputs)`
+
+Dispatches graph execution asynchronously with MLTensor inputs/outputs.
+
+Following the [W3C WebNN MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md) timeline model.
+
+**Parameters:**
+
+- `graph` (MLGraph): The compiled graph to execute
+- `inputs` (dict): Dictionary mapping input names to MLTensor objects
+- `outputs` (dict): Dictionary mapping output names to MLTensor objects
+
+**Returns:** None (results are written to output tensors)
+
+**Example:**
+
+```python
+# Create tensors
+input_tensor = context.create_tensor([2, 3], "float32")
+output_tensor = context.create_tensor([2, 3], "float32")
+
+# Write input data
+input_data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+context.write_tensor(input_tensor, input_data)
+
+# Dispatch execution
+context.dispatch(graph, {"x": input_tensor}, {"output": output_tensor})
+
+# Read results
+result = context.read_tensor(output_tensor)
+```
+
+---
+
+## Class: `MLTensor`
+
+Represents an opaque typed tensor for explicit resource management.
+
+Following the [W3C WebNN MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md).
+
+### Properties
+
+#### `shape` (list[int], read-only)
+
+The shape of the tensor.
+
+#### `data_type` (str, read-only)
+
+The data type of the tensor.
+
+#### `size` (int, read-only)
+
+The total number of elements in the tensor.
+
+#### `readable` (bool, read-only)
+
+Whether tensor data can be read back to CPU.
+
+#### `writable` (bool, read-only)
+
+Whether tensor data can be written from CPU.
+
+#### `exportable_to_gpu` (bool, read-only)
+
+Whether tensor can be exported for use as GPU texture.
+
+### Methods
+
+#### `destroy()`
+
+Explicitly destroys the tensor and releases its resources.
+
+After calling `destroy()`, the tensor cannot be used for any operations.
+
+**Raises:**
+
+- `RuntimeError`: If tensor is already destroyed
+
+**Example:**
+
+```python
+tensor = context.create_tensor([2, 3], "float32")
+# ... use tensor ...
+tensor.destroy()  # Explicit cleanup
+```
+
 ---
 
 ## Class: `MLGraphBuilder`

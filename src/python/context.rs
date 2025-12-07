@@ -77,6 +77,8 @@ impl PyMLContext {
 
     /// Compute the graph with given inputs using the backend selected at context creation
     ///
+    /// This is a synchronous execution method that returns computed results.
+    ///
     /// Args:
     ///     graph: The compiled MLGraph to execute
     ///     inputs: Dictionary mapping input names to numpy arrays
@@ -98,6 +100,52 @@ impl PyMLContext {
             Backend::CoreML => self.compute_coreml(py, graph, inputs),
             Backend::None => self.compute_fallback(py, graph),
         }
+    }
+
+    /// Dispatch graph execution asynchronously with MLTensor inputs/outputs
+    ///
+    /// Following the W3C WebNN MLTensor Explainer:
+    /// https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md
+    ///
+    /// This method queues the graph for execution and returns immediately.
+    /// Results are written to output tensors and can be read later with read_tensor().
+    ///
+    /// Args:
+    ///     graph: The compiled MLGraph to execute
+    ///     inputs: Dictionary mapping input names to MLTensor objects
+    ///     outputs: Dictionary mapping output names to MLTensor objects
+    ///
+    /// Note:
+    ///     This is currently implemented as synchronous execution.
+    ///     True async execution will be added in future versions.
+    #[pyo3(signature = (graph, inputs, outputs))]
+    fn dispatch(
+        &self,
+        py: Python,
+        graph: &PyMLGraph,
+        inputs: &Bound<'_, PyDict>,
+        outputs: &Bound<'_, PyDict>,
+    ) -> PyResult<()> {
+        // Convert MLTensor inputs to numpy arrays
+        let numpy_inputs = PyDict::new_bound(py);
+        for (key, value) in inputs.iter() {
+            let tensor = value.downcast::<PyMLTensor>()?;
+            let numpy_array = self.read_tensor(py, &tensor.borrow())?;
+            numpy_inputs.set_item(key, numpy_array)?;
+        }
+
+        // Execute graph
+        let results = self.compute(py, graph, &numpy_inputs, None)?;
+
+        // Write results to output tensors
+        for (key, value) in outputs.iter() {
+            let tensor = value.downcast::<PyMLTensor>()?;
+            if let Some(result) = results.bind(py).get_item(&key)? {
+                self.write_tensor(py, &tensor.borrow(), result.into())?;
+            }
+        }
+
+        Ok(())
     }
 
     /// Convert graph to ONNX format
@@ -184,13 +232,29 @@ impl PyMLContext {
 
     /// Create a tensor for explicit tensor management
     ///
+    /// Following the W3C WebNN MLTensor Explainer:
+    /// https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md
+    ///
     /// Args:
     ///     shape: Shape of the tensor
     ///     data_type: Data type string (e.g., "float32")
+    ///     readable: If True, tensor data can be read back to CPU (default: True)
+    ///     writable: If True, tensor data can be written from CPU (default: True)
+    ///     exportable_to_gpu: If True, tensor can be used as GPU texture (default: False)
     ///
     /// Returns:
-    ///     MLTensor: A new tensor with the specified shape and type
-    fn create_tensor(&self, shape: Vec<u32>, data_type: &str) -> PyResult<PyMLTensor> {
+    ///     MLTensor: A new tensor with the specified properties
+    #[pyo3(signature = (shape, data_type, readable=true, writable=true, exportable_to_gpu=false))]
+    fn create_tensor(
+        &self,
+        shape: Vec<u32>,
+        data_type: &str,
+        readable: bool,
+        writable: bool,
+        exportable_to_gpu: bool,
+    ) -> PyResult<PyMLTensor> {
+        use super::tensor::MLTensorDescriptor;
+
         let dtype = parse_data_type(data_type)?;
         let descriptor = OperandDescriptor {
             data_type: dtype,
@@ -198,21 +262,40 @@ impl PyMLContext {
             pending_permutation: Vec::new(),
         };
 
-        Ok(PyMLTensor::new(descriptor))
+        let tensor_descriptor = MLTensorDescriptor {
+            descriptor,
+            readable,
+            writable,
+            exportable_to_gpu,
+        };
+
+        Ok(PyMLTensor::new(tensor_descriptor))
     }
 
     /// Read data from a tensor into a numpy array
     ///
+    /// Follows the W3C WebNN MLTensor Explainer timeline model.
+    ///
     /// Args:
-    ///     tensor: The MLTensor to read from
+    ///     tensor: The MLTensor to read from (must have readable=True)
     ///
     /// Returns:
     ///     numpy.ndarray: The tensor data as a numpy array
+    ///
+    /// Raises:
+    ///     RuntimeError: If tensor is not readable or has been destroyed
     fn read_tensor(&self, py: Python, tensor: &PyMLTensor) -> PyResult<PyObject> {
         let numpy = py.import_bound("numpy")?;
-        let data = tensor.get_data();
-        let shape_tuple =
-            pyo3::types::PyTuple::new_bound(py, tensor.descriptor.shape.iter().map(|&d| d as i64));
+        let data = tensor.get_data()?; // Now returns PyResult
+        let shape_tuple = pyo3::types::PyTuple::new_bound(
+            py,
+            tensor
+                .tensor_descriptor
+                .descriptor
+                .shape
+                .iter()
+                .map(|&d| d as i64),
+        );
 
         let array = numpy.call_method1("array", (data,))?;
         let reshaped = array.call_method1("reshape", (shape_tuple,))?;
@@ -222,9 +305,15 @@ impl PyMLContext {
 
     /// Write data from a numpy array into a tensor
     ///
+    /// Follows the W3C WebNN MLTensor Explainer timeline model.
+    ///
     /// Args:
-    ///     tensor: The MLTensor to write to
+    ///     tensor: The MLTensor to write to (must have writable=True)
     ///     data: Numpy array or array-like data to write
+    ///
+    /// Raises:
+    ///     RuntimeError: If tensor is not writable or has been destroyed
+    ///     ValueError: If data shape doesn't match tensor shape
     fn write_tensor(&self, py: Python, tensor: &PyMLTensor, data: PyObject) -> PyResult<()> {
         let numpy = py.import_bound("numpy")?;
 
@@ -243,10 +332,10 @@ impl PyMLContext {
             .collect();
 
         // Validate shape
-        if shape != tensor.descriptor.shape {
+        if shape != tensor.tensor_descriptor.descriptor.shape {
             return Err(pyo3::exceptions::PyValueError::new_err(format!(
                 "Shape mismatch: tensor has shape {:?}, but data has shape {:?}",
-                tensor.descriptor.shape, shape
+                tensor.tensor_descriptor.descriptor.shape, shape
             )));
         }
 

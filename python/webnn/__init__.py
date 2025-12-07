@@ -61,28 +61,33 @@ class AsyncMLContext:
     async def dispatch(
         self,
         graph: MLGraph,
-        inputs: Dict[str, np.ndarray],
-        outputs: Optional[Dict[str, MLTensor]] = None
+        inputs: Dict[str, MLTensor],
+        outputs: Dict[str, MLTensor]
     ) -> None:
-        """Execute graph computation asynchronously (WebNN spec-compliant).
+        """Execute graph computation asynchronously (WebNN MLTensor Explainer).
+
+        Following the W3C WebNN MLTensor Explainer:
+        https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md
 
         This method dispatches the graph for execution and returns immediately.
         Results should be read using read_tensor_async() on output tensors.
 
         Args:
             graph: The compiled MLGraph to execute
-            inputs: Dictionary mapping input names to numpy arrays
-            outputs: Dictionary mapping output names to MLTensor objects (optional)
+            inputs: Dictionary mapping input names to MLTensor objects
+            outputs: Dictionary mapping output names to MLTensor objects
 
         Returns:
             None (execution happens asynchronously)
 
         Example:
-            >>> await async_context.dispatch(graph, {"x": x_data, "y": y_data})
+            >>> input_tensor = context.create_tensor([2, 3], "float32")
+            >>> output_tensor = context.create_tensor([2, 3], "float32")
+            >>> await async_context.dispatch(graph, {"x": input_tensor}, {"out": output_tensor})
         """
-        # Run synchronous compute in thread pool to avoid blocking event loop
+        # Run synchronous dispatch in thread pool to avoid blocking event loop
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self._context.compute, graph, inputs, outputs)
+        await loop.run_in_executor(None, self._context.dispatch, graph, inputs, outputs)
 
     async def read_tensor_async(self, tensor: MLTensor) -> np.ndarray:
         """Read tensor data asynchronously.
@@ -117,9 +122,10 @@ class AsyncMLContext:
         """Create a graph builder (synchronous)."""
         return self._context.create_graph_builder()
 
-    def create_tensor(self, shape, data_type: str) -> MLTensor:
+    def create_tensor(self, shape, data_type: str, readable: bool = True,
+                      writable: bool = True, exportable_to_gpu: bool = False) -> MLTensor:
         """Create a tensor (synchronous)."""
-        return self._context.create_tensor(shape, data_type)
+        return self._context.create_tensor(shape, data_type, readable, writable, exportable_to_gpu)
 
     def compute(self, graph: MLGraph, inputs: Dict[str, np.ndarray], outputs=None):
         """Compute (synchronous) - prefer dispatch() for async execution."""
