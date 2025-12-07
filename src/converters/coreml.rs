@@ -531,6 +531,30 @@ impl crate::converters::GraphConverter for CoremlConverter {
                     })),
                     ..Default::default()
                 }
+            } else if op.op_type.eq_ignore_ascii_case("globalAveragePool")
+                || op.op_type.eq_ignore_ascii_case("globalMaxPool")
+            {
+                // Determine pooling type
+                let pooling_type = if op.op_type.eq_ignore_ascii_case("globalAveragePool") {
+                    pooling_layer_params::PoolingType::Average
+                } else {
+                    pooling_layer_params::PoolingType::Max
+                };
+
+                NeuralNetworkLayer {
+                    name: layer_name,
+                    input: input_names,
+                    output: output_names,
+                    layer: Some(Layer::Pooling(PoolingLayerParams {
+                        r#type: pooling_type as i32,
+                        kernel_size: vec![], // Empty for global pooling
+                        stride: vec![],      // Empty for global pooling
+                        avg_pool_exclude_padding: false,
+                        global_pooling: true, // Key: this makes it global pooling
+                        ..Default::default()
+                    })),
+                    ..Default::default()
+                }
             } else {
                 return Err(GraphError::ConversionFailed {
                     format: "coreml".to_string(),

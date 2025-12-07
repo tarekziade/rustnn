@@ -44,6 +44,12 @@ impl OnnxConverter {
         if op_type.eq_ignore_ascii_case("maxPool2d") {
             return "MaxPool".to_string();
         }
+        if op_type.eq_ignore_ascii_case("globalAveragePool") {
+            return "GlobalAveragePool".to_string();
+        }
+        if op_type.eq_ignore_ascii_case("globalMaxPool") {
+            return "GlobalMaxPool".to_string();
+        }
 
         // Default: capitalize first letter
         let mut chars = op_type.chars();

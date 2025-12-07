@@ -622,6 +622,158 @@ impl PyMLGraphBuilder {
         Ok(py_operand)
     }
 
+    /// Global Average Pooling operation
+    ///
+    /// Args:
+    ///     input: Input operand (4D tensor)
+    ///     layout: Input layout "nchw" or "nhwc" (default: "nchw")
+    ///
+    /// Returns:
+    ///     MLOperand: The output operand with spatial dimensions reduced to 1x1
+    #[pyo3(signature = (input, layout=None))]
+    fn global_average_pool(
+        &mut self,
+        input: &PyMLOperand,
+        layout: Option<&str>,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::{
+            Conv2dInputLayout, GlobalPoolOptions, infer_global_pool_shape,
+        };
+
+        // Parse layout string
+        let layout_enum = match layout.unwrap_or("nchw") {
+            "nchw" => Conv2dInputLayout::Nchw,
+            "nhwc" => Conv2dInputLayout::Nhwc,
+            other => {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Invalid layout '{}', must be 'nchw' or 'nhwc'",
+                    other
+                )));
+            }
+        };
+
+        // Create options for shape inference
+        let options = GlobalPoolOptions {
+            layout: layout_enum,
+        };
+
+        // Infer output shape
+        let output_shape = infer_global_pool_shape(&input.descriptor.shape, &options)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        // Store parameters as JSON attributes
+        let attributes = serde_json::json!({
+            "layout": layout.unwrap_or("nchw"),
+        });
+
+        let operation = Operation {
+            op_type: "globalAveragePool".to_string(),
+            input_operands: vec![input.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
+    /// Global Max Pooling operation
+    ///
+    /// Args:
+    ///     input: Input operand (4D tensor)
+    ///     layout: Input layout "nchw" or "nhwc" (default: "nchw")
+    ///
+    /// Returns:
+    ///     MLOperand: The output operand with spatial dimensions reduced to 1x1
+    #[pyo3(signature = (input, layout=None))]
+    fn global_max_pool(
+        &mut self,
+        input: &PyMLOperand,
+        layout: Option<&str>,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::{
+            Conv2dInputLayout, GlobalPoolOptions, infer_global_pool_shape,
+        };
+
+        // Parse layout string
+        let layout_enum = match layout.unwrap_or("nchw") {
+            "nchw" => Conv2dInputLayout::Nchw,
+            "nhwc" => Conv2dInputLayout::Nhwc,
+            other => {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Invalid layout '{}', must be 'nchw' or 'nhwc'",
+                    other
+                )));
+            }
+        };
+
+        // Create options for shape inference
+        let options = GlobalPoolOptions {
+            layout: layout_enum,
+        };
+
+        // Infer output shape
+        let output_shape = infer_global_pool_shape(&input.descriptor.shape, &options)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        // Store parameters as JSON attributes
+        let attributes = serde_json::json!({
+            "layout": layout.unwrap_or("nchw"),
+        });
+
+        let operation = Operation {
+            op_type: "globalMaxPool".to_string(),
+            input_operands: vec![input.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
     // Unary operations
 
     /// ReLU activation

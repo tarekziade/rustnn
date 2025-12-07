@@ -762,6 +762,63 @@ def test_pool2d_invalid_layout(builder):
         builder.max_pool2d(input_op, window_dimensions=[2, 2], layout="invalid")
 
 
+# Global pooling tests
+def test_global_average_pool_basic(builder):
+    """Test basic globalAveragePool operation"""
+    # Input: [1, 64, 28, 28] -> Output: [1, 64, 1, 1]
+    input_op = builder.input("input", [1, 64, 28, 28], "float32")
+    output = builder.global_average_pool(input_op)
+
+    assert output.shape == [1, 64, 1, 1], f"Expected [1, 64, 1, 1], got {output.shape}"
+
+
+def test_global_average_pool_nhwc(builder):
+    """Test globalAveragePool with NHWC layout"""
+    # Input in NHWC: [1, 28, 28, 64] -> Output: [1, 1, 1, 64]
+    input_op = builder.input("input", [1, 28, 28, 64], "float32")
+    output = builder.global_average_pool(input_op, layout="nhwc")
+
+    assert output.shape == [1, 1, 1, 64], f"Expected [1, 1, 1, 64], got {output.shape}"
+
+
+def test_global_max_pool_basic(builder):
+    """Test basic globalMaxPool operation"""
+    # Input: [2, 128, 7, 7] -> Output: [2, 128, 1, 1]
+    input_op = builder.input("input", [2, 128, 7, 7], "float32")
+    output = builder.global_max_pool(input_op)
+
+    assert output.shape == [2, 128, 1, 1], f"Expected [2, 128, 1, 1], got {output.shape}"
+
+
+def test_global_max_pool_various_sizes(builder):
+    """Test globalMaxPool with different input sizes"""
+    # Test with 14x14 spatial dimensions
+    input_op = builder.input("input", [1, 512, 14, 14], "float32")
+    output = builder.global_max_pool(input_op)
+    assert output.shape == [1, 512, 1, 1], f"Expected [1, 512, 1, 1], got {output.shape}"
+
+    # Test with different batch size
+    input_op2 = builder.input("input2", [4, 256, 8, 8], "float32")
+    output2 = builder.global_max_pool(input_op2)
+    assert output2.shape == [4, 256, 1, 1], f"Expected [4, 256, 1, 1], got {output2.shape}"
+
+
+def test_global_pool_invalid_input_shape(builder):
+    """Test that global pooling rejects non-4D input"""
+    input_op = builder.input("input", [64, 28, 28], "float32")  # Only 3D
+
+    with pytest.raises(ValueError, match="Global pooling input must be 4D"):
+        builder.global_average_pool(input_op)
+
+
+def test_global_pool_invalid_layout(builder):
+    """Test that global pooling validates layout parameter"""
+    input_op = builder.input("input", [1, 64, 28, 28], "float32")
+
+    with pytest.raises(ValueError, match="Invalid layout"):
+        builder.global_max_pool(input_op, layout="invalid")
+
+
 def test_reshape_valid(builder):
     """Test valid reshape operation"""
     x = builder.input("x", [2, 3], "float32")

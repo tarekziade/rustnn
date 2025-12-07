@@ -661,6 +661,45 @@ pub fn infer_pool2d_shape(
     Ok(output_shape)
 }
 
+/// Options for global pooling operations
+#[derive(Debug, Clone)]
+pub struct GlobalPoolOptions {
+    pub layout: Conv2dInputLayout,
+}
+
+/// Infer the output shape for global pooling operations
+/// Global pooling reduces spatial dimensions to 1x1
+pub fn infer_global_pool_shape(
+    input_shape: &[u32],
+    options: &GlobalPoolOptions,
+) -> Result<Vec<u32>, GraphError> {
+    // Validate input is 4D
+    if input_shape.len() != 4 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Global pooling input must be 4D, got {}D tensor {:?}",
+                input_shape.len(),
+                input_shape
+            ),
+        });
+    }
+
+    // Global pooling reduces spatial dimensions to 1x1
+    // Output shape depends on layout
+    let output_shape = match options.layout {
+        Conv2dInputLayout::Nchw => {
+            // [N, C, H, W] -> [N, C, 1, 1]
+            vec![input_shape[0], input_shape[1], 1, 1]
+        }
+        Conv2dInputLayout::Nhwc => {
+            // [N, H, W, C] -> [N, 1, 1, C]
+            vec![input_shape[0], 1, 1, input_shape[3]]
+        }
+    };
+
+    Ok(output_shape)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1027,5 +1066,49 @@ mod tests {
         };
         // Input must be 4D
         assert!(infer_pool2d_shape(&[64, 32, 32], &options).is_err());
+    }
+
+    // Global pooling tests
+    #[test]
+    fn test_global_pool_nchw() {
+        let options = GlobalPoolOptions {
+            layout: Conv2dInputLayout::Nchw,
+        };
+        // Input: [1, 64, 28, 28] -> Output: [1, 64, 1, 1]
+        let output = infer_global_pool_shape(&[1, 64, 28, 28], &options).unwrap();
+        assert_eq!(output, vec![1, 64, 1, 1]);
+    }
+
+    #[test]
+    fn test_global_pool_nhwc() {
+        let options = GlobalPoolOptions {
+            layout: Conv2dInputLayout::Nhwc,
+        };
+        // Input: [1, 28, 28, 64] -> Output: [1, 1, 1, 64]
+        let output = infer_global_pool_shape(&[1, 28, 28, 64], &options).unwrap();
+        assert_eq!(output, vec![1, 1, 1, 64]);
+    }
+
+    #[test]
+    fn test_global_pool_various_sizes() {
+        let options = GlobalPoolOptions {
+            layout: Conv2dInputLayout::Nchw,
+        };
+        // Different spatial sizes should all reduce to 1x1
+        let output = infer_global_pool_shape(&[2, 128, 7, 7], &options).unwrap();
+        assert_eq!(output, vec![2, 128, 1, 1]);
+
+        let output = infer_global_pool_shape(&[1, 512, 14, 14], &options).unwrap();
+        assert_eq!(output, vec![1, 512, 1, 1]);
+    }
+
+    #[test]
+    fn test_global_pool_invalid_input_dim() {
+        let options = GlobalPoolOptions {
+            layout: Conv2dInputLayout::Nchw,
+        };
+        // Input must be 4D
+        assert!(infer_global_pool_shape(&[64, 32, 32], &options).is_err());
+        assert!(infer_global_pool_shape(&[1, 64, 32, 32, 32], &options).is_err());
     }
 }

@@ -30,8 +30,8 @@
     - [x] averagePool2d (DONE: shape inference, Python API, ONNX/CoreML converters, 8 tests)
     - [x] maxPool2d (DONE: shape inference, Python API, ONNX/CoreML converters, 8 tests)
     - l2Pool2d
-    - globalAveragePool
-    - globalMaxPool
+    - [x] globalAveragePool (DONE: shape inference, Python API, ONNX/CoreML converters, 6 tests)
+    - [x] globalMaxPool (DONE: shape inference, Python API, ONNX/CoreML converters, 6 tests)
 
 [ ] Normalization operations
     - batchNormalization

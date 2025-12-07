@@ -700,6 +700,102 @@ output = builder.max_pool2d(
 # Output shape: [1, 64, 14, 14]
 ```
 
+#### `global_average_pool(input, layout=None)`
+
+Global average pooling operation that reduces spatial dimensions to 1x1 by averaging over all spatial locations.
+
+**Parameters:**
+
+- `input` (MLOperand): Input tensor (4D)
+- `layout` (str, optional): `"nchw"` or `"nhwc"`. Default: `"nchw"`
+
+**Returns:** `MLOperand` - Output tensor with spatial dimensions 1x1
+
+**Shape Inference:**
+
+- NCHW: `[N, C, H, W]` → `[N, C, 1, 1]`
+- NHWC: `[N, H, W, C]` → `[N, 1, 1, C]`
+
+**Example: Basic Global Average Pooling**
+
+```python
+# Input: [1, 64, 28, 28]
+input_op = builder.input("input", [1, 64, 28, 28], "float32")
+
+# Global average pool reduces spatial dimensions to 1x1
+output = builder.global_average_pool(input_op)
+# Output shape: [1, 64, 1, 1]
+```
+
+**Example: For Classification (Typical ResNet-style)**
+
+```python
+# After last conv layer: [1, 2048, 7, 7]
+features = builder.input("features", [1, 2048, 7, 7], "float32")
+
+# Global average pooling instead of flatten
+pooled = builder.global_average_pool(features)
+# Output shape: [1, 2048, 1, 1]
+
+# Reshape for fully connected layer
+flattened = builder.reshape(pooled, [1, 2048])
+```
+
+**Example: NHWC Layout**
+
+```python
+# Input in NHWC: [1, 28, 28, 64]
+input_op = builder.input("input", [1, 28, 28, 64], "float32")
+
+output = builder.global_average_pool(input_op, layout="nhwc")
+# Output shape: [1, 1, 1, 64]
+```
+
+#### `global_max_pool(input, layout=None)`
+
+Global max pooling operation that reduces spatial dimensions to 1x1 by taking the maximum value over all spatial locations.
+
+**Parameters:**
+
+- `input` (MLOperand): Input tensor (4D)
+- `layout` (str, optional): `"nchw"` or `"nhwc"`. Default: `"nchw"`
+
+**Returns:** `MLOperand` - Output tensor with spatial dimensions 1x1
+
+**Shape Inference:**
+
+Same as `global_average_pool`:
+- NCHW: `[N, C, H, W]` → `[N, C, 1, 1]`
+- NHWC: `[N, H, W, C]` → `[N, 1, 1, C]`
+
+**Example: Basic Global Max Pooling**
+
+```python
+# Input: [2, 128, 7, 7]
+input_op = builder.input("input", [2, 128, 7, 7], "float32")
+
+# Global max pool reduces spatial dimensions to 1x1
+output = builder.global_max_pool(input_op)
+# Output shape: [2, 128, 1, 1]
+```
+
+**Example: Multi-scale Feature Extraction**
+
+```python
+# Extract features at different scales
+input_op = builder.input("input", [1, 512, 14, 14], "float32")
+
+# Global max pooling captures strongest activations
+max_pooled = builder.global_max_pool(input_op)
+# Output shape: [1, 512, 1, 1]
+
+# Global average pooling captures average response
+avg_pooled = builder.global_average_pool(input_op)
+# Output shape: [1, 512, 1, 1]
+
+# Can concatenate both for richer representation
+```
+
 ### Unary Operations
 
 All unary operations take one operand and return a new operand.
