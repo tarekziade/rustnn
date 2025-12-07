@@ -9,7 +9,7 @@
     - Returns actual computed outputs as numpy arrays
     - Includes fallback to zeros when ONNX runtime not available
 
-[ ] Add MLTensor class for explicit tensor management
+[x] Add MLTensor class for explicit tensor management
     - createTensor() for pre-allocating tensors
     - readTensor() for reading results
     - writeTensor() for setting input data
@@ -458,11 +458,21 @@ LOW PRIORITY:
 - Testing infrastructure expanded with comprehensive compute tests
 - CI/CD for packaging and publishing not yet set up
 
-Last Updated: 2025-12-06
+Last Updated: 2025-12-07
 
-## Recent Changes (2025-12-06)
+## Recent Changes (2025-12-07)
 
-### Shape Inference and Validation (Latest)
+### MLTensor Implementation (Latest)
+- Implemented MLTensor class for explicit tensor management
+- Added createTensor(), readTensor(), writeTensor() methods to MLContext
+- Thread-safe data storage using Arc<Mutex<Vec<f32>>>
+- Full NumPy interoperability with automatic type conversion
+- Shape validation and data integrity checks in Rust
+- 7 new Python tests covering tensor operations
+- All 40 Python tests passing (33 existing + 7 new)
+- Maintained Rust-first architecture: core logic in Rust, thin Python wrappers
+
+### Shape Inference and Validation
 - Implemented NumPy-style broadcasting for binary operations
 - Added proper matmul shape inference with batched matmul support
 - Added reshape validation to ensure element count consistency
