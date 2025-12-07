@@ -146,7 +146,7 @@ mkdocs build --strict
 
 3. **View deployment**:
    - Actions tab → "Build and Deploy Documentation"
-   - Documentation will be at: `https://your-org.github.io/rust-webnn-graph/`
+   - Documentation will be at: `https://your-org.github.io/rustnn/`
 
 ### Customize
 

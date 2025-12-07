@@ -1,4 +1,4 @@
-# rust-webnn-graph (rustnn) - Project Guide
+# rustnn (rustnn) - Project Guide
 
 ## Project Overview
 
@@ -626,6 +626,7 @@ See TODO.txt for complete list.
 
 - **README.md**: Complete documentation including Python API, Rust CLI, and architecture
 - **docs/api-reference.md**: Complete Python API reference with examples
+- **docs/webnn-spec-reference.md**: Local copy of W3C WebNN spec reference for offline use and easy parsing
 - **examples/**: Sample WebNN graph JSON files and Python examples
 - **tests/test_python_api.py**: Python API test suite (91 tests: 79 passing, 12 skipped)
 - **TODO.txt**: Implementation roadmap and completed features

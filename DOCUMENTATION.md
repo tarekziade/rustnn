@@ -136,7 +136,7 @@ All code examples include:
 ## 📁 File Structure
 
 ```
-rust-webnn-graph/
+rustnn/
 ├── docs/                       # Documentation source
 │   ├── index.md               # Home page
 │   ├── getting-started.md     # Getting started guide
@@ -186,7 +186,7 @@ Required packages:
 3. Push to `main` branch
 4. Documentation will be available at:
    ```
-   https://your-org.github.io/rust-webnn-graph/
+   https://your-org.github.io/rustnn/
    ```
 
 ### First Deployment

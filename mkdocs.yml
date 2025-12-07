@@ -1,10 +1,10 @@
 site_name: WebNN Python API
 site_description: Python bindings for the W3C WebNN API
 site_author: Your Organization
-site_url: https://your-org.github.io/rust-webnn-graph
+site_url: https://your-org.github.io/rustnn
 
-repo_name: your-org/rust-webnn-graph
-repo_url: https://github.com/your-org/rust-webnn-graph
+repo_name: your-org/rustnn
+repo_url: https://github.com/your-org/rustnn
 edit_uri: edit/main/docs/
 
 theme:
@@ -85,7 +85,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/your-org/rust-webnn-graph
+      link: https://github.com/your-org/rustnn
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/webnn/
   version:

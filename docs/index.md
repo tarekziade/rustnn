@@ -60,8 +60,8 @@ print(f"Graph compiled: {graph.operand_count} operands, {graph.operation_count} 
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/rust-webnn-graph.git
-cd rust-webnn-graph
+git clone https://github.com/your-org/rustnn.git
+cd rustnn
 
 # Install maturin
 pip install maturin
@@ -85,9 +85,9 @@ pip install webnn
 
 ## Support
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/your-org/rust-webnn-graph/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/your-org/rustnn/issues)
 - **Specification**: [W3C WebNN Spec](https://www.w3.org/TR/webnn/)
 
 ## License
 
-Apache-2.0 License - See [LICENSE](https://github.com/your-org/rust-webnn-graph/blob/main/LICENSE) for details.
+Apache-2.0 License - See [LICENSE](https://github.com/your-org/rustnn/blob/main/LICENSE) for details.

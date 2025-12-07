@@ -129,7 +129,7 @@ mkdocs build --strict --verbose
 ### Viewing Deployed Docs
 
 After the first successful deployment:
-- Your docs will be available at: `https://your-org.github.io/rust-webnn-graph/`
+- Your docs will be available at: `https://your-org.github.io/rustnn/`
 - The URL will be shown in the workflow run
 
 ### Manual Deployment

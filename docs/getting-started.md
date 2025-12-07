@@ -19,8 +19,8 @@ This guide will help you get started with the WebNN Python API.
 
 2. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-org/rust-webnn-graph.git
-   cd rust-webnn-graph
+   git clone https://github.com/your-org/rustnn.git
+   cd rustnn
    ```
 
 3. **Install maturin**:
