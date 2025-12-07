@@ -430,6 +430,198 @@ impl PyMLGraphBuilder {
         Ok(py_operand)
     }
 
+    /// 2D Average Pooling operation
+    ///
+    /// Args:
+    ///     input: Input operand (4D tensor)
+    ///     window_dimensions: Size of the pooling window [height, width] (default: [1, 1])
+    ///     strides: Stride along each spatial axis (default: [1, 1])
+    ///     dilations: Dilation along each spatial axis (default: [1, 1])
+    ///     pads: Padding [begin_h, begin_w, end_h, end_w] (default: [0, 0, 0, 0])
+    ///     layout: Input layout "nchw" or "nhwc" (default: "nchw")
+    ///
+    /// Returns:
+    ///     MLOperand: The output operand
+    #[pyo3(signature = (input, window_dimensions=None, strides=None, dilations=None, pads=None, layout=None))]
+    fn average_pool2d(
+        &mut self,
+        input: &PyMLOperand,
+        window_dimensions: Option<Vec<u32>>,
+        strides: Option<Vec<u32>>,
+        dilations: Option<Vec<u32>>,
+        pads: Option<Vec<u32>>,
+        layout: Option<&str>,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::{Conv2dInputLayout, Pool2dOptions, infer_pool2d_shape};
+
+        // Default values matching WebNN spec
+        let window_dimensions = window_dimensions.unwrap_or_else(|| vec![1, 1]);
+        let strides = strides.unwrap_or_else(|| vec![1, 1]);
+        let dilations = dilations.unwrap_or_else(|| vec![1, 1]);
+        let pads = pads.unwrap_or_else(|| vec![0, 0, 0, 0]);
+
+        // Parse layout string
+        let layout_enum = match layout.unwrap_or("nchw") {
+            "nchw" => Conv2dInputLayout::Nchw,
+            "nhwc" => Conv2dInputLayout::Nhwc,
+            other => {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Invalid layout '{}', must be 'nchw' or 'nhwc'",
+                    other
+                )));
+            }
+        };
+
+        // Create options for shape inference
+        let options = Pool2dOptions {
+            window_dimensions: window_dimensions.clone(),
+            strides: strides.clone(),
+            dilations: dilations.clone(),
+            pads: pads.clone(),
+            layout: layout_enum,
+        };
+
+        // Infer output shape
+        let output_shape = infer_pool2d_shape(&input.descriptor.shape, &options)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        // Store parameters as JSON attributes
+        let attributes = serde_json::json!({
+            "windowDimensions": window_dimensions,
+            "strides": strides,
+            "dilations": dilations,
+            "pads": pads,
+            "layout": layout.unwrap_or("nchw"),
+        });
+
+        let operation = Operation {
+            op_type: "averagePool2d".to_string(),
+            input_operands: vec![input.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
+    /// 2D Max Pooling operation
+    ///
+    /// Args:
+    ///     input: Input operand (4D tensor)
+    ///     window_dimensions: Size of the pooling window [height, width] (default: [1, 1])
+    ///     strides: Stride along each spatial axis (default: [1, 1])
+    ///     dilations: Dilation along each spatial axis (default: [1, 1])
+    ///     pads: Padding [begin_h, begin_w, end_h, end_w] (default: [0, 0, 0, 0])
+    ///     layout: Input layout "nchw" or "nhwc" (default: "nchw")
+    ///
+    /// Returns:
+    ///     MLOperand: The output operand
+    #[pyo3(signature = (input, window_dimensions=None, strides=None, dilations=None, pads=None, layout=None))]
+    fn max_pool2d(
+        &mut self,
+        input: &PyMLOperand,
+        window_dimensions: Option<Vec<u32>>,
+        strides: Option<Vec<u32>>,
+        dilations: Option<Vec<u32>>,
+        pads: Option<Vec<u32>>,
+        layout: Option<&str>,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::{Conv2dInputLayout, Pool2dOptions, infer_pool2d_shape};
+
+        // Default values matching WebNN spec
+        let window_dimensions = window_dimensions.unwrap_or_else(|| vec![1, 1]);
+        let strides = strides.unwrap_or_else(|| vec![1, 1]);
+        let dilations = dilations.unwrap_or_else(|| vec![1, 1]);
+        let pads = pads.unwrap_or_else(|| vec![0, 0, 0, 0]);
+
+        // Parse layout string
+        let layout_enum = match layout.unwrap_or("nchw") {
+            "nchw" => Conv2dInputLayout::Nchw,
+            "nhwc" => Conv2dInputLayout::Nhwc,
+            other => {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Invalid layout '{}', must be 'nchw' or 'nhwc'",
+                    other
+                )));
+            }
+        };
+
+        // Create options for shape inference
+        let options = Pool2dOptions {
+            window_dimensions: window_dimensions.clone(),
+            strides: strides.clone(),
+            dilations: dilations.clone(),
+            pads: pads.clone(),
+            layout: layout_enum,
+        };
+
+        // Infer output shape
+        let output_shape = infer_pool2d_shape(&input.descriptor.shape, &options)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        // Store parameters as JSON attributes
+        let attributes = serde_json::json!({
+            "windowDimensions": window_dimensions,
+            "strides": strides,
+            "dilations": dilations,
+            "pads": pads,
+            "layout": layout.unwrap_or("nchw"),
+        });
+
+        let operation = Operation {
+            op_type: "maxPool2d".to_string(),
+            input_operands: vec![input.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
     // Unary operations
 
     /// ReLU activation

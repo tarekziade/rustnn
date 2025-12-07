@@ -38,6 +38,12 @@ impl OnnxConverter {
         if op_type.eq_ignore_ascii_case("convTranspose2d") {
             return "ConvTranspose".to_string();
         }
+        if op_type.eq_ignore_ascii_case("averagePool2d") {
+            return "AveragePool".to_string();
+        }
+        if op_type.eq_ignore_ascii_case("maxPool2d") {
+            return "MaxPool".to_string();
+        }
 
         // Default: capitalize first letter
         let mut chars = op_type.chars();
@@ -199,6 +205,74 @@ impl OnnxConverter {
 
         attributes
     }
+
+    /// Create ONNX attributes for pool2d operations
+    fn create_pool2d_attributes(op: &Operation) -> Vec<AttributeProto> {
+        let mut attributes = Vec::new();
+
+        // Parse attributes from JSON
+        if let Some(window_dimensions) = op
+            .attributes
+            .get("windowDimensions")
+            .and_then(|v| v.as_array())
+        {
+            let kernel_shape: Vec<i64> = window_dimensions
+                .iter()
+                .filter_map(|v| v.as_u64().map(|u| u as i64))
+                .collect();
+            if !kernel_shape.is_empty() {
+                attributes.push(AttributeProto {
+                    name: Some("kernel_shape".to_string()),
+                    ints: kernel_shape,
+                    ..Default::default()
+                });
+            }
+        }
+
+        if let Some(strides) = op.attributes.get("strides").and_then(|v| v.as_array()) {
+            let strides_i64: Vec<i64> = strides
+                .iter()
+                .filter_map(|v| v.as_u64().map(|u| u as i64))
+                .collect();
+            if !strides_i64.is_empty() {
+                attributes.push(AttributeProto {
+                    name: Some("strides".to_string()),
+                    ints: strides_i64,
+                    ..Default::default()
+                });
+            }
+        }
+
+        if let Some(dilations) = op.attributes.get("dilations").and_then(|v| v.as_array()) {
+            let dilations_i64: Vec<i64> = dilations
+                .iter()
+                .filter_map(|v| v.as_u64().map(|u| u as i64))
+                .collect();
+            if !dilations_i64.is_empty() {
+                attributes.push(AttributeProto {
+                    name: Some("dilations".to_string()),
+                    ints: dilations_i64,
+                    ..Default::default()
+                });
+            }
+        }
+
+        if let Some(pads) = op.attributes.get("pads").and_then(|v| v.as_array()) {
+            let pads_i64: Vec<i64> = pads
+                .iter()
+                .filter_map(|v| v.as_u64().map(|u| u as i64))
+                .collect();
+            if !pads_i64.is_empty() {
+                attributes.push(AttributeProto {
+                    name: Some("pads".to_string()),
+                    ints: pads_i64,
+                    ..Default::default()
+                });
+            }
+        }
+
+        attributes
+    }
 }
 
 impl crate::converters::GraphConverter for OnnxConverter {
@@ -254,6 +328,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     Self::create_conv2d_attributes(op)
                 } else if op.op_type == "convTranspose2d" {
                     Self::create_conv_transpose2d_attributes(op)
+                } else if op.op_type == "averagePool2d" || op.op_type == "maxPool2d" {
+                    Self::create_pool2d_attributes(op)
                 } else {
                     Vec::new()
                 };

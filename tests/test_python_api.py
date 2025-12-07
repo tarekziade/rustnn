@@ -672,6 +672,96 @@ def test_conv_transpose2d_invalid_layout(builder):
         builder.conv_transpose2d(input_op, filter_op, input_layout="invalid")
 
 
+# Pooling tests
+def test_average_pool2d_basic(builder):
+    """Test basic averagePool2d operation"""
+    # Input: [1, 64, 28, 28], window: [2, 2], stride: [2, 2]
+    input_op = builder.input("input", [1, 64, 28, 28], "float32")
+    output = builder.average_pool2d(input_op, window_dimensions=[2, 2], strides=[2, 2])
+
+    # Output shape: [1, 64, 14, 14]
+    assert output.shape == [1, 64, 14, 14], f"Expected [1, 64, 14, 14], got {output.shape}"
+
+
+def test_average_pool2d_with_padding(builder):
+    """Test averagePool2d with padding"""
+    input_op = builder.input("input", [1, 64, 28, 28], "float32")
+    output = builder.average_pool2d(
+        input_op,
+        window_dimensions=[3, 3],
+        strides=[2, 2],
+        pads=[1, 1, 1, 1]
+    )
+
+    # With padding, output shape: [1, 64, 14, 14]
+    assert output.shape == [1, 64, 14, 14], f"Expected [1, 64, 14, 14], got {output.shape}"
+
+
+def test_average_pool2d_nhwc_layout(builder):
+    """Test averagePool2d with NHWC layout"""
+    # Input in NHWC: [1, 28, 28, 64]
+    input_op = builder.input("input", [1, 28, 28, 64], "float32")
+    output = builder.average_pool2d(
+        input_op,
+        window_dimensions=[2, 2],
+        strides=[2, 2],
+        layout="nhwc"
+    )
+
+    # Output should also be NHWC: [1, 14, 14, 64]
+    assert output.shape == [1, 14, 14, 64], f"Expected [1, 14, 14, 64], got {output.shape}"
+
+
+def test_max_pool2d_basic(builder):
+    """Test basic maxPool2d operation"""
+    # Input: [1, 64, 28, 28], window: [2, 2], stride: [2, 2]
+    input_op = builder.input("input", [1, 64, 28, 28], "float32")
+    output = builder.max_pool2d(input_op, window_dimensions=[2, 2], strides=[2, 2])
+
+    # Output shape: [1, 64, 14, 14]
+    assert output.shape == [1, 64, 14, 14], f"Expected [1, 64, 14, 14], got {output.shape}"
+
+
+def test_max_pool2d_with_padding(builder):
+    """Test maxPool2d with padding"""
+    input_op = builder.input("input", [1, 64, 28, 28], "float32")
+    output = builder.max_pool2d(
+        input_op,
+        window_dimensions=[3, 3],
+        strides=[2, 2],
+        pads=[1, 1, 1, 1]
+    )
+
+    # With padding, output shape: [1, 64, 14, 14]
+    assert output.shape == [1, 64, 14, 14], f"Expected [1, 64, 14, 14], got {output.shape}"
+
+
+def test_max_pool2d_stride_variations(builder):
+    """Test maxPool2d with different stride values"""
+    input_op = builder.input("input", [1, 32, 14, 14], "float32")
+    # Window 2x2, stride 1x1 (overlapping)
+    output = builder.max_pool2d(input_op, window_dimensions=[2, 2], strides=[1, 1])
+
+    # Output shape: [1, 32, 13, 13]
+    assert output.shape == [1, 32, 13, 13], f"Expected [1, 32, 13, 13], got {output.shape}"
+
+
+def test_pool2d_invalid_input_shape(builder):
+    """Test that pooling rejects non-4D input"""
+    input_op = builder.input("input", [64, 28, 28], "float32")  # Only 3D
+
+    with pytest.raises(ValueError, match="Pool2d input must be 4D"):
+        builder.average_pool2d(input_op, window_dimensions=[2, 2])
+
+
+def test_pool2d_invalid_layout(builder):
+    """Test that pooling validates layout parameter"""
+    input_op = builder.input("input", [1, 64, 28, 28], "float32")
+
+    with pytest.raises(ValueError, match="Invalid layout"):
+        builder.max_pool2d(input_op, window_dimensions=[2, 2], layout="invalid")
+
+
 def test_reshape_valid(builder):
     """Test valid reshape operation"""
     x = builder.input("x", [2, 3], "float32")

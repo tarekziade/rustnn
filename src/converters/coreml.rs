@@ -5,8 +5,9 @@ use crate::protos::coreml::specification::{
     ActivationParams, ActivationReLu, ActivationSigmoid, AddLayerParams, ArrayFeatureType,
     ConvolutionLayerParams, FeatureDescription, FeatureType, InnerProductLayerParams,
     LoadConstantLayerParams, Model, ModelDescription, NeuralNetwork, NeuralNetworkLayer,
-    SoftmaxLayerParams, TanhLayerParams, WeightParams, activation_params::NonlinearityType,
-    array_feature_type::ArrayDataType, feature_type, model, neural_network_layer::Layer,
+    PoolingLayerParams, SoftmaxLayerParams, TanhLayerParams, WeightParams,
+    activation_params::NonlinearityType, array_feature_type::ArrayDataType, feature_type, model,
+    neural_network_layer::Layer, pooling_layer_params,
 };
 use prost::Message;
 use prost::bytes::Bytes;
@@ -462,6 +463,70 @@ impl crate::converters::GraphConverter for CoremlConverter {
                         has_bias: false,
                         weights: Some(weight),
                         bias: None,
+                        ..Default::default()
+                    })),
+                    ..Default::default()
+                }
+            } else if op.op_type.eq_ignore_ascii_case("averagePool2d")
+                || op.op_type.eq_ignore_ascii_case("maxPool2d")
+            {
+                // Get pool parameters from attributes
+                let window_dimensions = op
+                    .attributes
+                    .get("windowDimensions")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_u64().map(|u| u as u64))
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_else(|| vec![1, 1]);
+
+                let strides = op
+                    .attributes
+                    .get("strides")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_u64().map(|u| u as u64))
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_else(|| vec![1, 1]);
+
+                let pads = op
+                    .attributes
+                    .get("pads")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_u64().map(|u| u as u64))
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_else(|| vec![0, 0, 0, 0]);
+
+                // CoreML padding format: [top, bottom, left, right]
+                let padding_top = pads[0];
+                let padding_bottom = pads[2];
+                let padding_left = pads[1];
+                let padding_right = pads[3];
+
+                // Determine pooling type
+                let pooling_type = if op.op_type.eq_ignore_ascii_case("averagePool2d") {
+                    pooling_layer_params::PoolingType::Average
+                } else {
+                    pooling_layer_params::PoolingType::Max
+                };
+
+                NeuralNetworkLayer {
+                    name: layer_name,
+                    input: input_names,
+                    output: output_names,
+                    layer: Some(Layer::Pooling(PoolingLayerParams {
+                        r#type: pooling_type as i32,
+                        kernel_size: vec![window_dimensions[0], window_dimensions[1]],
+                        stride: vec![strides[0], strides[1]],
+                        avg_pool_exclude_padding: false,
+                        global_pooling: false,
                         ..Default::default()
                     })),
                     ..Default::default()

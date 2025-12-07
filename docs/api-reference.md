@@ -565,6 +565,141 @@ output = builder.conv_transpose2d(
 # Output shape: [1, 32, 28, 28]
 ```
 
+### Pooling Operations
+
+#### `average_pool2d(input, window_dimensions=None, strides=None, dilations=None, pads=None, layout=None)`
+
+2D average pooling operation for downsampling by computing the average of values in a pooling window.
+
+**Parameters:**
+
+- `input` (MLOperand): Input tensor (4D)
+- `window_dimensions` (list[int], optional): Pooling window size `[height, width]`. Default: `[1, 1]`
+- `strides` (list[int], optional): Stride along each spatial axis. Default: `[1, 1]`
+- `dilations` (list[int], optional): Dilation along each spatial axis. Default: `[1, 1]`
+- `pads` (list[int], optional): Padding `[begin_height, begin_width, end_height, end_width]`. Default: `[0, 0, 0, 0]`
+- `layout` (str, optional): `"nchw"` or `"nhwc"`. Default: `"nchw"`
+
+**Returns:** `MLOperand` - Output tensor after pooling
+
+**Shape Inference:**
+
+For each spatial dimension:
+```
+output_size = floor((input_size + pad_begin + pad_end - effective_window_size) / stride) + 1
+```
+
+where `effective_window_size = (window_size - 1) * dilation + 1`
+
+**Example: Basic Average Pooling**
+
+```python
+# Input: [1, 64, 28, 28]
+input_op = builder.input("input", [1, 64, 28, 28], "float32")
+
+# Apply 2x2 average pooling with stride 2
+output = builder.average_pool2d(
+    input_op,
+    window_dimensions=[2, 2],
+    strides=[2, 2]
+)
+# Output shape: [1, 64, 14, 14]
+```
+
+**Example: Average Pooling with Padding**
+
+```python
+input_op = builder.input("input", [1, 64, 28, 28], "float32")
+
+output = builder.average_pool2d(
+    input_op,
+    window_dimensions=[3, 3],
+    strides=[2, 2],
+    pads=[1, 1, 1, 1]  # Padding on all sides
+)
+# Output shape: [1, 64, 14, 14]
+```
+
+**Example: NHWC Layout**
+
+```python
+# Input in NHWC format: [batch, height, width, channels]
+input_op = builder.input("input", [1, 28, 28, 64], "float32")
+
+output = builder.average_pool2d(
+    input_op,
+    window_dimensions=[2, 2],
+    strides=[2, 2],
+    layout="nhwc"
+)
+# Output shape: [1, 14, 14, 64] (also NHWC)
+```
+
+#### `max_pool2d(input, window_dimensions=None, strides=None, dilations=None, pads=None, layout=None)`
+
+2D max pooling operation for downsampling by taking the maximum value in a pooling window.
+
+**Parameters:**
+
+- `input` (MLOperand): Input tensor (4D)
+- `window_dimensions` (list[int], optional): Pooling window size `[height, width]`. Default: `[1, 1]`
+- `strides` (list[int], optional): Stride along each spatial axis. Default: `[1, 1]`
+- `dilations` (list[int], optional): Dilation along each spatial axis. Default: `[1, 1]`
+- `pads` (list[int], optional): Padding `[begin_height, begin_width, end_height, end_width]`. Default: `[0, 0, 0, 0]`
+- `layout` (str, optional): `"nchw"` or `"nhwc"`. Default: `"nchw"`
+
+**Returns:** `MLOperand` - Output tensor after pooling
+
+**Shape Inference:**
+
+Same as `average_pool2d` - for each spatial dimension:
+```
+output_size = floor((input_size + pad_begin + pad_end - effective_window_size) / stride) + 1
+```
+
+**Example: Basic Max Pooling**
+
+```python
+# Input: [1, 64, 28, 28]
+input_op = builder.input("input", [1, 64, 28, 28], "float32")
+
+# Apply 2x2 max pooling with stride 2
+output = builder.max_pool2d(
+    input_op,
+    window_dimensions=[2, 2],
+    strides=[2, 2]
+)
+# Output shape: [1, 64, 14, 14]
+```
+
+**Example: Overlapping Max Pooling**
+
+```python
+input_op = builder.input("input", [1, 32, 14, 14], "float32")
+
+# Window size 2x2, stride 1x1 (overlapping windows)
+output = builder.max_pool2d(
+    input_op,
+    window_dimensions=[2, 2],
+    strides=[1, 1]
+)
+# Output shape: [1, 32, 13, 13]
+```
+
+**Example: Max Pooling with Padding**
+
+```python
+input_op = builder.input("input", [1, 64, 28, 28], "float32")
+
+output = builder.max_pool2d(
+    input_op,
+    window_dimensions=[3, 3],
+    strides=[2, 2],
+    pads=[1, 1, 1, 1]
+)
+# Output shape: [1, 64, 14, 14]
+```
+
 ### Unary Operations
 
 All unary operations take one operand and return a new operand.

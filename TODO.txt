@@ -27,8 +27,8 @@
     - [x] depthwiseConv2d (DONE: use conv2d with groups=in_channels parameter)
 
 [ ] Pooling operations
-    - averagePool2d
-    - maxPool2d
+    - [x] averagePool2d (DONE: shape inference, Python API, ONNX/CoreML converters, 8 tests)
+    - [x] maxPool2d (DONE: shape inference, Python API, ONNX/CoreML converters, 8 tests)
     - l2Pool2d
     - globalAveragePool
     - globalMaxPool

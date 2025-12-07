@@ -526,6 +526,141 @@ pub fn infer_conv_transpose2d_shape(
     Ok(output_shape)
 }
 
+/// Parameters for pool2d shape inference
+pub struct Pool2dOptions {
+    pub window_dimensions: Vec<u32>,
+    pub strides: Vec<u32>,
+    pub dilations: Vec<u32>,
+    pub pads: Vec<u32>,
+    pub layout: Conv2dInputLayout,
+}
+
+/// Infer output shape for 2D pooling operations (average, max)
+///
+/// Following the W3C WebNN specification for pool2d:
+/// https://www.w3.org/TR/webnn/#api-mlgraphbuilder-pool2d
+pub fn infer_pool2d_shape(
+    input_shape: &[u32],
+    options: &Pool2dOptions,
+) -> Result<Vec<u32>, GraphError> {
+    // Input must be 4D: [batch, channels, height, width] or [batch, height, width, channels]
+    if input_shape.len() != 4 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!("Pool2d input must be 4D, got shape {:?}", input_shape),
+        });
+    }
+
+    // Extract dimensions based on layout
+    let (batch, channels, input_h, input_w) = match options.layout {
+        Conv2dInputLayout::Nchw => (
+            input_shape[0],
+            input_shape[1],
+            input_shape[2],
+            input_shape[3],
+        ),
+        Conv2dInputLayout::Nhwc => (
+            input_shape[0],
+            input_shape[3],
+            input_shape[1],
+            input_shape[2],
+        ),
+    };
+
+    // Validate window dimensions
+    if options.window_dimensions.len() != 2 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Pool2d window_dimensions must have 2 elements, got {:?}",
+                options.window_dimensions
+            ),
+        });
+    }
+    let window_h = options.window_dimensions[0];
+    let window_w = options.window_dimensions[1];
+
+    if window_h == 0 || window_w == 0 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: "Pool2d window dimensions must be > 0".to_string(),
+        });
+    }
+
+    // Validate strides
+    if options.strides.len() != 2 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Pool2d strides must have 2 elements, got {:?}",
+                options.strides
+            ),
+        });
+    }
+    let stride_h = options.strides[0];
+    let stride_w = options.strides[1];
+
+    if stride_h == 0 || stride_w == 0 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: "Pool2d strides must be > 0".to_string(),
+        });
+    }
+
+    // Validate dilations
+    if options.dilations.len() != 2 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Pool2d dilations must have 2 elements, got {:?}",
+                options.dilations
+            ),
+        });
+    }
+    let dilation_h = options.dilations[0];
+    let dilation_w = options.dilations[1];
+
+    if dilation_h == 0 || dilation_w == 0 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: "Pool2d dilations must be > 0".to_string(),
+        });
+    }
+
+    // Validate pads
+    if options.pads.len() != 4 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!("Pool2d pads must have 4 elements, got {:?}", options.pads),
+        });
+    }
+    let pad_begin_h = options.pads[0];
+    let pad_begin_w = options.pads[1];
+    let pad_end_h = options.pads[2];
+    let pad_end_w = options.pads[3];
+
+    // Compute effective window size with dilation
+    let effective_window_h = dilation_h * (window_h - 1) + 1;
+    let effective_window_w = dilation_w * (window_w - 1) + 1;
+
+    // Compute output spatial dimensions
+    // Formula: floor((input_size + pad_begin + pad_end - effective_window_size) / stride) + 1
+    let padded_h = input_h + pad_begin_h + pad_end_h;
+    let padded_w = input_w + pad_begin_w + pad_end_w;
+
+    if padded_h < effective_window_h || padded_w < effective_window_w {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Pool2d: padded input size [{}, {}] is smaller than effective window size [{}, {}]",
+                padded_h, padded_w, effective_window_h, effective_window_w
+            ),
+        });
+    }
+
+    let output_h = (padded_h - effective_window_h) / stride_h + 1;
+    let output_w = (padded_w - effective_window_w) / stride_w + 1;
+
+    // Build output shape based on layout (channels remain unchanged)
+    let output_shape = match options.layout {
+        Conv2dInputLayout::Nchw => vec![batch, channels, output_h, output_w],
+        Conv2dInputLayout::Nhwc => vec![batch, output_h, output_w, channels],
+    };
+
+    Ok(output_shape)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -818,5 +953,79 @@ mod tests {
         };
         // Input must be 4D
         assert!(infer_conv_transpose2d_shape(&[64, 14, 14], &[64, 32, 3, 3], &options).is_err());
+    }
+
+    // Pool2d tests
+    #[test]
+    fn test_pool2d_basic() {
+        let options = Pool2dOptions {
+            window_dimensions: vec![2, 2],
+            strides: vec![2, 2],
+            dilations: vec![1, 1],
+            pads: vec![0, 0, 0, 0],
+            layout: Conv2dInputLayout::Nchw,
+        };
+        // Input: [1, 64, 32, 32], Window: [2, 2], Stride: [2, 2]
+        // Output: (32 - 2) / 2 + 1 = 16
+        let output = infer_pool2d_shape(&[1, 64, 32, 32], &options).unwrap();
+        assert_eq!(output, vec![1, 64, 16, 16]);
+    }
+
+    #[test]
+    fn test_pool2d_with_padding() {
+        let options = Pool2dOptions {
+            window_dimensions: vec![3, 3],
+            strides: vec![1, 1],
+            dilations: vec![1, 1],
+            pads: vec![1, 1, 1, 1],
+            layout: Conv2dInputLayout::Nchw,
+        };
+        // Input: [1, 64, 32, 32], Window: [3, 3], Padding: 1
+        // Output: (32 + 1 + 1 - 3) / 1 + 1 = 32
+        let output = infer_pool2d_shape(&[1, 64, 32, 32], &options).unwrap();
+        assert_eq!(output, vec![1, 64, 32, 32]);
+    }
+
+    #[test]
+    fn test_pool2d_nhwc_layout() {
+        let options = Pool2dOptions {
+            window_dimensions: vec![2, 2],
+            strides: vec![2, 2],
+            dilations: vec![1, 1],
+            pads: vec![0, 0, 0, 0],
+            layout: Conv2dInputLayout::Nhwc,
+        };
+        // Input: [1, 32, 32, 64] (NHWC)
+        // Output: [1, 16, 16, 64] (NHWC)
+        let output = infer_pool2d_shape(&[1, 32, 32, 64], &options).unwrap();
+        assert_eq!(output, vec![1, 16, 16, 64]);
+    }
+
+    #[test]
+    fn test_pool2d_with_stride() {
+        let options = Pool2dOptions {
+            window_dimensions: vec![3, 3],
+            strides: vec![2, 2],
+            dilations: vec![1, 1],
+            pads: vec![0, 0, 0, 0],
+            layout: Conv2dInputLayout::Nchw,
+        };
+        // Input: [1, 64, 28, 28], Window: [3, 3], Stride: [2, 2]
+        // Output: (28 - 3) / 2 + 1 = 13
+        let output = infer_pool2d_shape(&[1, 64, 28, 28], &options).unwrap();
+        assert_eq!(output, vec![1, 64, 13, 13]);
+    }
+
+    #[test]
+    fn test_pool2d_invalid_input_dim() {
+        let options = Pool2dOptions {
+            window_dimensions: vec![2, 2],
+            strides: vec![2, 2],
+            dilations: vec![1, 1],
+            pads: vec![0, 0, 0, 0],
+            layout: Conv2dInputLayout::Nchw,
+        };
+        // Input must be 4D
+        assert!(infer_pool2d_shape(&[64, 32, 32], &options).is_err());
     }
 }
