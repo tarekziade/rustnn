@@ -235,9 +235,10 @@ Execution context for neural network operations.
   - Returns dictionary of numpy arrays as outputs
 - `convert_to_onnx(graph, output_path)`: Export graph to ONNX file (for deployment/inspection)
 - `convert_to_coreml(graph, output_path)`: Export graph to CoreML file (macOS only, for deployment)
-- `create_tensor(shape, data_type)`: Create a tensor for explicit memory management
+- `create_tensor(shape, data_type, readable=True, writable=True, exportable_to_gpu=False)`: Create a tensor for explicit memory management ([MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md))
 - `read_tensor(tensor)`: Read tensor data (synchronous)
 - `write_tensor(tensor, data)`: Write tensor data (synchronous)
+- `dispatch(graph, inputs, outputs)`: Dispatch graph execution with MLTensor inputs/outputs ([MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md))
 
 #### `webnn.AsyncMLContext`
 Async wrapper for MLContext providing WebNN-compliant asynchronous execution.
@@ -249,7 +250,7 @@ async_context = webnn.AsyncMLContext(context)
 ```
 
 **Async Methods:**
-- `async dispatch(graph, inputs, outputs=None)`: Execute graph asynchronously (WebNN spec-compliant)
+- `async dispatch(graph, inputs, outputs)`: Execute graph asynchronously with MLTensor inputs/outputs ([MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md))
   - Returns immediately, execution happens in background
   - Use for non-blocking computation
 - `async read_tensor_async(tensor)`: Read tensor data asynchronously
@@ -257,7 +258,7 @@ async_context = webnn.AsyncMLContext(context)
 
 **Synchronous Methods (pass-through):**
 - `create_graph_builder()`: Create a new graph builder
-- `create_tensor(shape, data_type)`: Create a tensor
+- `create_tensor(shape, data_type, readable=True, writable=True, exportable_to_gpu=False)`: Create a tensor
 - `compute(graph, inputs, outputs=None)`: Synchronous execution
 - `read_tensor(tensor)`: Synchronous tensor read
 - `write_tensor(tensor, data)`: Synchronous tensor write
@@ -326,10 +327,18 @@ Compiled computational graph.
 #### `webnn.MLTensor`
 Explicit tensor for memory management.
 
+Following the [W3C WebNN MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md).
+
 **Properties:**
 - `data_type`: Data type string
 - `shape`: Tensor dimensions
 - `size`: Total number of elements
+- `readable`: Whether tensor data can be read back to CPU
+- `writable`: Whether tensor data can be written from CPU
+- `exportable_to_gpu`: Whether tensor can be exported as GPU texture
+
+**Methods:**
+- `destroy()`: Explicitly release tensor resources
 
 ### Supported Data Types
 
