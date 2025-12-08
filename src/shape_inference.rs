@@ -1683,6 +1683,70 @@ pub fn infer_prelu_shape(input_shape: &[u32], slope_shape: &[u32]) -> Result<Vec
     Ok(input_shape.to_vec())
 }
 
+/// Infer output shape for clamp operation
+///
+/// Clamp constrains values between a minimum and maximum element-wise.
+/// Output shape equals input shape.
+pub fn infer_clamp_shape(input_shape: &[u32]) -> Vec<u32> {
+    input_shape.to_vec()
+}
+
+/// Infer output shape for gemm (general matrix multiplication) operation
+///
+/// GEMM computes: alpha * A' * B' + beta * C
+/// where A' and B' are optionally transposed versions of A and B
+///
+/// For 2D matrices:
+/// - If a_transpose: A has shape [K, M], else [M, K]
+/// - If b_transpose: B has shape [N, K], else [K, N]
+/// - Output has shape [M, N]
+pub fn infer_gemm_shape(
+    a_shape: &[u32],
+    b_shape: &[u32],
+    a_transpose: bool,
+    b_transpose: bool,
+) -> Result<Vec<u32>, GraphError> {
+    // Gemm only supports 2D matrices
+    if a_shape.len() != 2 || b_shape.len() != 2 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "GEMM requires 2D matrices, got shapes {:?} and {:?}",
+                a_shape, b_shape
+            ),
+        });
+    }
+
+    // Get dimensions after optional transposition
+    let (m, k_a) = if a_transpose {
+        (a_shape[1], a_shape[0])
+    } else {
+        (a_shape[0], a_shape[1])
+    };
+
+    let (k_b, n) = if b_transpose {
+        (b_shape[1], b_shape[0])
+    } else {
+        (b_shape[0], b_shape[1])
+    };
+
+    // Check that inner dimensions match
+    if k_a != k_b {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "GEMM inner dimensions must match: A{}[M={}, K={}] x B{}[K={}, N={}]",
+                if a_transpose { "^T" } else { "" },
+                m,
+                k_a,
+                if b_transpose { "^T" } else { "" },
+                k_b,
+                n
+            ),
+        });
+    }
+
+    Ok(vec![m, n])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2979,5 +3043,47 @@ mod tests {
         // Dimension mismatch (not 1 and not equal)
         assert!(infer_prelu_shape(&[2, 3, 4], &[2, 5, 4]).is_err());
         assert!(infer_prelu_shape(&[2, 3, 4], &[3, 3, 4]).is_err());
+    }
+
+    #[test]
+    fn test_clamp_shape() {
+        // Clamp preserves input shape
+        assert_eq!(infer_clamp_shape(&[2, 3, 4]), vec![2, 3, 4]);
+        assert_eq!(infer_clamp_shape(&[1, 224, 224, 3]), vec![1, 224, 224, 3]);
+        assert_eq!(infer_clamp_shape(&[10]), vec![10]);
+    }
+
+    #[test]
+    fn test_gemm_2d() {
+        // Basic 2D gemm: [M, K] x [K, N] -> [M, N]
+        assert_eq!(
+            infer_gemm_shape(&[3, 4], &[4, 5], false, false).unwrap(),
+            vec![3, 5]
+        );
+
+        // With transposition
+        assert_eq!(
+            infer_gemm_shape(&[4, 3], &[4, 5], true, false).unwrap(),
+            vec![3, 5]
+        );
+        assert_eq!(
+            infer_gemm_shape(&[3, 4], &[5, 4], false, true).unwrap(),
+            vec![3, 5]
+        );
+        assert_eq!(
+            infer_gemm_shape(&[4, 3], &[5, 4], true, true).unwrap(),
+            vec![3, 5]
+        );
+    }
+
+    #[test]
+    fn test_gemm_invalid() {
+        // Incompatible dimensions
+        assert!(infer_gemm_shape(&[3, 4], &[5, 6], false, false).is_err());
+        assert!(infer_gemm_shape(&[3, 4], &[5, 6], true, false).is_err());
+
+        // Non-2D inputs
+        assert!(infer_gemm_shape(&[3], &[3, 4], false, false).is_err());
+        assert!(infer_gemm_shape(&[3, 4], &[4], false, false).is_err());
     }
 }
