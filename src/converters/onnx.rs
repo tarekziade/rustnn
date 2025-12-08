@@ -551,6 +551,7 @@ impl OnnxConverter {
         if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
                 name: Some("alpha".to_string()),
+                r#type: Some(AttributeType::Float as i32),
                 f: Some(alpha as f32),
                 ..Default::default()
             });
@@ -559,6 +560,7 @@ impl OnnxConverter {
         if let Some(beta) = op.attributes.get("beta").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
                 name: Some("beta".to_string()),
+                r#type: Some(AttributeType::Float as i32),
                 f: Some(beta as f32),
                 ..Default::default()
             });
@@ -574,6 +576,7 @@ impl OnnxConverter {
         if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
                 name: Some("alpha".to_string()),
+                r#type: Some(AttributeType::Float as i32),
                 f: Some(alpha as f32),
                 ..Default::default()
             });
@@ -582,6 +585,7 @@ impl OnnxConverter {
         if let Some(beta) = op.attributes.get("beta").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
                 name: Some("beta".to_string()),
+                r#type: Some(AttributeType::Float as i32),
                 f: Some(beta as f32),
                 ..Default::default()
             });
@@ -597,6 +601,7 @@ impl OnnxConverter {
         if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
                 name: Some("alpha".to_string()),
+                r#type: Some(AttributeType::Float as i32),
                 f: Some(alpha as f32),
                 ..Default::default()
             });
@@ -612,6 +617,7 @@ impl OnnxConverter {
         if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
                 name: Some("alpha".to_string()),
+                r#type: Some(AttributeType::Float as i32),
                 f: Some(alpha as f32),
                 ..Default::default()
             });

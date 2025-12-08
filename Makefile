@@ -71,7 +71,7 @@ validate-all-env: build test onnx-validate coreml-validate
 # Python Targets
 # ==============================================================================
 
-python-dev:
+python-dev: onnxruntime-download
 	@echo "Installing Python package in development mode..."
 	pip install maturin
 	ORT_STRATEGY=system \
@@ -80,7 +80,7 @@ python-dev:
 	RUSTFLAGS="-L $(ORT_LIB_DIR)" \
 	maturin develop --features python,onnx-runtime
 
-python-build:
+python-build: onnxruntime-download
 	@echo "Building Python wheel..."
 	pip install maturin
 	ORT_STRATEGY=system \
