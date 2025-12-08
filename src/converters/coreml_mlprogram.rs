@@ -100,6 +100,16 @@ mod mil_ops {
 
     // Shape operations
     pub const RESHAPE: &str = "reshape";
+
+    // Tensor manipulation operations
+    pub const TRANSPOSE: &str = "transpose";
+    pub const CONCAT: &str = "concat";
+    pub const SLICE: &str = "slice_by_size";
+    pub const EXPAND: &str = "tile";
+    pub const GATHER: &str = "gather";
+    pub const SPLIT: &str = "split";
+    pub const WHERE: &str = "select";
+    pub const PAD: &str = "pad";
 }
 
 #[derive(Default)]
@@ -427,6 +437,16 @@ impl CoremlMlProgramConverter {
             // Shape operations
             "reshape" => mil_ops::RESHAPE,
 
+            // Tensor manipulation
+            "transpose" => mil_ops::TRANSPOSE,
+            "concat" => mil_ops::CONCAT,
+            "slice" => mil_ops::SLICE,
+            "expand" => mil_ops::EXPAND,
+            "gather" => mil_ops::GATHER,
+            "split" => mil_ops::SPLIT,
+            "where" => mil_ops::WHERE,
+            "pad" => mil_ops::PAD,
+
             _ => {
                 return Err(GraphError::ConversionFailed {
                     format: "coreml_mlprogram".to_string(),
@@ -717,6 +737,189 @@ impl CoremlMlProgramConverter {
                     inputs.insert(
                         "epsilon".to_string(),
                         Self::create_immediate_float(epsilon as f32),
+                    );
+                }
+            }
+
+            // Tensor manipulation operations
+            "transpose" => {
+                // transpose: x, perm (permutation)
+                if !input_names.is_empty() {
+                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
+                }
+
+                // Add permutation parameter if present
+                if let Some(perm) = op.attributes.get("permutation").and_then(|v| v.as_array()) {
+                    let perm_u32: Vec<u32> = perm
+                        .iter()
+                        .filter_map(|v| v.as_u64().map(|u| u as u32))
+                        .collect();
+                    if !perm_u32.is_empty() {
+                        inputs.insert(
+                            "perm".to_string(),
+                            Self::create_immediate_int_array(&perm_u32),
+                        );
+                    }
+                }
+            }
+
+            "concat" => {
+                // concat: values (list of tensors), axis
+                // In CoreML, all inputs are listed as separate named inputs
+                for (idx, input_name) in input_names.iter().enumerate() {
+                    inputs.insert(format!("values_{}", idx), Self::create_argument(input_name));
+                }
+
+                // Add axis parameter
+                if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
+                    inputs.insert("axis".to_string(), Self::create_immediate_int(axis as u32));
+                }
+            }
+
+            "slice" => {
+                // slice_by_size: x, begin, size
+                if !input_names.is_empty() {
+                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
+                }
+
+                // Add starts (begin) parameter
+                if let Some(starts) = op.attributes.get("starts").and_then(|v| v.as_array()) {
+                    let starts_u32: Vec<u32> = starts
+                        .iter()
+                        .filter_map(|v| v.as_u64().map(|u| u as u32))
+                        .collect();
+                    if !starts_u32.is_empty() {
+                        inputs.insert(
+                            "begin".to_string(),
+                            Self::create_immediate_int_array(&starts_u32),
+                        );
+                    }
+                }
+
+                // Add sizes parameter
+                if let Some(sizes) = op.attributes.get("sizes").and_then(|v| v.as_array()) {
+                    let sizes_u32: Vec<u32> = sizes
+                        .iter()
+                        .filter_map(|v| v.as_u64().map(|u| u as u32))
+                        .collect();
+                    if !sizes_u32.is_empty() {
+                        inputs.insert(
+                            "size".to_string(),
+                            Self::create_immediate_int_array(&sizes_u32),
+                        );
+                    }
+                }
+            }
+
+            "expand" => {
+                // tile: x, reps (repetitions)
+                if !input_names.is_empty() {
+                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
+                }
+
+                // Add newShape parameter as reps
+                if let Some(new_shape) = op.attributes.get("newShape").and_then(|v| v.as_array()) {
+                    let new_shape_u32: Vec<u32> = new_shape
+                        .iter()
+                        .filter_map(|v| v.as_u64().map(|u| u as u32))
+                        .collect();
+                    if !new_shape_u32.is_empty() {
+                        inputs.insert(
+                            "reps".to_string(),
+                            Self::create_immediate_int_array(&new_shape_u32),
+                        );
+                    }
+                }
+            }
+
+            "gather" => {
+                // gather: params (data), indices, axis
+                if input_names.len() >= 2 {
+                    inputs.insert("params".to_string(), Self::create_argument(&input_names[0]));
+                    inputs.insert(
+                        "indices".to_string(),
+                        Self::create_argument(&input_names[1]),
+                    );
+                }
+
+                // Add axis parameter (defaults to 0)
+                if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
+                    inputs.insert("axis".to_string(), Self::create_immediate_int(axis as u32));
+                }
+            }
+
+            "split" => {
+                // split: x, num_splits or split_sizes, axis
+                if !input_names.is_empty() {
+                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
+                }
+
+                // Add splits parameter (can be int or array)
+                if let Some(splits) = op.attributes.get("splits") {
+                    if let Some(count) = splits.as_u64() {
+                        inputs.insert(
+                            "num_splits".to_string(),
+                            Self::create_immediate_int(count as u32),
+                        );
+                    } else if let Some(sizes) = splits.as_array() {
+                        let sizes_u32: Vec<u32> = sizes
+                            .iter()
+                            .filter_map(|v| v.as_u64().map(|u| u as u32))
+                            .collect();
+                        if !sizes_u32.is_empty() {
+                            inputs.insert(
+                                "split_sizes".to_string(),
+                                Self::create_immediate_int_array(&sizes_u32),
+                            );
+                        }
+                    }
+                }
+
+                // Add axis parameter (defaults to 0)
+                if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
+                    inputs.insert("axis".to_string(), Self::create_immediate_int(axis as u32));
+                }
+            }
+
+            "where" => {
+                // select: cond, a (true_value), b (false_value)
+                if input_names.len() >= 3 {
+                    inputs.insert("cond".to_string(), Self::create_argument(&input_names[0]));
+                    inputs.insert("a".to_string(), Self::create_argument(&input_names[1]));
+                    inputs.insert("b".to_string(), Self::create_argument(&input_names[2]));
+                }
+            }
+
+            "pad" => {
+                // pad: x, pad, mode, constant_val
+                if !input_names.is_empty() {
+                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
+                }
+
+                // Add padding parameter
+                if let Some(padding) = op.attributes.get("padding").and_then(|v| v.as_array()) {
+                    let padding_u32: Vec<u32> = padding
+                        .iter()
+                        .filter_map(|v| v.as_u64().map(|u| u as u32))
+                        .collect();
+                    if !padding_u32.is_empty() {
+                        inputs.insert(
+                            "pad".to_string(),
+                            Self::create_immediate_int_array(&padding_u32),
+                        );
+                    }
+                }
+
+                // Add mode parameter (defaults to "constant")
+                // CoreML pad modes: "constant", "reflect", "replicate"
+                // WebNN modes: "constant", "edge", "reflection", "symmetric"
+                // Note: "edge" maps to "replicate", "reflection" and "symmetric" are similar
+
+                // Add constant value if present
+                if let Some(value) = op.attributes.get("value").and_then(|v| v.as_f64()) {
+                    inputs.insert(
+                        "constant_val".to_string(),
+                        Self::create_immediate_float(value as f32),
                     );
                 }
             }

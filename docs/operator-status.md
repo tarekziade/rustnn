@@ -140,34 +140,51 @@ This document tracks the implementation status of all WebNN operators across dif
 |-----------|----------------|------------|------|------------------|
 | `reshape` | ✅ | ✅ | ✅ | ✅ |
 
+## Tensor Manipulation
+
+| Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
+|-----------|----------------|------------|------|------------------|
+| `transpose` | ✅ | ✅ | ✅ | ✅ |
+| `concat` | ✅ | ✅ | ✅ | ✅ |
+| `slice` | ✅ | ✅ | ✅ | ✅ |
+| `expand` | ✅ | ✅ | ✅ | ✅ |
+| `gather` | ✅ | ✅ | ✅ | ✅ |
+| `split` | ✅ | ✅ | ✅ | ✅ |
+| `where` | ✅ | ✅ | ✅ | ✅ |
+| `pad` | ✅ | ✅ | ✅ | ✅ |
+
 ---
 
 ## Summary Statistics
 
 ```
 WebNN Spec (CR Draft Dec 2025): ~95 total operations
-Core Operations Implemented:     60/60 (100%) ✅
+Core Operations Implemented:     68/68 (100%) ✅
 Deferred Operations:              4 (RNN: lstm, lstmCell, gru, gruCell)
-Remaining Operations:             ~31 (tensor manipulation, advanced activations)
+Remaining Operations:             ~23 (advanced tensor ops, additional activations)
 
 Implementation Status:
-Shape Inference:                  60/60 (100%)
-Python API:                       60/60 (100%)
-ONNX Backend:                     60/60 (100%)
-CoreML MLProgram:                 60/60 (100%) ✅
+Shape Inference:                  68/68 (100%)
+Python API:                       68/68 (100%)
+ONNX Backend:                     68/68 (100%)
+CoreML MLProgram:                 68/68 (100%) ✅
 ```
 
 **🎉 CORE OPERATIONS FULLY IMPLEMENTED! 🎉**
 
 ### Implementation Status
 
-All 60 core WebNN operations are now fully implemented across all backends:
+All 68 core WebNN operations are now fully implemented across all backends:
 - ✅ **Shape Inference**: Complete type and shape validation for all operations
 - ✅ **Python API**: W3C WebNN spec-compliant Python bindings
 - ✅ **ONNX Backend**: Cross-platform execution with full parameter support
 - ✅ **CoreML MLProgram**: macOS GPU/Neural Engine execution with full parameter support
 
 **Recent Additions:**
+- **Tensor Manipulation Operations (8 operations):** `transpose`, `concat`, `slice`, `expand`, `gather`, `split`, `where`, `pad`
+  - Full implementation across all backends (shape inference, Python API, ONNX, CoreML)
+  - 46 comprehensive Python tests covering various scenarios
+  - Essential for Transformers, CNNs, and modern ML architectures
 - Added full parameter support (strides, dilations, pads, groups, epsilon, etc.) for:
   - Convolution operations: `conv2d`, `conv_transpose2d`
   - Pooling operations: `average_pool2d`, `max_pool2d`
@@ -192,32 +209,26 @@ The following operations are defined in the WebNN specification but are **intent
 - **Complexity**: Each operation requires 10-15 parameters with complex shape inference (~2000-3000 LOC total)
 - **Spec Evolution**: Active [W3C discussion](https://github.com/webmachinelearning/webnn/issues/453) about removing these in favor of lower-level primitives
 - **Modern ML Trends**: LSTM/GRU largely obsoleted by Transformer architectures
-- **Priority**: Simpler, more widely-used operations (concat, gather, slice, pad) should be implemented first
+- **Priority**: Simpler, more widely-used operations should be implemented first
 - **Test Coverage**: WPT tests exist but can be added when/if implementation is prioritized
 
 ### Priority Operations for Next Implementation
 
 Based on modern ML architecture requirements, the following operations should be prioritized:
 
-**High Priority (Transformers, CNNs):**
-- `concat` - Concatenate tensors along axis
-- `gather` - Gather elements from tensor
-- `slice` - Extract sub-tensors
-- `split` - Split tensor into parts
-- `transpose` - Permute dimensions
-- `expand` - Broadcast to shape
-- `where` - Conditional selection
-- `pad` - Add padding
-
-**Medium Priority (Advanced architectures):**
+**High Priority (Advanced architectures):**
 - `gelu` - GELU activation (Transformers)
-- `layerNorm` parameters - Complete parameter support
-- `softmax` parameters - Add axis parameter
 - `squeeze` / `unsqueeze` - Dimension manipulation
+- `argMax` / `argMin` - Find indices of extreme values
+- `cast` - Type conversion
 
-**Lower Priority (Specialized):**
+**Medium Priority (Additional features):**
+- `softmax` parameters - Add axis parameter
 - `scatter` - Scatter updates
 - `tile` - Repeat tensor
+- `triangular` - Extract triangular part
+
+**Lower Priority (Specialized activations):**
 - `prelu`, `elu`, `leakyRelu` - Additional activations
 - `hardSigmoid`, `hardSwish`, `softplus`, `softsign` - Specialized activations
 

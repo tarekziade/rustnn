@@ -945,6 +945,389 @@ pub fn infer_quantize_linear_shape(input_shape: &[u32]) -> Result<Vec<u32>, Grap
     Ok(input_shape.to_vec())
 }
 
+/// Infer output shape for transpose operation
+///
+/// Transpose reorders tensor dimensions according to a permutation.
+/// If no permutation is provided, dimensions are reversed.
+pub fn infer_transpose_shape(
+    input_shape: &[u32],
+    permutation: Option<&[u32]>,
+) -> Result<Vec<u32>, GraphError> {
+    let rank = input_shape.len();
+
+    // If no permutation, reverse dimensions (default WebNN behavior)
+    if permutation.is_none() {
+        let mut output_shape = input_shape.to_vec();
+        output_shape.reverse();
+        return Ok(output_shape);
+    }
+
+    let perm = permutation.unwrap();
+
+    // Validate permutation length matches input rank
+    if perm.len() != rank {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Transpose permutation length {} must match input rank {}, input shape: {:?}",
+                perm.len(),
+                rank,
+                input_shape
+            ),
+        });
+    }
+
+    // Validate permutation contains unique values in range [0, rank)
+    let mut seen = vec![false; rank];
+    for &axis in perm {
+        if axis >= rank as u32 {
+            return Err(GraphError::ShapeInferenceFailed {
+                reason: format!(
+                    "Transpose permutation axis {} out of bounds for rank {}, input shape: {:?}",
+                    axis, rank, input_shape
+                ),
+            });
+        }
+        if seen[axis as usize] {
+            return Err(GraphError::ShapeInferenceFailed {
+                reason: format!("Transpose permutation contains duplicate axis {}", axis),
+            });
+        }
+        seen[axis as usize] = true;
+    }
+
+    // Build output shape by permuting dimensions
+    let output_shape: Vec<u32> = perm.iter().map(|&i| input_shape[i as usize]).collect();
+
+    Ok(output_shape)
+}
+
+/// Infer output shape for concat operation
+///
+/// Concatenates multiple tensors along a specified axis.
+pub fn infer_concat_shape(input_shapes: &[Vec<u32>], axis: u32) -> Result<Vec<u32>, GraphError> {
+    if input_shapes.is_empty() {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: "Concat requires at least one input".to_string(),
+        });
+    }
+
+    let first_shape = &input_shapes[0];
+    let rank = first_shape.len();
+
+    // Validate axis is within bounds
+    if axis >= rank as u32 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Concat axis {} out of bounds for rank {}, shape: {:?}",
+                axis, rank, first_shape
+            ),
+        });
+    }
+
+    // Validate all inputs have same rank
+    for (idx, shape) in input_shapes.iter().enumerate() {
+        if shape.len() != rank {
+            return Err(GraphError::ShapeInferenceFailed {
+                reason: format!(
+                    "Concat input {} has rank {} but expected rank {}, shapes: {:?}",
+                    idx,
+                    shape.len(),
+                    rank,
+                    input_shapes
+                ),
+            });
+        }
+    }
+
+    // Validate all dimensions except concat axis match
+    for dim_idx in 0..rank {
+        if dim_idx == axis as usize {
+            continue;
+        }
+        let expected_dim = first_shape[dim_idx];
+        for (input_idx, shape) in input_shapes.iter().enumerate() {
+            if shape[dim_idx] != expected_dim {
+                return Err(GraphError::ShapeInferenceFailed {
+                    reason: format!(
+                        "Concat input {} dimension {} is {} but expected {} (all non-concat dimensions must match)",
+                        input_idx, dim_idx, shape[dim_idx], expected_dim
+                    ),
+                });
+            }
+        }
+    }
+
+    // Compute output shape: sum concat axis, others match first input
+    let mut output_shape = first_shape.clone();
+    let concat_dim_size: u32 = input_shapes.iter().map(|shape| shape[axis as usize]).sum();
+    output_shape[axis as usize] = concat_dim_size;
+
+    Ok(output_shape)
+}
+
+/// Infer output shape for slice operation
+///
+/// Extracts a contiguous sub-tensor from the input.
+pub fn infer_slice_shape(
+    input_shape: &[u32],
+    starts: &[u32],
+    sizes: &[u32],
+) -> Result<Vec<u32>, GraphError> {
+    let rank = input_shape.len();
+
+    // Validate starts and sizes have same length as input rank
+    if starts.len() != rank {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Slice starts length {} must match input rank {}, input shape: {:?}",
+                starts.len(),
+                rank,
+                input_shape
+            ),
+        });
+    }
+
+    if sizes.len() != rank {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Slice sizes length {} must match input rank {}, input shape: {:?}",
+                sizes.len(),
+                rank,
+                input_shape
+            ),
+        });
+    }
+
+    // Validate starts and sizes are within bounds
+    for (dim_idx, (&start, &size)) in starts.iter().zip(sizes.iter()).enumerate() {
+        let input_dim = input_shape[dim_idx];
+
+        if start >= input_dim {
+            return Err(GraphError::ShapeInferenceFailed {
+                reason: format!(
+                    "Slice start {} for dimension {} exceeds input dimension size {}",
+                    start, dim_idx, input_dim
+                ),
+            });
+        }
+
+        if start + size > input_dim {
+            return Err(GraphError::ShapeInferenceFailed {
+                reason: format!(
+                    "Slice end {} (start {} + size {}) for dimension {} exceeds input dimension size {}",
+                    start + size,
+                    start,
+                    size,
+                    dim_idx,
+                    input_dim
+                ),
+            });
+        }
+    }
+
+    // Output shape is simply the sizes
+    Ok(sizes.to_vec())
+}
+
+/// Infer output shape for expand operation
+///
+/// Broadcasts a tensor to a larger shape. Dimensions of size 1 can be expanded to larger sizes.
+pub fn infer_expand_shape(input_shape: &[u32], new_shape: &[u32]) -> Result<Vec<u32>, GraphError> {
+    let input_rank = input_shape.len();
+    let output_rank = new_shape.len();
+
+    // Output rank must be >= input rank
+    if output_rank < input_rank {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Expand new_shape rank {} must be >= input rank {}, input shape: {:?}, new_shape: {:?}",
+                output_rank, input_rank, input_shape, new_shape
+            ),
+        });
+    }
+
+    // Align shapes from the right (trailing dimensions)
+    let offset = output_rank - input_rank;
+
+    for i in 0..input_rank {
+        let input_dim = input_shape[i];
+        let output_dim = new_shape[offset + i];
+
+        // Input dimension must be 1 or match output dimension
+        if input_dim != 1 && input_dim != output_dim {
+            return Err(GraphError::ShapeInferenceFailed {
+                reason: format!(
+                    "Expand dimension {} mismatch: input {} can only expand if it's 1, but new_shape specifies {}, input shape: {:?}, new_shape: {:?}",
+                    i, input_dim, output_dim, input_shape, new_shape
+                ),
+            });
+        }
+    }
+
+    // Output shape is the new_shape
+    Ok(new_shape.to_vec())
+}
+
+/// Infer output shape for gather operation
+///
+/// Gathers values from input tensor along an axis according to indices.
+pub fn infer_gather_shape(
+    input_shape: &[u32],
+    indices_shape: &[u32],
+    axis: u32,
+) -> Result<Vec<u32>, GraphError> {
+    let input_rank = input_shape.len();
+
+    // Validate axis is within bounds
+    if axis >= input_rank as u32 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Gather axis {} out of bounds for input rank {}, input shape: {:?}",
+                axis, input_rank, input_shape
+            ),
+        });
+    }
+
+    // Output shape = input_shape[0:axis] + indices_shape + input_shape[axis+1:]
+    let mut output_shape = Vec::new();
+    output_shape.extend_from_slice(&input_shape[..axis as usize]);
+    output_shape.extend_from_slice(indices_shape);
+    output_shape.extend_from_slice(&input_shape[(axis as usize + 1)..]);
+
+    Ok(output_shape)
+}
+
+/// Represents the split specification
+#[derive(Debug, Clone)]
+pub enum SplitSpec {
+    /// Split into N equal parts
+    Count(u32),
+    /// Split into parts of specified sizes
+    Sizes(Vec<u32>),
+}
+
+/// Infer output shapes for split operation
+///
+/// Splits a tensor into multiple sub-tensors along an axis.
+pub fn infer_split_shapes(
+    input_shape: &[u32],
+    split_spec: &SplitSpec,
+    axis: u32,
+) -> Result<Vec<Vec<u32>>, GraphError> {
+    let input_rank = input_shape.len();
+
+    // Validate axis is within bounds
+    if axis >= input_rank as u32 {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Split axis {} out of bounds for input rank {}, input shape: {:?}",
+                axis, input_rank, input_shape
+            ),
+        });
+    }
+
+    let axis_size = input_shape[axis as usize];
+
+    let split_sizes: Vec<u32> = match split_spec {
+        SplitSpec::Count(count) => {
+            if *count == 0 {
+                return Err(GraphError::ShapeInferenceFailed {
+                    reason: "Split count must be > 0".to_string(),
+                });
+            }
+
+            if axis_size % count != 0 {
+                return Err(GraphError::ShapeInferenceFailed {
+                    reason: format!(
+                        "Split count {} does not evenly divide axis size {}, input shape: {:?}",
+                        count, axis_size, input_shape
+                    ),
+                });
+            }
+
+            let size_per_split = axis_size / count;
+            vec![size_per_split; *count as usize]
+        }
+        SplitSpec::Sizes(sizes) => {
+            let total: u32 = sizes.iter().sum();
+            if total != axis_size {
+                return Err(GraphError::ShapeInferenceFailed {
+                    reason: format!(
+                        "Split sizes {:?} sum to {} but axis size is {}, input shape: {:?}",
+                        sizes, total, axis_size, input_shape
+                    ),
+                });
+            }
+            sizes.clone()
+        }
+    };
+
+    // Create output shapes
+    let mut output_shapes = Vec::new();
+    for &split_size in &split_sizes {
+        let mut shape = input_shape.to_vec();
+        shape[axis as usize] = split_size;
+        output_shapes.push(shape);
+    }
+
+    Ok(output_shapes)
+}
+
+/// Infer output shape for where operation
+///
+/// Selects elements from trueValue or falseValue based on condition.
+/// All inputs are broadcast to a common shape.
+pub fn infer_where_shape(
+    condition_shape: &[u32],
+    true_value_shape: &[u32],
+    false_value_shape: &[u32],
+) -> Result<Vec<u32>, GraphError> {
+    // All three inputs are broadcast to a common shape
+    let temp_shape = broadcast_shapes(condition_shape, true_value_shape)?;
+    let output_shape = broadcast_shapes(&temp_shape, false_value_shape)?;
+
+    Ok(output_shape)
+}
+
+/// Pad mode for pad operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PadMode {
+    Constant,
+    Edge,
+    Reflection,
+    Symmetric,
+}
+
+/// Infer output shape for pad operation
+///
+/// Adds padding around the input tensor.
+/// Padding is specified as [begin_0, begin_1, ..., begin_n, end_0, end_1, ..., end_n]
+pub fn infer_pad_shape(input_shape: &[u32], padding: &[u32]) -> Result<Vec<u32>, GraphError> {
+    let rank = input_shape.len();
+
+    // Padding must have length 2 * rank (begin and end for each dimension)
+    if padding.len() != 2 * rank {
+        return Err(GraphError::ShapeInferenceFailed {
+            reason: format!(
+                "Pad padding length {} must be 2 * input rank {}, input shape: {:?}",
+                padding.len(),
+                rank,
+                input_shape
+            ),
+        });
+    }
+
+    // Compute output shape
+    let mut output_shape = Vec::with_capacity(rank);
+    for i in 0..rank {
+        let begin_pad = padding[i];
+        let end_pad = padding[rank + i];
+        output_shape.push(input_shape[i] + begin_pad + end_pad);
+    }
+
+    Ok(output_shape)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1550,5 +1933,274 @@ mod tests {
         // Works with any dimensional input
         let output = infer_quantize_linear_shape(&[10]).unwrap();
         assert_eq!(output, vec![10]);
+    }
+
+    // Transpose tests
+    #[test]
+    fn test_transpose_default_permutation() {
+        // Default: reverse dimensions
+        assert_eq!(infer_transpose_shape(&[4, 6], None).unwrap(), vec![6, 4]);
+        assert_eq!(
+            infer_transpose_shape(&[2, 3, 4], None).unwrap(),
+            vec![4, 3, 2]
+        );
+    }
+
+    #[test]
+    fn test_transpose_custom_permutation() {
+        // 2D with explicit permutation
+        assert_eq!(
+            infer_transpose_shape(&[4, 6], Some(&[1, 0])).unwrap(),
+            vec![6, 4]
+        );
+
+        // 3D with custom permutation
+        assert_eq!(
+            infer_transpose_shape(&[2, 3, 4], Some(&[2, 0, 1])).unwrap(),
+            vec![4, 2, 3]
+        );
+    }
+
+    #[test]
+    fn test_transpose_invalid_permutation() {
+        // Wrong length
+        assert!(infer_transpose_shape(&[2, 3, 4], Some(&[0, 1])).is_err());
+
+        // Out of bounds axis
+        assert!(infer_transpose_shape(&[2, 3], Some(&[0, 3])).is_err());
+
+        // Duplicate axis
+        assert!(infer_transpose_shape(&[2, 3], Some(&[0, 0])).is_err());
+    }
+
+    // Concat tests
+    #[test]
+    fn test_concat_basic() {
+        let shapes = vec![vec![2, 3], vec![2, 3]];
+        assert_eq!(infer_concat_shape(&shapes, 0).unwrap(), vec![4, 3]);
+
+        let shapes = vec![vec![2, 3], vec![2, 3]];
+        assert_eq!(infer_concat_shape(&shapes, 1).unwrap(), vec![2, 6]);
+    }
+
+    #[test]
+    fn test_concat_multiple_inputs() {
+        let shapes = vec![vec![1, 3], vec![2, 3], vec![3, 3]];
+        assert_eq!(infer_concat_shape(&shapes, 0).unwrap(), vec![6, 3]);
+    }
+
+    #[test]
+    fn test_concat_3d() {
+        let shapes = vec![vec![2, 3, 4], vec![2, 3, 4]];
+        assert_eq!(infer_concat_shape(&shapes, 2).unwrap(), vec![2, 3, 8]);
+    }
+
+    #[test]
+    fn test_concat_invalid() {
+        // Empty inputs
+        assert!(infer_concat_shape(&[], 0).is_err());
+
+        // Mismatched ranks
+        let shapes = vec![vec![2, 3], vec![2, 3, 4]];
+        assert!(infer_concat_shape(&shapes, 0).is_err());
+
+        // Mismatched non-concat dimensions
+        let shapes = vec![vec![2, 3], vec![2, 4]];
+        assert!(infer_concat_shape(&shapes, 0).is_err());
+
+        // Axis out of bounds
+        let shapes = vec![vec![2, 3]];
+        assert!(infer_concat_shape(&shapes, 2).is_err());
+    }
+
+    // Slice tests
+    #[test]
+    fn test_slice_basic() {
+        // 1D slice
+        assert_eq!(infer_slice_shape(&[24], &[12], &[12]).unwrap(), vec![12]);
+
+        // 2D slice
+        assert_eq!(
+            infer_slice_shape(&[4, 6], &[2, 2], &[2, 4]).unwrap(),
+            vec![2, 4]
+        );
+
+        // 3D slice
+        assert_eq!(
+            infer_slice_shape(&[4, 3, 2], &[1, 1, 1], &[3, 2, 1]).unwrap(),
+            vec![3, 2, 1]
+        );
+    }
+
+    #[test]
+    fn test_slice_invalid() {
+        // starts length mismatch
+        assert!(infer_slice_shape(&[4, 6], &[2], &[2, 4]).is_err());
+
+        // sizes length mismatch
+        assert!(infer_slice_shape(&[4, 6], &[2, 2], &[2]).is_err());
+
+        // start out of bounds
+        assert!(infer_slice_shape(&[4, 6], &[5, 2], &[1, 4]).is_err());
+
+        // end out of bounds
+        assert!(infer_slice_shape(&[4, 6], &[2, 2], &[3, 4]).is_err());
+    }
+
+    // Expand tests
+    #[test]
+    fn test_expand_basic() {
+        // Expand 1D to larger 1D
+        assert_eq!(infer_expand_shape(&[1], &[24]).unwrap(), vec![24]);
+
+        // Expand to higher dimensions
+        assert_eq!(infer_expand_shape(&[1], &[4, 6]).unwrap(), vec![4, 6]);
+
+        // Expand some dimensions
+        assert_eq!(infer_expand_shape(&[1, 6], &[4, 6]).unwrap(), vec![4, 6]);
+    }
+
+    #[test]
+    fn test_expand_scalar() {
+        // 0D (scalar) to various shapes
+        assert_eq!(infer_expand_shape(&[], &[24]).unwrap(), vec![24]);
+        assert_eq!(infer_expand_shape(&[], &[4, 6]).unwrap(), vec![4, 6]);
+    }
+
+    #[test]
+    fn test_expand_invalid() {
+        // Output rank < input rank
+        assert!(infer_expand_shape(&[2, 3], &[6]).is_err());
+
+        // Non-1 dimension can't be expanded
+        assert!(infer_expand_shape(&[2, 3], &[4, 3]).is_err());
+    }
+
+    // Gather tests
+    #[test]
+    fn test_gather_basic() {
+        // 1D input, 1D indices
+        assert_eq!(infer_gather_shape(&[24], &[8], 0).unwrap(), vec![8]);
+
+        // 2D input, 1D indices, axis=0
+        assert_eq!(infer_gather_shape(&[12, 2], &[8], 0).unwrap(), vec![8, 2]);
+
+        // 3D input, 2D indices, axis=1
+        assert_eq!(
+            infer_gather_shape(&[3, 4, 2], &[2, 2], 1).unwrap(),
+            vec![3, 2, 2, 2]
+        );
+    }
+
+    #[test]
+    fn test_gather_scalar_indices() {
+        // Scalar indices (0D)
+        assert_eq!(
+            infer_gather_shape(&[24], &[], 0).unwrap(),
+            Vec::<u32>::new()
+        );
+    }
+
+    #[test]
+    fn test_gather_invalid() {
+        // Axis out of bounds
+        assert!(infer_gather_shape(&[24], &[8], 1).is_err());
+    }
+
+    // Split tests
+    #[test]
+    fn test_split_by_count() {
+        // Split 1D into 3 equal parts
+        let shapes = infer_split_shapes(&[24], &SplitSpec::Count(3), 0).unwrap();
+        assert_eq!(shapes, vec![vec![8], vec![8], vec![8]]);
+
+        // Split 2D along axis 0
+        let shapes = infer_split_shapes(&[8, 3], &SplitSpec::Count(2), 0).unwrap();
+        assert_eq!(shapes, vec![vec![4, 3], vec![4, 3]]);
+    }
+
+    #[test]
+    fn test_split_by_sizes() {
+        // Split with custom sizes
+        let shapes = infer_split_shapes(&[24], &SplitSpec::Sizes(vec![8, 8, 8]), 0).unwrap();
+        assert_eq!(shapes, vec![vec![8], vec![8], vec![8]]);
+
+        // Unequal split sizes
+        let shapes = infer_split_shapes(&[12], &SplitSpec::Sizes(vec![3, 3, 3, 3]), 0).unwrap();
+        assert_eq!(shapes, vec![vec![3], vec![3], vec![3], vec![3]]);
+    }
+
+    #[test]
+    fn test_split_invalid() {
+        // Count doesn't divide evenly
+        assert!(infer_split_shapes(&[24], &SplitSpec::Count(5), 0).is_err());
+
+        // Sizes don't sum to axis size
+        assert!(infer_split_shapes(&[24], &SplitSpec::Sizes(vec![10, 10]), 0).is_err());
+
+        // Axis out of bounds
+        assert!(infer_split_shapes(&[24], &SplitSpec::Count(3), 1).is_err());
+
+        // Zero count
+        assert!(infer_split_shapes(&[24], &SplitSpec::Count(0), 0).is_err());
+    }
+
+    // Where tests
+    #[test]
+    fn test_where_basic() {
+        // Same shapes
+        assert_eq!(
+            infer_where_shape(&[2, 3], &[2, 3], &[2, 3]).unwrap(),
+            vec![2, 3]
+        );
+
+        // Broadcasting
+        assert_eq!(
+            infer_where_shape(&[2, 3], &[1, 3], &[2, 1]).unwrap(),
+            vec![2, 3]
+        );
+    }
+
+    #[test]
+    fn test_where_broadcast_complex() {
+        // All inputs broadcast to common shape
+        assert_eq!(
+            infer_where_shape(&[1, 3], &[2, 1], &[2, 3]).unwrap(),
+            vec![2, 3]
+        );
+    }
+
+    #[test]
+    fn test_where_invalid() {
+        // Incompatible shapes
+        assert!(infer_where_shape(&[2, 3], &[2, 4], &[2, 3]).is_err());
+    }
+
+    // Pad tests
+    #[test]
+    fn test_pad_basic() {
+        // 1D padding [begin, end]
+        assert_eq!(infer_pad_shape(&[9], &[1, 1]).unwrap(), vec![11]);
+
+        // 2D padding [begin_0, begin_1, end_0, end_1]
+        assert_eq!(infer_pad_shape(&[3, 3], &[1, 1, 1, 1]).unwrap(), vec![5, 5]);
+
+        // 4D padding
+        assert_eq!(
+            infer_pad_shape(&[1, 3, 3, 1], &[0, 2, 2, 0, 0, 2, 2, 0]).unwrap(),
+            vec![1, 7, 7, 1]
+        );
+    }
+
+    #[test]
+    fn test_pad_no_padding() {
+        // Zero padding
+        assert_eq!(infer_pad_shape(&[3, 3], &[0, 0, 0, 0]).unwrap(), vec![3, 3]);
+    }
+
+    #[test]
+    fn test_pad_invalid() {
+        // Wrong padding length
+        assert!(infer_pad_shape(&[3, 3], &[1, 1, 1]).is_err());
     }
 }

@@ -2115,3 +2115,333 @@ def test_quantization_roundtrip(context):
     assert dequantized.shape == [10, 20]
     assert dequantized.data_type == "float32"
     graph = builder.build({"output": dequantized})
+
+
+# ========================================
+# Tensor Manipulation Operations Tests
+# ========================================
+
+
+# Transpose tests
+def test_transpose_default_permutation(context):
+    """Test transpose with default permutation (reverses dimensions)"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [4, 6], "float32")
+    output = builder.transpose(x)
+    assert output.shape == [6, 4]
+    graph = builder.build({"output": output})
+
+
+def test_transpose_custom_permutation_2d(context):
+    """Test transpose with custom 2D permutation"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [4, 6], "float32")
+    output = builder.transpose(x, permutation=[1, 0])
+    assert output.shape == [6, 4]
+    graph = builder.build({"output": output})
+
+
+def test_transpose_custom_permutation_3d(context):
+    """Test transpose with custom 3D permutation"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [2, 3, 4], "float32")
+    output = builder.transpose(x, permutation=[2, 0, 1])
+    assert output.shape == [4, 2, 3]
+    graph = builder.build({"output": output})
+
+
+def test_transpose_4d_nchw_to_nhwc(context):
+    """Test transpose 4D tensor from NCHW to NHWC layout"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [1, 3, 224, 224], "float32")
+    output = builder.transpose(x, permutation=[0, 2, 3, 1])
+    assert output.shape == [1, 224, 224, 3]
+    graph = builder.build({"output": output})
+
+
+# Concat tests
+def test_concat_2_inputs_axis_0(context):
+    """Test concat with 2 inputs along axis 0"""
+    builder = context.create_graph_builder()
+    x1 = builder.input("x1", [2, 3], "float32")
+    x2 = builder.input("x2", [2, 3], "float32")
+    output = builder.concat([x1, x2], axis=0)
+    assert output.shape == [4, 3]
+    graph = builder.build({"output": output})
+
+
+def test_concat_2_inputs_axis_1(context):
+    """Test concat with 2 inputs along axis 1"""
+    builder = context.create_graph_builder()
+    x1 = builder.input("x1", [2, 3], "float32")
+    x2 = builder.input("x2", [2, 3], "float32")
+    output = builder.concat([x1, x2], axis=1)
+    assert output.shape == [2, 6]
+    graph = builder.build({"output": output})
+
+
+def test_concat_multiple_inputs(context):
+    """Test concat with 3 inputs"""
+    builder = context.create_graph_builder()
+    x1 = builder.input("x1", [1, 3], "float32")
+    x2 = builder.input("x2", [2, 3], "float32")
+    x3 = builder.input("x3", [3, 3], "float32")
+    output = builder.concat([x1, x2, x3], axis=0)
+    assert output.shape == [6, 3]
+    graph = builder.build({"output": output})
+
+
+def test_concat_3d(context):
+    """Test concat with 3D tensors"""
+    builder = context.create_graph_builder()
+    x1 = builder.input("x1", [2, 3, 4], "float32")
+    x2 = builder.input("x2", [2, 3, 4], "float32")
+    output = builder.concat([x1, x2], axis=2)
+    assert output.shape == [2, 3, 8]
+    graph = builder.build({"output": output})
+
+
+# Slice tests
+def test_slice_1d(context):
+    """Test slice on 1D tensor"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [24], "float32")
+    output = builder.slice(x, starts=[12], sizes=[12])
+    assert output.shape == [12]
+    graph = builder.build({"output": output})
+
+
+def test_slice_2d(context):
+    """Test slice on 2D tensor"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [4, 6], "float32")
+    output = builder.slice(x, starts=[2, 2], sizes=[2, 4])
+    assert output.shape == [2, 4]
+    graph = builder.build({"output": output})
+
+
+def test_slice_3d(context):
+    """Test slice on 3D tensor"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [4, 3, 2], "float32")
+    output = builder.slice(x, starts=[1, 1, 1], sizes=[3, 2, 1])
+    assert output.shape == [3, 2, 1]
+    graph = builder.build({"output": output})
+
+
+def test_slice_whole_dimension(context):
+    """Test slice that selects entire dimension"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [4, 6], "float32")
+    output = builder.slice(x, starts=[0, 2], sizes=[4, 4])
+    assert output.shape == [4, 4]
+    graph = builder.build({"output": output})
+
+
+# Expand tests
+def test_expand_1d_to_larger_1d(context):
+    """Test expand 1D to larger 1D"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [1], "float32")
+    output = builder.expand(x, new_shape=[24])
+    assert output.shape == [24]
+    graph = builder.build({"output": output})
+
+
+def test_expand_1d_to_2d(context):
+    """Test expand 1D to 2D"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [1], "float32")
+    output = builder.expand(x, new_shape=[4, 6])
+    assert output.shape == [4, 6]
+    graph = builder.build({"output": output})
+
+
+def test_expand_some_dimensions(context):
+    """Test expand specific dimensions"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [1, 6], "float32")
+    output = builder.expand(x, new_shape=[4, 6])
+    assert output.shape == [4, 6]
+    graph = builder.build({"output": output})
+
+
+def test_expand_scalar_to_tensor(context):
+    """Test expand scalar (0D) to tensor"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [], "float32")
+    output = builder.expand(x, new_shape=[24])
+    assert output.shape == [24]
+    graph = builder.build({"output": output})
+
+
+# Gather tests
+def test_gather_1d_indices(context):
+    """Test gather with 1D indices on 1D input"""
+    builder = context.create_graph_builder()
+    input_tensor = builder.input("input", [24], "float32")
+    indices = builder.input("indices", [8], "int32")
+    output = builder.gather(input_tensor, indices, axis=0)
+    assert output.shape == [8]
+    graph = builder.build({"output": output})
+
+
+def test_gather_2d_input_1d_indices_axis0(context):
+    """Test gather with 2D input, 1D indices, axis=0"""
+    builder = context.create_graph_builder()
+    input_tensor = builder.input("input", [12, 2], "float32")
+    indices = builder.input("indices", [8], "int32")
+    output = builder.gather(input_tensor, indices, axis=0)
+    assert output.shape == [8, 2]
+    graph = builder.build({"output": output})
+
+
+def test_gather_3d_input_2d_indices_axis1(context):
+    """Test gather with 3D input, 2D indices, axis=1"""
+    builder = context.create_graph_builder()
+    input_tensor = builder.input("input", [3, 4, 2], "float32")
+    indices = builder.input("indices", [2, 2], "int32")
+    output = builder.gather(input_tensor, indices, axis=1)
+    assert output.shape == [3, 2, 2, 2]
+    graph = builder.build({"output": output})
+
+
+def test_gather_default_axis(context):
+    """Test gather with default axis=0"""
+    builder = context.create_graph_builder()
+    input_tensor = builder.input("input", [12, 2], "float32")
+    indices = builder.input("indices", [8], "int32")
+    output = builder.gather(input_tensor, indices)
+    assert output.shape == [8, 2]
+    graph = builder.build({"output": output})
+
+
+# Split tests (note: current architecture only supports using first output)
+def test_split_by_count(context):
+    """Test split with equal count"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [24], "float32")
+    outputs = builder.split(x, splits=3, axis=0)
+    assert len(outputs) == 3
+    assert all(o.shape == [8] for o in outputs)
+    # Note: Only first output can be used in graph due to single-output limitation
+    graph = builder.build({"output": outputs[0]})
+
+
+def test_split_by_sizes(context):
+    """Test split with custom sizes"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [24], "float32")
+    outputs = builder.split(x, splits=[8, 8, 8], axis=0)
+    assert len(outputs) == 3
+    assert all(o.shape == [8] for o in outputs)
+    graph = builder.build({"output": outputs[0]})
+
+
+def test_split_unequal_sizes(context):
+    """Test split with unequal sizes"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [12], "float32")
+    outputs = builder.split(x, splits=[3, 3, 3, 3], axis=0)
+    assert len(outputs) == 4
+    assert all(o.shape == [3] for o in outputs)
+    graph = builder.build({"output": outputs[0]})
+
+
+def test_split_2d_along_axis1(context):
+    """Test split 2D tensor along axis 1"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [8, 3], "float32")
+    outputs = builder.split(x, splits=3, axis=1)
+    assert len(outputs) == 3
+    assert all(o.shape == [8, 1] for o in outputs)
+    graph = builder.build({"output": outputs[0]})
+
+
+# Where tests
+def test_where_same_shapes(context):
+    """Test where with all inputs having same shape"""
+    builder = context.create_graph_builder()
+    condition = builder.input("condition", [2, 3], "int32")
+    true_value = builder.input("true_value", [2, 3], "float32")
+    false_value = builder.input("false_value", [2, 3], "float32")
+    output = builder.where_(condition, true_value, false_value)
+    assert output.shape == [2, 3]
+    graph = builder.build({"output": output})
+
+
+def test_where_with_broadcasting(context):
+    """Test where with broadcasting"""
+    builder = context.create_graph_builder()
+    condition = builder.input("condition", [2, 3], "int32")
+    true_value = builder.input("true_value", [1, 3], "float32")
+    false_value = builder.input("false_value", [2, 1], "float32")
+    output = builder.where_(condition, true_value, false_value)
+    assert output.shape == [2, 3]
+    graph = builder.build({"output": output})
+
+
+def test_where_scalar_values(context):
+    """Test where with scalar condition and values"""
+    builder = context.create_graph_builder()
+    condition = builder.input("condition", [1], "int32")
+    true_value = builder.input("true_value", [2, 3], "float32")
+    false_value = builder.input("false_value", [2, 3], "float32")
+    output = builder.where_(condition, true_value, false_value)
+    assert output.shape == [2, 3]
+    graph = builder.build({"output": output})
+
+
+# Pad tests
+def test_pad_1d(context):
+    """Test pad on 1D tensor"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [9], "float32")
+    output = builder.pad(x, padding=[1, 1])
+    assert output.shape == [11]
+    graph = builder.build({"output": output})
+
+
+def test_pad_2d(context):
+    """Test pad on 2D tensor"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [3, 3], "float32")
+    output = builder.pad(x, padding=[1, 1, 1, 1])
+    assert output.shape == [5, 5]
+    graph = builder.build({"output": output})
+
+
+def test_pad_4d(context):
+    """Test pad on 4D tensor"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [1, 3, 3, 1], "float32")
+    output = builder.pad(x, padding=[0, 2, 2, 0, 0, 2, 2, 0])
+    assert output.shape == [1, 7, 7, 1]
+    graph = builder.build({"output": output})
+
+
+def test_pad_with_mode(context):
+    """Test pad with edge mode"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [3, 3], "float32")
+    output = builder.pad(x, padding=[1, 1, 1, 1], mode="edge")
+    assert output.shape == [5, 5]
+    graph = builder.build({"output": output})
+
+
+def test_pad_with_value(context):
+    """Test pad with constant value"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [3, 3], "float32")
+    output = builder.pad(x, padding=[1, 1, 1, 1], mode="constant", value=5.0)
+    assert output.shape == [5, 5]
+    graph = builder.build({"output": output})
+
+
+def test_pad_asymmetric(context):
+    """Test pad with asymmetric padding"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [3, 3], "float32")
+    output = builder.pad(x, padding=[1, 2, 3, 4])
+    assert output.shape == [7, 9]
+    graph = builder.build({"output": output})

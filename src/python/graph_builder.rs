@@ -1822,6 +1822,536 @@ impl PyMLGraphBuilder {
         self.reduce_op("reduceSumSquare", input, axes, keep_dimensions)
     }
 
+    // Tensor manipulation operations
+
+    /// Transpose operation
+    ///
+    /// Reorders the dimensions of a tensor according to a permutation.
+    /// If no permutation is provided, reverses the dimensions.
+    ///
+    /// Args:
+    ///     input: Input operand
+    ///     permutation: Optional permutation of dimensions (default: reverse dimensions)
+    ///
+    /// Returns:
+    ///     MLOperand: The transposed output operand
+    #[pyo3(signature = (input, permutation=None))]
+    fn transpose(
+        &mut self,
+        input: &PyMLOperand,
+        permutation: Option<Vec<u32>>,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::infer_transpose_shape;
+
+        // Infer output shape
+        let output_shape = infer_transpose_shape(&input.descriptor.shape, permutation.as_deref())
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        // Store parameters as JSON attributes
+        let mut attributes = serde_json::json!({});
+        if let Some(perm) = permutation {
+            attributes["permutation"] = serde_json::json!(perm);
+        }
+
+        let operation = Operation {
+            op_type: "transpose".to_string(),
+            input_operands: vec![input.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
+    /// Concat operation
+    ///
+    /// Concatenates multiple tensors along a specified axis.
+    ///
+    /// Args:
+    ///     inputs: List of input operands to concatenate
+    ///     axis: Axis along which to concatenate
+    ///
+    /// Returns:
+    ///     MLOperand: The concatenated output operand
+    fn concat(&mut self, inputs: Vec<PyMLOperand>, axis: u32) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::infer_concat_shape;
+
+        if inputs.is_empty() {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "Concat requires at least one input",
+            ));
+        }
+
+        // Collect input shapes
+        let input_shapes: Vec<Vec<u32>> = inputs
+            .iter()
+            .map(|op| op.descriptor.shape.clone())
+            .collect();
+
+        // Infer output shape
+        let output_shape = infer_concat_shape(&input_shapes, axis)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: inputs[0].descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        // Collect input IDs
+        let input_ids: Vec<u32> = inputs.iter().map(|op| op.id).collect();
+
+        let attributes = serde_json::json!({
+            "axis": axis,
+        });
+
+        let operation = Operation {
+            op_type: "concat".to_string(),
+            input_operands: input_ids,
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
+    /// Slice operation
+    ///
+    /// Extracts a contiguous sub-tensor from the input.
+    ///
+    /// Args:
+    ///     input: Input operand
+    ///     starts: Starting indices for each dimension
+    ///     sizes: Size of the slice for each dimension
+    ///
+    /// Returns:
+    ///     MLOperand: The sliced output operand
+    fn slice(
+        &mut self,
+        input: &PyMLOperand,
+        starts: Vec<u32>,
+        sizes: Vec<u32>,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::infer_slice_shape;
+
+        // Infer output shape
+        let output_shape = infer_slice_shape(&input.descriptor.shape, &starts, &sizes)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        let attributes = serde_json::json!({
+            "starts": starts,
+            "sizes": sizes,
+        });
+
+        let operation = Operation {
+            op_type: "slice".to_string(),
+            input_operands: vec![input.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
+    /// Expand operation
+    ///
+    /// Broadcasts a tensor to a larger shape. Dimensions of size 1 can be expanded to larger sizes.
+    ///
+    /// Args:
+    ///     input: Input operand
+    ///     new_shape: Target shape for expansion
+    ///
+    /// Returns:
+    ///     MLOperand: The expanded output operand
+    fn expand(&mut self, input: &PyMLOperand, new_shape: Vec<u32>) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::infer_expand_shape;
+
+        // Infer output shape
+        let output_shape = infer_expand_shape(&input.descriptor.shape, &new_shape)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        let attributes = serde_json::json!({
+            "newShape": new_shape,
+        });
+
+        let operation = Operation {
+            op_type: "expand".to_string(),
+            input_operands: vec![input.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
+    /// Gather operation
+    ///
+    /// Gathers values from input tensor along an axis according to indices.
+    ///
+    /// Args:
+    ///     input: Input operand
+    ///     indices: Indices tensor
+    ///     axis: Axis along which to gather (default: 0)
+    ///
+    /// Returns:
+    ///     MLOperand: The gathered output operand
+    #[pyo3(signature = (input, indices, axis=0))]
+    fn gather(
+        &mut self,
+        input: &PyMLOperand,
+        indices: &PyMLOperand,
+        axis: u32,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::infer_gather_shape;
+
+        // Infer output shape
+        let output_shape =
+            infer_gather_shape(&input.descriptor.shape, &indices.descriptor.shape, axis)
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        let attributes = serde_json::json!({
+            "axis": axis,
+        });
+
+        let operation = Operation {
+            op_type: "gather".to_string(),
+            input_operands: vec![input.id, indices.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
+    /// Split operation
+    ///
+    /// Splits a tensor into multiple sub-tensors along an axis.
+    ///
+    /// Args:
+    ///     input: Input operand
+    ///     splits: Either number of equal splits (int) or list of split sizes
+    ///     axis: Axis along which to split (default: 0)
+    ///
+    /// Returns:
+    ///     List[MLOperand]: List of output operands
+    #[pyo3(signature = (input, splits, axis=0))]
+    fn split(
+        &mut self,
+        py: Python,
+        input: &PyMLOperand,
+        splits: &Bound<'_, PyAny>,
+        axis: u32,
+    ) -> PyResult<Vec<PyMLOperand>> {
+        use crate::shape_inference::{SplitSpec, infer_split_shapes};
+
+        // Determine split specification
+        let split_spec = if let Ok(count) = splits.extract::<u32>() {
+            SplitSpec::Count(count)
+        } else if let Ok(sizes) = splits.extract::<Vec<u32>>() {
+            SplitSpec::Sizes(sizes)
+        } else {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "splits must be either an integer or a list of integers",
+            ));
+        };
+
+        // Infer output shapes
+        let output_shapes = infer_split_shapes(&input.descriptor.shape, &split_spec, axis)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        // Create output operands
+        let mut py_operands = Vec::new();
+        let first_output_id = self.next_operand_id;
+
+        for output_shape in &output_shapes {
+            let output_descriptor = OperandDescriptor {
+                data_type: input.descriptor.data_type,
+                shape: output_shape.clone(),
+                pending_permutation: Vec::new(),
+            };
+
+            let output_id = self.next_operand_id;
+            self.next_operand_id += 1;
+
+            let output_operand = Operand {
+                descriptor: output_descriptor.clone(),
+                kind: OperandKind::Output,
+                name: None,
+            };
+            self.operands.push(output_operand);
+
+            let py_operand =
+                PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+            self.operand_map.insert(output_id, py_operand.clone());
+            py_operands.push(py_operand);
+        }
+
+        // Create operation with multiple outputs
+        // For split, we use the first output ID as the primary output
+        let attributes = match split_spec {
+            SplitSpec::Count(count) => serde_json::json!({
+                "axis": axis,
+                "splits": count,
+            }),
+            SplitSpec::Sizes(sizes) => serde_json::json!({
+                "axis": axis,
+                "splits": sizes,
+            }),
+        };
+
+        let operation = Operation {
+            op_type: "split".to_string(),
+            input_operands: vec![input.id],
+            output_operand: first_output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        Ok(py_operands)
+    }
+
+    /// Where operation
+    ///
+    /// Selects elements from trueValue or falseValue based on condition.
+    /// All inputs are broadcast to a common shape.
+    ///
+    /// Args:
+    ///     condition: Boolean condition tensor
+    ///     true_value: Values to select when condition is true
+    ///     false_value: Values to select when condition is false
+    ///
+    /// Returns:
+    ///     MLOperand: The output operand
+    fn where_(
+        &mut self,
+        condition: &PyMLOperand,
+        true_value: &PyMLOperand,
+        false_value: &PyMLOperand,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::infer_where_shape;
+
+        // Infer output shape
+        let output_shape = infer_where_shape(
+            &condition.descriptor.shape,
+            &true_value.descriptor.shape,
+            &false_value.descriptor.shape,
+        )
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: true_value.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        let operation = Operation {
+            op_type: "where".to_string(),
+            input_operands: vec![condition.id, true_value.id, false_value.id],
+            output_operand: output_id,
+            attributes: serde_json::json!({}),
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
+    /// Pad operation
+    ///
+    /// Adds padding around the input tensor.
+    ///
+    /// Args:
+    ///     input: Input operand
+    ///     padding: Padding values [begin_0, begin_1, ..., end_0, end_1, ...]
+    ///     mode: Padding mode ("constant", "edge", "reflection", "symmetric") (default: "constant")
+    ///     value: Padding value for constant mode (default: 0.0)
+    ///
+    /// Returns:
+    ///     MLOperand: The padded output operand
+    #[pyo3(signature = (input, padding, mode=None, value=None))]
+    fn pad(
+        &mut self,
+        input: &PyMLOperand,
+        padding: Vec<u32>,
+        mode: Option<&str>,
+        value: Option<f32>,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::infer_pad_shape;
+
+        // Infer output shape
+        let output_shape = infer_pad_shape(&input.descriptor.shape, &padding)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        // Validate mode
+        let mode_str = mode.unwrap_or("constant");
+        if !["constant", "edge", "reflection", "symmetric"].contains(&mode_str) {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "Invalid pad mode '{}', must be 'constant', 'edge', 'reflection', or 'symmetric'",
+                mode_str
+            )));
+        }
+
+        let mut attributes = serde_json::json!({
+            "padding": padding,
+            "mode": mode_str,
+        });
+
+        if let Some(v) = value {
+            attributes["value"] = serde_json::json!(v);
+        }
+
+        let operation = Operation {
+            op_type: "pad".to_string(),
+            input_operands: vec![input.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
     /// Build the computational graph
     ///
     /// Args:
