@@ -26,6 +26,7 @@ mod mil_ops {
     pub const DIV: &str = "real_div";
     pub const POW: &str = "pow";
     pub const MATMUL: &str = "matmul";
+    pub const LINEAR: &str = "linear"; // For gemm with bias
 
     // Activation functions
     pub const RELU: &str = "relu";
@@ -434,6 +435,7 @@ impl CoremlMlProgramConverter {
             "div" => mil_ops::DIV,
             "pow" => mil_ops::POW,
             "matmul" => mil_ops::MATMUL,
+            "gemm" => mil_ops::MATMUL, // Gemm maps to matmul with transpose handling
 
             // Activation functions
             "relu" => mil_ops::RELU,
@@ -578,6 +580,49 @@ impl CoremlMlProgramConverter {
                     inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
                     inputs.insert("y".to_string(), Self::create_argument(&input_names[1]));
                 }
+            }
+
+            // Gemm operation: General Matrix Multiplication
+            // Y = alpha * op(A) * op(B) + beta * C
+            // CoreML matmul handles: Y = A * B (with transpose options)
+            // For now, we support transpose options and basic matmul
+            // TODO: Support alpha, beta, and bias (C) by decomposing into mul and add operations
+            "gemm" => {
+                if input_names.len() >= 2 {
+                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
+                    inputs.insert("y".to_string(), Self::create_argument(&input_names[1]));
+                }
+
+                // Add transpose parameters if specified
+                if let Some(a_transpose) = op
+                    .attributes
+                    .get("aTranspose")
+                    .or_else(|| op.attributes.get("a_transpose"))
+                    .and_then(|v| v.as_bool())
+                {
+                    inputs.insert(
+                        "transpose_x".to_string(),
+                        Self::create_immediate_bool(a_transpose),
+                    );
+                }
+
+                if let Some(b_transpose) = op
+                    .attributes
+                    .get("bTranspose")
+                    .or_else(|| op.attributes.get("b_transpose"))
+                    .and_then(|v| v.as_bool())
+                {
+                    inputs.insert(
+                        "transpose_y".to_string(),
+                        Self::create_immediate_bool(b_transpose),
+                    );
+                }
+
+                // Note: alpha, beta, and bias (C) are not yet supported
+                // These would require decomposing gemm into multiple operations:
+                // 1. matmul(op(A), op(B))
+                // 2. mul by alpha if != 1.0
+                // 3. add beta * C if C is provided
             }
 
             // Unary operations: x
