@@ -293,6 +293,17 @@ examples/
 
 ### Adding New WebNN Operations (Standard Workflow)
 
+**IMPORTANT: Before implementing any new operation, always check the Chromium reference implementation first:**
+- **Chromium WebNN Source**: https://chromium.googlesource.com/chromium/src/+/lkgr/services/webnn/
+- **ONNX Runtime Backend**: https://chromium.googlesource.com/chromium/src/+/lkgr/services/webnn/ort/graph_builder_ort.cc
+- **CoreML Backend**: https://chromium.googlesource.com/chromium/src/+/lkgr/services/webnn/coreml/graph_builder_coreml.mm
+- **Why**: Chromium is the reference implementation of W3C WebNN spec. Their implementation shows:
+  - Correct WebNN API signatures and behavior
+  - How to handle type conversions (e.g., Cast nodes for ONNX bool types)
+  - Edge cases and validation requirements
+  - Backend-specific workarounds and best practices
+- **How to use**: Search for the operation name in `graph_builder_ort.cc` or `graph_builder_coreml.mm` to see their implementation approach
+
 **Complete implementation checklist for adding operations:**
 
 1. **Shape Inference** (`src/shape_inference.rs`):
