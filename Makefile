@@ -43,9 +43,15 @@ viz:
 
 
 onnxruntime-download:
-	mkdir -p $(ORT_DIR)
-	curl -L $(ORT_BASE)/$(ORT_TARBALL) -o $(ORT_DIR)/$(ORT_TARBALL)
-	tar -xzf $(ORT_DIR)/$(ORT_TARBALL) -C $(ORT_DIR)
+	@if [ -d "$(ORT_LIB_DIR)" ]; then \
+		echo "ONNX Runtime already downloaded at $(ORT_LIB_DIR)"; \
+	else \
+		echo "Downloading ONNX Runtime $(ORT_VERSION)..."; \
+		mkdir -p $(ORT_DIR); \
+		curl -L $(ORT_BASE)/$(ORT_TARBALL) -o $(ORT_DIR)/$(ORT_TARBALL); \
+		tar -xzf $(ORT_DIR)/$(ORT_TARBALL) -C $(ORT_DIR); \
+		echo "✓ ONNX Runtime downloaded and extracted"; \
+	fi
 
 onnx: onnxruntime-download
 	ORT_STRATEGY=system ORT_LIB_LOCATION=$(ORT_LIB_LOCATION) DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) RUSTFLAGS="-L $(ORT_LIB_DIR)" $(CARGO) run --features onnx-runtime -- $(GRAPH_FILE) --convert onnx --convert-output $(ONNX_PATH)
