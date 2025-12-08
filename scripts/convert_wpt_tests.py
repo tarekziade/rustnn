@@ -272,7 +272,7 @@ def convert_operation_tests(
         "output_file": str(output_file),
         "source_file": str(test_file),
         "test_count": len(test_cases) if test_cases else 0,
-        "requires_manual_review": len(test_cases) == 0
+        "requires_manual_review": not test_cases or len(test_cases) == 0
     }
 
 

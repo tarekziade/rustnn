@@ -1,0 +1,8 @@
+{
+  "operation": "reduce_product",
+  "wpt_version": "2025-12-08",
+  "wpt_commit": "25b26d4cfd4e1ca1b288849c03fa58ee7b049ef1",
+  "source_file": "webnn/conformance_tests/reduce_l1.https.any.js",
+  "conversion_note": "This file was auto-generated from WPT JavaScript tests. Manual verification recommended. Some test cases may require manual conversion from JavaScript syntax.",
+  "tests": []
+}
