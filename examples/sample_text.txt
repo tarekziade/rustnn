@@ -1,0 +1,15 @@
+The quick brown fox jumps over the lazy dog. This is a sample text for training a language model.
+In machine learning, we often need training data to teach our models how to generate text.
+This text will be used to train a simple transformer model using WebNN operations.
+The model learns patterns in the text and can then generate similar text.
+Training a language model requires lots of text data and computational resources.
+However, this small example demonstrates the core concepts of next-token prediction.
+Each word follows the previous words in a meaningful way, creating coherent sentences.
+The transformer architecture with attention mechanisms is very powerful for this task.
+WebNN allows us to run these models efficiently in web browsers and across different backends.
+We can train on CPU, GPU, or even specialized hardware like Neural Processing Units.
+This makes machine learning more accessible to everyone with a web browser.
+The future of AI is running models locally on your device for privacy and speed.
+Text generation has many applications: chatbots, writing assistants, code completion.
+With enough training data, models can learn to write in different styles and domains.
+This sample text is short, but it demonstrates the training pipeline nicely.
