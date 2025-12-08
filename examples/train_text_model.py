@@ -27,16 +27,16 @@ def load_text_data(file_path):
     return text
 
 
-def prepare_training_data(text, vocab_size=256, seq_len=32):
+def prepare_training_data(text, vocab_size=128, seq_len=32):
     """
-    Convert text to training sequences.
+    Convert text to training sequences (ASCII-only).
 
     Returns:
         X: input sequences (num_samples, seq_len)
         y: target tokens (num_samples,)
     """
-    # Convert to bytes
-    data = np.array([b for b in text.encode('utf-8') if b < vocab_size], dtype=np.int32)
+    # Convert to ASCII bytes (0-127)
+    data = np.array([b for b in text.encode('ascii', errors='ignore') if b < vocab_size], dtype=np.int32)
 
     if len(data) < seq_len + 1:
         raise ValueError(f"Text too short. Need at least {seq_len + 1} characters, got {len(data)}")
@@ -227,14 +227,14 @@ def main():
     print()
 
     # Prepare training data
-    print("Preparing training sequences...")
-    X, y = prepare_training_data(text, vocab_size=256, seq_len=32)
+    print("Preparing training sequences (ASCII-only)...")
+    X, y = prepare_training_data(text, vocab_size=128, seq_len=32)
     print(f"✓ Created {len(X)} training samples")
     print()
 
     # Initialize model
-    print("Initializing model...")
-    model = SimpleTransformerLM(vocab_size=256, d_model=64, max_seq_len=32)
+    print("Initializing model (ASCII vocab)...")
+    model = SimpleTransformerLM(vocab_size=128, d_model=64, max_seq_len=32)
     print("✓ Model initialized")
 
     # Train

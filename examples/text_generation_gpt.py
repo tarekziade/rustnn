@@ -252,7 +252,7 @@ def main():
     print("Next-Token Generation with Attention (WebNN)")
     print("=" * 70)
     print(f"Backend: {backend_name}")
-    print(f"Model: vocab=256 (byte-level), d_model=64, max_seq=32")
+    print(f"Model: vocab=128 (ASCII), d_model=64, max_seq=32")
     print()
 
     # Create WebNN context
@@ -264,8 +264,8 @@ def main():
 
     # Initialize model
     print("Initializing transformer model...")
-    model = SimpleTransformerLM(vocab_size=256, d_model=64, max_seq_len=32)
-    print("✓ Model initialized")
+    model = SimpleTransformerLM(vocab_size=128, d_model=64, max_seq_len=32)
+    print("✓ Model initialized (ASCII-only vocab for readable output)")
     print()
 
     # Load weights if provided
@@ -278,9 +278,9 @@ def main():
         model.save_weights(args.save_weights)
         print()
 
-    # Convert prompt to byte-level tokens
-    prompt_bytes = args.prompt.encode('utf-8')
-    prompt_tokens = [b for b in prompt_bytes]
+    # Convert prompt to ASCII tokens (0-127 only)
+    prompt_bytes = args.prompt.encode('ascii', errors='ignore')
+    prompt_tokens = [b for b in prompt_bytes if b < 128]
 
     print(f"Prompt: '{args.prompt}'")
     print(f"Prompt tokens ({len(prompt_tokens)}): {prompt_tokens[:10]}{'...' if len(prompt_tokens) > 10 else ''}")

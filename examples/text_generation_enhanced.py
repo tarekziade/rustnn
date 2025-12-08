@@ -134,8 +134,8 @@ class EnhancedTransformerLM:
         if self.tokenizer:
             return self.tokenizer.encode(text).ids
         else:
-            # Byte-level fallback
-            return [b for b in text.encode('utf-8') if b < self.vocab_size]
+            # ASCII-only fallback (0-127)
+            return [b for b in text.encode('ascii', errors='ignore') if b < self.vocab_size]
 
     def decode(self, tokens):
         """Decode tokens to text."""
@@ -324,8 +324,8 @@ def main():
     print(f"✓ Context created (accelerated={context.accelerated})")
     print()
 
-    # Initialize model
-    model = EnhancedTransformerLM(vocab_size=256, d_model=64, max_seq_len=128)
+    # Initialize model (ASCII-only vocab for readable output)
+    model = EnhancedTransformerLM(vocab_size=128, d_model=64, max_seq_len=128)
 
     # Set tokenizer if specified
     if args.tokenizer:
