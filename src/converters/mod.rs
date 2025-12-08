@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use crate::error::GraphError;
 use crate::graph::GraphInfo;
 
-mod coreml;
+mod coreml_mlprogram;
 mod onnx;
 
-pub use coreml::CoremlConverter;
+pub use coreml_mlprogram::CoremlMlProgramConverter;
 pub use onnx::OnnxConverter;
 
 #[derive(Debug, Clone)]
@@ -31,7 +31,7 @@ impl ConverterRegistry {
             converters: HashMap::new(),
         };
         registry.register(Box::new(OnnxConverter::default()));
-        registry.register(Box::new(CoremlConverter::default()));
+        registry.register(Box::new(CoremlMlProgramConverter::default()));
         registry
     }
 
