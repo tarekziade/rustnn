@@ -38,6 +38,11 @@ env/
 *.mlmodel
 *.bin
 
+# Generated training artifacts (root only)
+/trained_model.json
+/simple_model.json
+/*_model.json
+
 # IDE
 .vscode/
 .idea/
