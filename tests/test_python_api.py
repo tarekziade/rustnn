@@ -3279,3 +3279,223 @@ def test_hard_swish_multidimensional(context):
     hard_sigmoid = np.maximum(0, np.minimum(1, 0.2 * x_data + 0.5))
     expected = x_data * hard_sigmoid
     np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+# ============================================================================
+# Clamp operation tests
+# ============================================================================
+
+
+@requires_onnx_runtime
+def test_clamp_basic(context):
+    """Test clamp with min and max values"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [2, 3], "float32")
+    output = builder.clamp(x, min_value=0.0, max_value=6.0)
+    assert output.shape == [2, 3]
+    graph = builder.build({"output": output})
+
+    x_data = np.array([[-1, 0, 1], [5, 7, 3]], dtype=np.float32)
+    results = context.compute(graph, {"x": x_data})
+    assert "output" in results
+    assert results["output"].shape == (2, 3)
+
+    # Clamp: max(min_value, min(x, max_value))
+    expected = np.clip(x_data, 0.0, 6.0)
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+@requires_onnx_runtime
+def test_clamp_relu6(context):
+    """Test clamp as ReLU6 (min=0, max=6)"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [3, 3], "float32")
+    output = builder.clamp(x, min_value=0.0, max_value=6.0)
+    graph = builder.build({"output": output})
+
+    x_data = np.array([[-2, -1, 0], [1, 3, 5], [6, 7, 10]], dtype=np.float32)
+    results = context.compute(graph, {"x": x_data})
+
+    expected = np.array([[0, 0, 0], [1, 3, 5], [6, 6, 6]], dtype=np.float32)
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+@requires_onnx_runtime
+def test_clamp_multidimensional(context):
+    """Test clamp with multidimensional input"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [2, 2, 2], "float32")
+    output = builder.clamp(x, min_value=-1.0, max_value=1.0)
+    assert output.shape == [2, 2, 2]
+    graph = builder.build({"output": output})
+
+    x_data = np.array([[[-2, -0.5], [0, 0.5]], [[1, 1.5], [-1.5, 2]]], dtype=np.float32)
+    results = context.compute(graph, {"x": x_data})
+
+    expected = np.clip(x_data, -1.0, 1.0)
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+def test_clamp_shape_inference(context):
+    """Test clamp shape inference"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [1, 224, 224, 3], "float32")
+    output = builder.clamp(x, min_value=0.0, max_value=6.0)
+    assert output.shape == [1, 224, 224, 3]
+
+
+def test_clamp_invalid_range(context):
+    """Test clamp with invalid min/max range"""
+    builder = context.create_graph_builder()
+    x = builder.input("x", [2, 3], "float32")
+
+    # min_value > max_value should raise an error
+    with pytest.raises(Exception):
+        builder.clamp(x, min_value=6.0, max_value=0.0)
+
+
+# ============================================================================
+# GEMM (General Matrix Multiplication) operation tests
+# ============================================================================
+
+
+@requires_onnx_runtime
+def test_gemm_basic(context):
+    """Test basic GEMM: C = A * B"""
+    builder = context.create_graph_builder()
+    a = builder.input("a", [2, 3], "float32")
+    b = builder.input("b", [3, 4], "float32")
+    output = builder.gemm(a, b)
+    assert output.shape == [2, 4]
+    graph = builder.build({"output": output})
+
+    a_data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+    b_data = np.array([[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]], dtype=np.float32)
+    results = context.compute(graph, {"a": a_data, "b": b_data})
+    assert "output" in results
+    assert results["output"].shape == (2, 4)
+
+    expected = np.matmul(a_data, b_data)
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+@requires_onnx_runtime
+def test_gemm_transpose_a(context):
+    """Test GEMM with A transposed"""
+    builder = context.create_graph_builder()
+    a = builder.input("a", [3, 2], "float32")  # Will be transposed to [2, 3]
+    b = builder.input("b", [3, 4], "float32")
+    output = builder.gemm(a, b, a_transpose=True)
+    assert output.shape == [2, 4]
+    graph = builder.build({"output": output})
+
+    a_data = np.array([[1, 4], [2, 5], [3, 6]], dtype=np.float32)
+    b_data = np.array([[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]], dtype=np.float32)
+    results = context.compute(graph, {"a": a_data, "b": b_data})
+
+    expected = np.matmul(a_data.T, b_data)
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+@requires_onnx_runtime
+def test_gemm_transpose_b(context):
+    """Test GEMM with B transposed"""
+    builder = context.create_graph_builder()
+    a = builder.input("a", [2, 3], "float32")
+    b = builder.input("b", [4, 3], "float32")  # Will be transposed to [3, 4]
+    output = builder.gemm(a, b, b_transpose=True)
+    assert output.shape == [2, 4]
+    graph = builder.build({"output": output})
+
+    a_data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+    b_data = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]], dtype=np.float32)
+    results = context.compute(graph, {"a": a_data, "b": b_data})
+
+    expected = np.matmul(a_data, b_data.T)
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+@requires_onnx_runtime
+def test_gemm_transpose_both(context):
+    """Test GEMM with both A and B transposed"""
+    builder = context.create_graph_builder()
+    a = builder.input("a", [3, 2], "float32")  # Will be transposed to [2, 3]
+    b = builder.input("b", [4, 3], "float32")  # Will be transposed to [3, 4]
+    output = builder.gemm(a, b, a_transpose=True, b_transpose=True)
+    assert output.shape == [2, 4]
+    graph = builder.build({"output": output})
+
+    a_data = np.array([[1, 4], [2, 5], [3, 6]], dtype=np.float32)
+    b_data = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]], dtype=np.float32)
+    results = context.compute(graph, {"a": a_data, "b": b_data})
+
+    expected = np.matmul(a_data.T, b_data.T)
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+@requires_onnx_runtime
+def test_gemm_with_bias(context):
+    """Test GEMM with bias: C = A * B + c"""
+    builder = context.create_graph_builder()
+    a = builder.input("a", [2, 3], "float32")
+    b = builder.input("b", [3, 4], "float32")
+    c = builder.input("c", [2, 4], "float32")
+    output = builder.gemm(a, b, c=c)
+    assert output.shape == [2, 4]
+    graph = builder.build({"output": output})
+
+    a_data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+    b_data = np.array([[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]], dtype=np.float32)
+    c_data = np.array([[1, 1, 1, 1], [2, 2, 2, 2]], dtype=np.float32)
+    results = context.compute(graph, {"a": a_data, "b": b_data, "c": c_data})
+
+    expected = np.matmul(a_data, b_data) + c_data
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+@requires_onnx_runtime
+def test_gemm_with_alpha_beta(context):
+    """Test GEMM with scaling factors: C = alpha * A * B + beta * c"""
+    builder = context.create_graph_builder()
+    a = builder.input("a", [2, 3], "float32")
+    b = builder.input("b", [3, 4], "float32")
+    c = builder.input("c", [2, 4], "float32")
+    output = builder.gemm(a, b, c=c, alpha=2.0, beta=0.5)
+    assert output.shape == [2, 4]
+    graph = builder.build({"output": output})
+
+    a_data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
+    b_data = np.array([[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]], dtype=np.float32)
+    c_data = np.array([[1, 1, 1, 1], [2, 2, 2, 2]], dtype=np.float32)
+    results = context.compute(graph, {"a": a_data, "b": b_data, "c": c_data})
+
+    expected = 2.0 * np.matmul(a_data, b_data) + 0.5 * c_data
+    np.testing.assert_allclose(results["output"], expected, rtol=1e-5)
+
+
+def test_gemm_shape_inference(context):
+    """Test GEMM shape inference"""
+    builder = context.create_graph_builder()
+    a = builder.input("a", [128, 512], "float32")
+    b = builder.input("b", [512, 1000], "float32")
+    output = builder.gemm(a, b)
+    assert output.shape == [128, 1000]
+
+
+def test_gemm_shape_inference_transpose(context):
+    """Test GEMM shape inference with transpose"""
+    builder = context.create_graph_builder()
+    a = builder.input("a", [512, 128], "float32")
+    b = builder.input("b", [1000, 512], "float32")
+    output = builder.gemm(a, b, a_transpose=True, b_transpose=True)
+    assert output.shape == [128, 1000]
+
+
+def test_gemm_invalid_shapes(context):
+    """Test GEMM with incompatible shapes"""
+    builder = context.create_graph_builder()
+    a = builder.input("a", [2, 3], "float32")
+    b = builder.input("b", [4, 5], "float32")  # Incompatible: 3 != 4
+
+    with pytest.raises(Exception):
+        builder.gemm(a, b)

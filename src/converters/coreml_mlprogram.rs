@@ -143,6 +143,9 @@ mod mil_ops {
 
     // Triangular operation
     pub const TRIANGULAR: &str = "band_part";
+
+    // Clamp operation
+    pub const CLIP: &str = "clip";
 }
 
 #[derive(Default)]
@@ -543,6 +546,9 @@ impl CoremlMlProgramConverter {
             // Triangular operation
             "triangular" => mil_ops::TRIANGULAR,
 
+            // Clamp operation
+            "clamp" => mil_ops::CLIP,
+
             _ => {
                 return Err(GraphError::ConversionFailed {
                     format: "coreml_mlprogram".to_string(),
@@ -636,6 +642,27 @@ impl CoremlMlProgramConverter {
                     inputs.insert(
                         "beta".to_string(),
                         Self::create_immediate_float(beta as f32),
+                    );
+                }
+            }
+
+            // Clamp operation: x, alpha (min), beta (max)
+            "clamp" => {
+                if !input_names.is_empty() {
+                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
+                }
+                // Add min_value parameter from attributes (CoreML uses "alpha" for min in clip)
+                if let Some(min_value) = op.attributes.get("min_value").and_then(|v| v.as_f64()) {
+                    inputs.insert(
+                        "alpha".to_string(),
+                        Self::create_immediate_float(min_value as f32),
+                    );
+                }
+                // Add max_value parameter from attributes (CoreML uses "beta" for max in clip)
+                if let Some(max_value) = op.attributes.get("max_value").and_then(|v| v.as_f64()) {
+                    inputs.insert(
+                        "beta".to_string(),
+                        Self::create_immediate_float(max_value as f32),
                     );
                 }
             }

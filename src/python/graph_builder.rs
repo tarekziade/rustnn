@@ -200,6 +200,99 @@ impl PyMLGraphBuilder {
         Ok(py_operand)
     }
 
+    /// General Matrix Multiplication (GEMM)
+    ///
+    /// Computes: alpha * A' * B' + beta * C
+    /// where A' and B' are optionally transposed versions of A and B.
+    ///
+    /// Args:
+    ///     a: First input matrix (2D tensor)
+    ///     b: Second input matrix (2D tensor)
+    ///     c: Optional bias matrix (2D tensor, default: None)
+    ///     alpha: Scalar multiplier for A*B (default: 1.0)
+    ///     beta: Scalar multiplier for C (default: 1.0)
+    ///     a_transpose: Whether to transpose A (default: False)
+    ///     b_transpose: Whether to transpose B (default: False)
+    ///
+    ///Returns:
+    ///     MLOperand: Output matrix [M, N]
+    ///
+    /// Example:
+    ///     # Standard multiplication: Y = A * B
+    ///     y = builder.gemm(a, b)
+    ///
+    ///     # With bias and transposed B: Y = A * B^T + C
+    ///     y = builder.gemm(a, b, c=bias, b_transpose=True)
+    #[pyo3(signature = (a, b, c=None, alpha=1.0, beta=1.0, a_transpose=false, b_transpose=false))]
+    fn gemm(
+        &mut self,
+        a: &PyMLOperand,
+        b: &PyMLOperand,
+        c: Option<&PyMLOperand>,
+        alpha: f32,
+        beta: f32,
+        a_transpose: bool,
+        b_transpose: bool,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::infer_gemm_shape;
+
+        let output_shape = infer_gemm_shape(
+            &a.descriptor.shape,
+            &b.descriptor.shape,
+            a_transpose,
+            b_transpose,
+        )
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+        let output_descriptor = OperandDescriptor {
+            data_type: a.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        let mut attributes = serde_json::json!({
+            "alpha": alpha,
+            "beta": beta,
+            "a_transpose": a_transpose,
+            "b_transpose": b_transpose,
+        });
+
+        let mut input_operands = vec![a.id, b.id];
+
+        // Add optional bias operand
+        if let Some(c_operand) = c {
+            input_operands.push(c_operand.id);
+            attributes["has_bias"] = serde_json::json!(true);
+        } else {
+            attributes["has_bias"] = serde_json::json!(false);
+        }
+
+        let operation = Operation {
+            op_type: "gemm".to_string(),
+            input_operands,
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
     /// 2D Convolution operation
     ///
     /// Args:
@@ -3192,6 +3285,78 @@ impl PyMLGraphBuilder {
 
         let operation = Operation {
             op_type: "softsign".to_string(),
+            input_operands: vec![input.id],
+            output_operand: output_id,
+            attributes,
+            label: None,
+        };
+
+        self.operations.push(operation);
+
+        let output_operand = Operand {
+            descriptor: output_descriptor.clone(),
+            kind: OperandKind::Output,
+            name: None,
+        };
+        self.operands.push(output_operand);
+
+        let py_operand = PyMLOperand::new(output_id, output_descriptor, OperandKind::Output, None);
+        self.operand_map.insert(output_id, py_operand.clone());
+
+        Ok(py_operand)
+    }
+
+    /// clamp operation (element-wise clamping)
+    ///
+    /// Constrains every element in the input tensor between min and max values:
+    ///   y = max(min_value, min(x, max_value))
+    ///
+    /// Args:
+    ///     input: Input tensor
+    ///     min_value: Minimum value (default: negative infinity)
+    ///     max_value: Maximum value (default: positive infinity)
+    ///
+    /// Returns:
+    ///     MLOperand: Output operand with values clamped to [min_value, max_value]
+    ///
+    /// Example:
+    ///     # ReLU6: clamp(x, 0, 6)
+    ///     relu6 = builder.clamp(x, min_value=0.0, max_value=6.0)
+    #[pyo3(signature = (input, min_value=f32::NEG_INFINITY, max_value=f32::INFINITY))]
+    fn clamp(
+        &mut self,
+        input: &PyMLOperand,
+        min_value: f32,
+        max_value: f32,
+    ) -> PyResult<PyMLOperand> {
+        use crate::shape_inference::infer_clamp_shape;
+
+        // Validate min <= max
+        if min_value > max_value {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "clamp min_value ({}) must be <= max_value ({})",
+                min_value, max_value
+            )));
+        }
+
+        let output_shape = infer_clamp_shape(&input.descriptor.shape);
+
+        let output_descriptor = OperandDescriptor {
+            data_type: input.descriptor.data_type,
+            shape: output_shape,
+            pending_permutation: Vec::new(),
+        };
+
+        let output_id = self.next_operand_id;
+        self.next_operand_id += 1;
+
+        let attributes = serde_json::json!({
+            "min_value": min_value,
+            "max_value": max_value,
+        });
+
+        let operation = Operation {
+            op_type: "clamp".to_string(),
             input_operands: vec![input.id],
             output_operand: output_id,
             attributes,

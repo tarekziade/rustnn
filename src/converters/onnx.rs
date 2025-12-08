@@ -137,6 +137,12 @@ impl OnnxConverter {
         if op_type.eq_ignore_ascii_case("leakyRelu") {
             return "LeakyRelu".to_string();
         }
+        if op_type.eq_ignore_ascii_case("clamp") {
+            return "Clip".to_string();
+        }
+        if op_type.eq_ignore_ascii_case("gemm") {
+            return "Gemm".to_string();
+        }
 
         // Default: capitalize first letter
         let mut chars = op_type.chars();
@@ -626,6 +632,52 @@ impl OnnxConverter {
         attributes
     }
 
+    /// Clamp operation doesn't use attributes - min/max are inputs in opset 11+
+    /// Handled in convert() method as special case
+
+    /// Create ONNX attributes for gemm operation
+    fn create_gemm_attributes(op: &Operation) -> Vec<AttributeProto> {
+        let mut attributes = Vec::new();
+
+        if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
+            attributes.push(AttributeProto {
+                name: Some("alpha".to_string()),
+                r#type: Some(AttributeType::Float as i32),
+                f: Some(alpha as f32),
+                ..Default::default()
+            });
+        }
+
+        if let Some(beta) = op.attributes.get("beta").and_then(|v| v.as_f64()) {
+            attributes.push(AttributeProto {
+                name: Some("beta".to_string()),
+                r#type: Some(AttributeType::Float as i32),
+                f: Some(beta as f32),
+                ..Default::default()
+            });
+        }
+
+        if let Some(a_transpose) = op.attributes.get("a_transpose").and_then(|v| v.as_bool()) {
+            attributes.push(AttributeProto {
+                name: Some("transA".to_string()),
+                r#type: Some(AttributeType::Int as i32),
+                i: Some(if a_transpose { 1 } else { 0 }),
+                ..Default::default()
+            });
+        }
+
+        if let Some(b_transpose) = op.attributes.get("b_transpose").and_then(|v| v.as_bool()) {
+            attributes.push(AttributeProto {
+                name: Some("transB".to_string()),
+                r#type: Some(AttributeType::Int as i32),
+                i: Some(if b_transpose { 1 } else { 0 }),
+                ..Default::default()
+            });
+        }
+
+        attributes
+    }
+
     fn create_operation_attributes(op: &Operation) -> Vec<AttributeProto> {
         if op.op_type == "conv2d" {
             Self::create_conv2d_attributes(op)
@@ -655,6 +707,11 @@ impl OnnxConverter {
             Self::create_elu_attributes(op)
         } else if op.op_type == "leakyRelu" {
             Self::create_leakyrelu_attributes(op)
+        } else if op.op_type == "gemm" {
+            Self::create_gemm_attributes(op)
+        } else if op.op_type == "clamp" {
+            // Clamp (Clip in ONNX opset 11+) uses inputs for min/max, not attributes
+            Vec::new()
         } else {
             Vec::new()
         }
@@ -826,6 +883,52 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     ProtoDataType::Float,
                 ));
                 cast_counter += 1;
+            } else if op.op_type == "clamp" {
+                // Clamp (Clip in ONNX) uses min/max as inputs (not attributes) in opset 11+
+                let mut inputs: Vec<String> = op
+                    .input_operands
+                    .iter()
+                    .map(|id| Self::operand_name(graph, *id))
+                    .collect();
+
+                // Add min value as second input (optional in ONNX Clip)
+                if let Some(min_value) = op.attributes.get("min_value").and_then(|v| v.as_f64()) {
+                    let min_name = format!("{}_min", op_name);
+                    inputs.push(min_name.clone());
+
+                    // Add min initializer
+                    initializers.push(TensorProto {
+                        name: Some(min_name),
+                        data_type: Some(ProtoDataType::Float as i32),
+                        dims: vec![], // Scalar
+                        float_data: vec![min_value as f32],
+                        ..Default::default()
+                    });
+                }
+
+                // Add max value as third input (optional in ONNX Clip)
+                if let Some(max_value) = op.attributes.get("max_value").and_then(|v| v.as_f64()) {
+                    let max_name = format!("{}_max", op_name);
+                    inputs.push(max_name.clone());
+
+                    // Add max initializer
+                    initializers.push(TensorProto {
+                        name: Some(max_name),
+                        data_type: Some(ProtoDataType::Float as i32),
+                        dims: vec![], // Scalar
+                        float_data: vec![max_value as f32],
+                        ..Default::default()
+                    });
+                }
+
+                nodes.push(NodeProto {
+                    input: inputs,
+                    output: vec![Self::operand_name(graph, op.output_operand)],
+                    name: Some(op_name),
+                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    attribute: vec![], // No attributes for Clip in opset 11+
+                    ..Default::default()
+                });
             } else {
                 // Regular operation - no Cast nodes needed
                 let attributes = Self::create_operation_attributes(op);
