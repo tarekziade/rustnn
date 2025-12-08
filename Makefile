@@ -13,7 +13,8 @@ ORT_DIR ?= target/onnxruntime
 ORT_LIB_DIR ?= $(ORT_DIR)/onnxruntime-osx-arm64-$(ORT_VERSION)/lib
 ORT_LIB_LOCATION ?= $(ORT_LIB_DIR)
 .PHONY: build test fmt run viz onnx coreml coreml-validate onnx-validate validate-all-env \
-	python-dev python-build python-test python-test-wpt python-clean python-example mobilenet-demo text-gen-demo \
+	python-dev python-build python-test python-test-wpt python-clean python-example \
+	mobilenet-demo text-gen-demo text-gen-train text-gen-trained text-gen-enhanced \
 	docs-serve docs-build docs-clean ci-docs \
 	help clean-all
 
@@ -163,6 +164,55 @@ text-gen-demo: python-dev
 	@echo "Text generation demo completed!"
 	@echo "========================================================================"
 
+text-gen-train: python-dev
+	@echo "========================================================================"
+	@echo "Training Text Generation Model"
+	@echo "========================================================================"
+	@echo ""
+	@if [ -f .venv-webnn/bin/python ]; then \
+		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) .venv-webnn/bin/python examples/train_text_model.py --data examples/sample_text.txt --epochs 10 --batch-size 32 --lr 0.001 --save trained_model.json; \
+	else \
+		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) python examples/train_text_model.py --data examples/sample_text.txt --epochs 10 --batch-size 32 --lr 0.001 --save trained_model.json; \
+	fi
+	@echo ""
+	@echo "========================================================================"
+	@echo "Training completed! Model saved to trained_model.json"
+	@echo "========================================================================"
+
+text-gen-trained: python-dev
+	@echo "========================================================================"
+	@echo "Text Generation with Trained Weights"
+	@echo "========================================================================"
+	@echo ""
+	@if [ ! -f trained_model.json ]; then \
+		echo "Error: trained_model.json not found. Run 'make text-gen-train' first."; \
+		exit 1; \
+	fi
+	@if [ -f .venv-webnn/bin/python ]; then \
+		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) .venv-webnn/bin/python examples/text_generation_gpt.py --weights trained_model.json --prompt "The model" --tokens 50 --temperature 0.8 --backend cpu; \
+	else \
+		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) python examples/text_generation_gpt.py --weights trained_model.json --prompt "The model" --tokens 50 --temperature 0.8 --backend cpu; \
+	fi
+	@echo ""
+	@echo "========================================================================"
+	@echo "Generation with trained weights completed!"
+	@echo "========================================================================"
+
+text-gen-enhanced: python-dev
+	@echo "========================================================================"
+	@echo "Enhanced Text Generation with KV Cache"
+	@echo "========================================================================"
+	@echo ""
+	@if [ -f .venv-webnn/bin/python ]; then \
+		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) .venv-webnn/bin/python examples/text_generation_enhanced.py --use-kv-cache --prompt "Hello world" --tokens 30 --temperature 0.8 --backend cpu; \
+	else \
+		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) python examples/text_generation_enhanced.py --use-kv-cache --prompt "Hello world" --tokens 30 --temperature 0.8 --backend cpu; \
+	fi
+	@echo ""
+	@echo "========================================================================"
+	@echo "Enhanced generation with KV cache completed!"
+	@echo "========================================================================"
+
 python-clean:
 	@echo "Cleaning Python artifacts..."
 	rm -rf target/wheels
@@ -237,7 +287,10 @@ help:
 	@echo "  python-test-wpt    - Run WPT conformance tests only"
 	@echo "  python-example     - Run Python examples"
 	@echo "  mobilenet-demo     - Run MobileNetV2 classifier on all 3 backends"
-	@echo "  text-gen-demo      - Run text generation with attention demo"
+	@echo "  text-gen-demo      - Run basic text generation with attention"
+	@echo "  text-gen-train     - Train text generation model on sample data"
+	@echo "  text-gen-trained   - Generate text using trained model weights"
+	@echo "  text-gen-enhanced  - Run enhanced version with KV cache"
 	@echo "  python-clean       - Clean Python artifacts"
 	@echo ""
 	@echo "Documentation:"
