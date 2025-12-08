@@ -7,6 +7,7 @@ use pyo3::prelude::*;
 pub struct PyMLOperand {
     pub(crate) id: u32,
     pub(crate) descriptor: OperandDescriptor,
+    #[allow(dead_code)]
     pub(crate) kind: OperandKind,
     pub(crate) name: Option<String>,
 }

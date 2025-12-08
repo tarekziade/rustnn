@@ -2141,7 +2141,7 @@ impl PyMLGraphBuilder {
     #[pyo3(signature = (input, splits, axis=0))]
     fn split(
         &mut self,
-        py: Python,
+        _py: Python,
         input: &PyMLOperand,
         splits: &Bound<'_, PyAny>,
         axis: u32,

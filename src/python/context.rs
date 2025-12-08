@@ -15,6 +15,7 @@ use crate::executors::coreml::run_coreml_zeroed_cached;
 
 /// Backend execution engine selected at context creation
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(dead_code)]
 enum Backend {
     /// ONNX Runtime (CPU execution)
     OnnxCpu,
@@ -60,7 +61,7 @@ impl PyML {
 #[pyclass(name = "MLContext")]
 pub struct PyMLContext {
     power_preference: String,
-    accelerated_requested: bool,
+    _accelerated_requested: bool,
     accelerated_available: bool,
     backend: Backend,
 }
@@ -383,7 +384,7 @@ impl PyMLContext {
 
         Self {
             power_preference,
-            accelerated_requested,
+            _accelerated_requested: accelerated_requested,
             accelerated_available,
             backend,
         }
@@ -503,8 +504,8 @@ impl PyMLContext {
     #[cfg(any(not(target_os = "macos"), not(feature = "coreml-runtime")))]
     fn compute_coreml(
         &self,
-        py: Python,
-        graph: &PyMLGraph,
+        _py: Python,
+        _graph: &PyMLGraph,
         _inputs: &Bound<'_, PyDict>,
     ) -> PyResult<Py<PyDict>> {
         Err(pyo3::exceptions::PyRuntimeError::new_err(
@@ -596,14 +597,18 @@ impl PyMLContext {
                     return (Backend::OnnxGpu, true);
                 }
 
-                // No acceleration available, fallback to CPU
-                #[cfg(feature = "onnx-runtime")]
-                {
-                    return (Backend::OnnxCpu, false);
-                }
+                // No acceleration available - only reachable when onnx-runtime is not enabled
                 #[cfg(not(feature = "onnx-runtime"))]
                 {
-                    return (Backend::None, false);
+                    (Backend::None, false)
+                }
+
+                // When onnx-runtime is enabled, one of the above cfg blocks will match and return,
+                // so this branch is never reached. We need this to satisfy the compiler in that case.
+                #[cfg(feature = "onnx-runtime")]
+                #[allow(unreachable_code)]
+                {
+                    (Backend::None, false)
                 }
             }
             "high-performance" | "default" => {
