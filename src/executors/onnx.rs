@@ -1,6 +1,7 @@
 #![cfg(all(feature = "onnx-runtime"))]
 
 use std::collections::HashMap;
+use std::sync::Once;
 
 use ort::session::SessionInputValue;
 
@@ -11,6 +12,26 @@ use ort::value::Value;
 
 use crate::error::GraphError;
 use crate::graph::OperandDescriptor;
+
+static INIT: Once = Once::new();
+
+fn ensure_ort_initialized() -> Result<(), GraphError> {
+    let mut result = Ok(());
+    INIT.call_once(|| {
+        if let Err(e) = ort::init()
+            .with_name("rustnn")
+            .with_execution_providers([
+                ort::execution_providers::CPUExecutionProvider::default().build()
+            ])
+            .commit()
+        {
+            result = Err(GraphError::OnnxRuntimeFailed {
+                reason: format!("ort init failed: {e}"),
+            });
+        }
+    });
+    result
+}
 
 #[derive(Debug, Clone)]
 pub struct OnnxOutput {
@@ -37,16 +58,8 @@ pub fn run_onnx_zeroed(
     model_bytes: &[u8],
     _inputs: &HashMap<String, OperandDescriptor>,
 ) -> Result<Vec<OnnxOutput>, GraphError> {
-    // Initialize ort global environment (safe to call multiple times)
-    ort::init()
-        .with_name("rustnn")
-        .with_execution_providers([
-            ort::execution_providers::CPUExecutionProvider::default().build()
-        ])
-        .commit()
-        .map_err(|e| GraphError::OnnxRuntimeFailed {
-            reason: format!("ort init failed: {e}"),
-        })?;
+    // Initialize ort global environment (only once per process)
+    ensure_ort_initialized()?;
 
     let mut session = Session::builder()
         .map_err(|e| GraphError::OnnxRuntimeFailed {
@@ -130,16 +143,8 @@ pub fn run_onnx_with_inputs(
     model_bytes: &[u8],
     inputs: Vec<OnnxInput>,
 ) -> Result<Vec<OnnxOutputWithData>, GraphError> {
-    // Initialize ort global environment (safe to call multiple times)
-    ort::init()
-        .with_name("rustnn")
-        .with_execution_providers([
-            ort::execution_providers::CPUExecutionProvider::default().build()
-        ])
-        .commit()
-        .map_err(|e| GraphError::OnnxRuntimeFailed {
-            reason: format!("ort init failed: {e}"),
-        })?;
+    // Initialize ort global environment (only once per process)
+    ensure_ort_initialized()?;
 
     let mut session = Session::builder()
         .map_err(|e| GraphError::OnnxRuntimeFailed {
