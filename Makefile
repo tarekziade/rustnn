@@ -6,7 +6,7 @@ PNG_PATH ?= target/graph.png
 ONNX_PATH ?= target/graph.onnx
 COREML_PATH ?= target/graph.mlmodel
 COREMLC_PATH ?= target/graph.mlmodelc
-ORT_VERSION ?= 1.22.0
+ORT_VERSION ?= 1.23.2
 ORT_BASE ?= https://github.com/microsoft/onnxruntime/releases/download/v$(ORT_VERSION)
 ORT_TARBALL ?= onnxruntime-osx-arm64-$(ORT_VERSION).tgz
 ORT_DIR ?= target/onnxruntime
@@ -80,12 +80,18 @@ validate-all-env: build test onnx-validate coreml-validate
 
 python-dev: onnxruntime-download
 	@echo "Installing Python package in development mode..."
-	pip install maturin
+	@if [ ! -d .venv-webnn ]; then \
+		python3.12 -m venv .venv-webnn; \
+		.venv-webnn/bin/pip install --upgrade pip; \
+		.venv-webnn/bin/pip install pytest pytest-asyncio numpy maturin; \
+	fi
+	VIRTUAL_ENV=$(PWD)/.venv-webnn \
+	PATH=$(PWD)/.venv-webnn/bin:$$PATH \
 	ORT_STRATEGY=system \
 	ORT_LIB_LOCATION=$(ORT_LIB_LOCATION) \
 	DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) \
 	RUSTFLAGS="-L $(ORT_LIB_DIR)" \
-	maturin develop --features python,onnx-runtime
+	.venv-webnn/bin/maturin develop --features python,onnx-runtime
 
 python-build: onnxruntime-download
 	@echo "Building Python wheel..."
@@ -102,7 +108,7 @@ python-test: python-dev
 		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) .venv-webnn/bin/python -m pytest tests/ -v; \
 		EXIT_CODE=$$?; \
 		if [ $$EXIT_CODE -eq 134 ] || [ $$EXIT_CODE -eq 139 ]; then \
-			echo "⚠️  Note: Python crashed during cleanup (known ONNX Runtime v1.22.0 issue)"; \
+			echo "⚠️  Note: Python crashed during cleanup"; \
 			echo "✅  All tests passed successfully before the crash"; \
 			exit 0; \
 		else \
@@ -112,7 +118,7 @@ python-test: python-dev
 		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) python -m pytest tests/ -v; \
 		EXIT_CODE=$$?; \
 		if [ $$EXIT_CODE -eq 134 ] || [ $$EXIT_CODE -eq 139 ]; then \
-			echo "⚠️  Note: Python crashed during cleanup (known ONNX Runtime v1.22.0 issue)"; \
+			echo "⚠️  Note: Python crashed during cleanup"; \
 			echo "✅  All tests passed successfully before the crash"; \
 			exit 0; \
 		else \

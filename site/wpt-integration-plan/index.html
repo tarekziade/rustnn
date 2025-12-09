@@ -1,0 +1,1977 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Python bindings for the W3C WebNN API">
+      
+      
+        <meta name="author" content="Your Organization">
+      
+      
+        <link rel="canonical" href="https://your-org.github.io/rustnn/wpt-integration-plan/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../logo/rustnn.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>WPT WebNN Test Integration Plan - WebNN Python API</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#wpt-webnn-test-integration-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="WebNN Python API" class="md-header__button md-logo" aria-label="WebNN Python API" data-md-component="logo">
+      
+  <img src="../logo/rustnn.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WebNN Python API
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              WPT WebNN Test Integration Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/your-org/rustnn" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    your-org/rustnn
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../examples/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Examples
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../development/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Development
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../advanced/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Advanced Topics
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="WebNN Python API" class="md-nav__button md-logo" aria-label="WebNN Python API" data-md-component="logo">
+      
+  <img src="../logo/rustnn.png" alt="logo">
+
+    </a>
+    WebNN Python API
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/your-org/rustnn" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    your-org/rustnn
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#background" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Background
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Background">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-are-wpt-webnn-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What are WPT WebNN Tests?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wpt-test-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WPT Test Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-state-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current State Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Current State Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-we-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What We Have
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-were-missing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What We're Missing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Strategy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integration Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#approach-python-test-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approach: Python Test Adapter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-python-not-javascript" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Python (not JavaScript)?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-test-infrastructure-week-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Test Infrastructure (Week 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-conformance-tests-week-2-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Conformance Tests (Week 2-3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-validation-tests-week-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Validation Tests (Week 4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-continuous-integration-week-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Continuous Integration (Week 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Design
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Design">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#directory-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-data-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Data Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tolerance-checking-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tolerance Checking Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-parameterization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Parameterization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Path
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration Path">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#short-term-immediate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Short-term (Immediate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium-term-1-2-weeks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Medium-term (1-2 weeks)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#long-term-1-2-months" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Long-term (1-2 months)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risks-and-mitigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risks and Mitigation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Risks and Mitigation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#risk-1-test-data-conversion-complexity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 1: Test Data Conversion Complexity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-2-precision-tolerance-mismatches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 2: Precision Tolerance Mismatches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-3-unsupported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 3: Unsupported Data Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-4-test-maintenance-burden" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 4: Test Maintenance Burden
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-5-performance-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk 5: Performance Impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#success-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Criteria
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Success Criteria">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#milestone-1-reduction-operations-week-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Milestone 1: Reduction Operations (Week 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#milestone-2-tier-1-coverage-week-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Milestone 2: Tier 1 Coverage (Week 3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#milestone-3-validation-coverage-week-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Milestone 3: Validation Coverage (Week 4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#milestone-4-production-ready-week-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Milestone 4: Production Ready (Week 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open Questions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Appendices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#appendix-a-wpt-test-coverage-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix A: WPT Test Coverage Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#appendix-b-example-test-converter-pseudocode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix B: Example Test Converter Pseudocode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="wpt-webnn-test-integration-plan">WPT WebNN Test Integration Plan<a class="headerlink" href="#wpt-webnn-test-integration-plan" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> Design Document
+<strong>Created:</strong> 2025-12-07
+<strong>Author:</strong> Claude Code (via analysis of WPT test suite)</p>
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p>This document outlines a strategy for integrating the W3C Web Platform Tests (WPT) for WebNN with the rustnn implementation. The goal is to leverage the comprehensive WPT test suite (110+ conformance tests, 64+ validation tests) to validate our implementation's correctness and spec compliance.</p>
+<h2 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h2>
+<h3 id="what-are-wpt-webnn-tests">What are WPT WebNN Tests?<a class="headerlink" href="#what-are-wpt-webnn-tests" title="Permanent link">&para;</a></h3>
+<p>The <a href="https://github.com/web-platform-tests/wpt/tree/master/webnn">Web Platform Tests for WebNN</a> are the official conformance tests for the W3C WebNN specification. They consist of:</p>
+<ol>
+<li><strong>Conformance Tests</strong> (<code>conformance_tests/</code>): 110+ tests validating that operations produce mathematically correct results</li>
+<li><strong>Validation Tests</strong> (<code>validation_tests/</code>): 64+ tests ensuring proper error handling and parameter validation</li>
+<li><strong>IDL Tests</strong>: Web IDL interface validation tests</li>
+<li><strong>Test Resources</strong>: Shared utilities and test data</li>
+</ol>
+<h3 id="wpt-test-structure">WPT Test Structure<a class="headerlink" href="#wpt-test-structure" title="Permanent link">&para;</a></h3>
+<p><strong>Conformance Test Example:</strong>
+<div class="language-javascript highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;relu float32 2D tensor&quot;</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="s2">&quot;graph&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="s2">&quot;inputs&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="s2">&quot;reluInput&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="s2">&quot;data&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="mf">3</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mf">4</span><span class="p">,</span><span class="w"> </span><span class="mf">5</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mf">6</span><span class="p">],</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">        </span><span class="s2">&quot;descriptor&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;dimensions&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="mf">3</span><span class="p">],</span><span class="w"> </span><span class="s2">&quot;dataType&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;float32&quot;</span><span class="p">}</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="s2">&quot;operators&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;relu&quot;</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">      </span><span class="s2">&quot;arguments&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="s2">&quot;input&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;reluInput&quot;</span><span class="p">}],</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">      </span><span class="s2">&quot;outputs&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;reluOutput&quot;</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="p">}],</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="s2">&quot;expectedOutputs&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">      </span><span class="s2">&quot;reluOutput&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">        </span><span class="s2">&quot;data&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="mf">0</span><span class="p">,</span><span class="w"> </span><span class="mf">3</span><span class="p">,</span><span class="w"> </span><span class="mf">0</span><span class="p">,</span><span class="w"> </span><span class="mf">5</span><span class="p">,</span><span class="w"> </span><span class="mf">0</span><span class="p">],</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">        </span><span class="s2">&quot;descriptor&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;dimensions&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="mf">3</span><span class="p">],</span><span class="w"> </span><span class="s2">&quot;dataType&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;float32&quot;</span><span class="p">}</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<p><strong>Key Components:</strong>
+- <strong>Test data format</strong>: JSON-like structures with inputs, operators, and expected outputs
+- <strong>Precision tolerances</strong>: ULP (Units in Last Place) or ATOL (absolute tolerance) based
+- <strong>Multi-context</strong>: Tests run on CPU, GPU, NPU variants
+- <strong>Data types</strong>: float32, float16, int8, int32, int64, uint8, uint32, uint64, int4, uint4</p>
+<h2 id="current-state-analysis">Current State Analysis<a class="headerlink" href="#current-state-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="what-we-have">What We Have<a class="headerlink" href="#what-we-have" title="Permanent link">&para;</a></h3>
+<p>✅ <strong>Python API</strong>: Full WebNN-compliant API with all reduction operations
+✅ <strong>Graph Builder</strong>: Backend-agnostic graph construction
+✅ <strong>ONNX Backend</strong>: Cross-platform execution via ONNX Runtime
+✅ <strong>CoreML Backend</strong>: macOS-optimized execution
+✅ <strong>Basic Tests</strong>: 109 Python tests (18 for reduction operations)</p>
+<h3 id="what-were-missing">What We're Missing<a class="headerlink" href="#what-were-missing" title="Permanent link">&para;</a></h3>
+<p>❌ <strong>Comprehensive test coverage</strong>: Only ~10% of WPT test cases covered
+❌ <strong>Precision validation</strong>: No ULP-based tolerance checking
+❌ <strong>Data type coverage</strong>: Missing float16, int64, int4/uint4 support
+❌ <strong>Validation tests</strong>: No systematic parameter validation testing
+❌ <strong>Test automation</strong>: Manual test writing vs. data-driven approach</p>
+<h2 id="integration-strategy">Integration Strategy<a class="headerlink" href="#integration-strategy" title="Permanent link">&para;</a></h2>
+<h3 id="approach-python-test-adapter">Approach: Python Test Adapter<a class="headerlink" href="#approach-python-test-adapter" title="Permanent link">&para;</a></h3>
+<p>We propose creating a <strong>Python-based test adapter</strong> that:
+1. Loads WPT test data (converted from JavaScript to JSON)
+2. Executes tests against our Python WebNN API
+3. Validates results using WPT-compatible tolerance checking
+4. Reports results in pytest format</p>
+<h3 id="why-python-not-javascript">Why Python (not JavaScript)?<a class="headerlink" href="#why-python-not-javascript" title="Permanent link">&para;</a></h3>
+<p><strong>Advantages:</strong>
+- ✅ Our Python API already implements WebNN spec
+- ✅ Can reuse existing pytest infrastructure
+- ✅ Direct access to NumPy for numerical validation
+- ✅ Easier to integrate with CI/CD
+- ✅ No need for JavaScript runtime</p>
+<p><strong>Trade-offs:</strong>
+- ⚠️ Need to convert JS test data to Python/JSON format
+- ⚠️ Some WPT utilities need reimplementation (tolerance checking, type conversion)</p>
+<h2 id="implementation-plan">Implementation Plan<a class="headerlink" href="#implementation-plan" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-test-infrastructure-week-1">Phase 1: Test Infrastructure (Week 1)<a class="headerlink" href="#phase-1-test-infrastructure-week-1" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Build the foundation for running WPT-style tests in Python</p>
+<p><strong>Tasks:</strong></p>
+<ol>
+<li><strong>Create test data converter</strong> (<code>scripts/convert_wpt_tests.py</code>)</li>
+<li>Parse JavaScript test files from WPT repo</li>
+<li>Extract test case data structures</li>
+<li>Convert to JSON format (one file per operation)</li>
+<li>
+<p>Store in <code>tests/wpt_data/conformance/</code> and <code>tests/wpt_data/validation/</code></p>
+</li>
+<li>
+<p><strong>Implement tolerance checking</strong> (<code>tests/wpt_utils.py</code>)</p>
+</li>
+<li>Port ULP distance calculation from WPT <code>utils.js</code></li>
+<li>Implement ATOL checking</li>
+<li>Create precision tolerance lookup tables</li>
+<li>
+<p>Add tolerance accumulation for multi-operator graphs</p>
+</li>
+<li>
+<p><strong>Build test loader</strong> (<code>tests/test_wpt_conformance.py</code>)</p>
+</li>
+<li>Load JSON test data</li>
+<li>Parameterize pytest tests from data</li>
+<li>Map test data to WebNN API calls</li>
+<li>Execute and validate results</li>
+</ol>
+<p><strong>Deliverables:</strong>
+- [ ] <code>scripts/convert_wpt_tests.py</code> - Converter script
+- [ ] <code>tests/wpt_utils.py</code> - WPT-compatible utilities
+- [ ] <code>tests/wpt_data/</code> - Test data directory structure
+- [ ] <code>tests/test_wpt_conformance.py</code> - Test runner (initial version)</p>
+<h3 id="phase-2-conformance-tests-week-2-3">Phase 2: Conformance Tests (Week 2-3)<a class="headerlink" href="#phase-2-conformance-tests-week-2-3" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Run all WPT conformance tests for implemented operations</p>
+<p><strong>Priority Operations (in order):</strong></p>
+<p><strong>Tier 1 - Already Implemented:</strong>
+1. ✅ Binary ops: add, sub, mul, div, matmul (5 ops)
+2. ✅ Activations: relu, sigmoid, tanh, softmax (4 ops)
+3. ✅ Reductions: reduceSum, reduceMean, reduceMax, reduceMin, reduceProduct, reduceL1, reduceL2, reduceLogSum, reduceLogSumExp, reduceSumSquare (10 ops)
+4. ✅ Pooling: averagePool2d, maxPool2d, globalAveragePool, globalMaxPool (4 ops)
+5. ✅ Convolution: conv2d, convTranspose2d (2 ops)
+6. ✅ Normalization: batchNormalization, instanceNormalization, layerNormalization (3 ops)
+7. ✅ Shape: reshape (1 op)</p>
+<p><strong>Total Tier 1:</strong> 29 operations (estimated ~35-40 WPT test files)</p>
+<p><strong>Tier 2 - High Priority Missing Ops:</strong>
+1. Element-wise: abs, ceil, floor, exp, log, sqrt, neg, reciprocal (8 ops)
+2. Shape: transpose, concat, split, slice, expand (5 ops)
+3. Logical: equal, greater, lesser, logical_not (4 ops)</p>
+<p><strong>Tier 3 - Future:</strong>
+- Recurrent: lstm, gru, lstmCell, gruCell
+- Advanced: gemm, where, cast, clamp, gather, scatter
+- Quantization: quantizeLinear, dequantizeLinear</p>
+<p><strong>Tasks:</strong></p>
+<ol>
+<li>
+<p><strong>Convert Tier 1 test data</strong> (Priority: Reductions first)
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>scripts/convert_wpt_tests.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--wpt-repo<span class="w"> </span>~/wpt<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--operations<span class="w"> </span>reduce_sum,reduce_mean,reduce_max,reduce_min<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--output<span class="w"> </span>tests/wpt_data/conformance/
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>Implement data type support</strong></p>
+</li>
+<li>Add float16 support (map to float32 for computation, track separately)</li>
+<li>Add int64/uint64 support (use Python int, convert to/from NumPy)</li>
+<li>
+<p>Document unsupported types (int4/uint4 - defer to future)</p>
+</li>
+<li>
+<p><strong>Run and validate conformance tests</strong>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pytest<span class="w"> </span>tests/test_wpt_conformance.py<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;reduce&quot;</span><span class="w"> </span>-v
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>Fix failures</strong></p>
+</li>
+<li>Investigate numerical precision issues</li>
+<li>Adjust tolerance settings if needed</li>
+<li>
+<p>Fix implementation bugs</p>
+</li>
+<li>
+<p><strong>Add CI integration</strong></p>
+</li>
+<li>Add GitHub Actions workflow</li>
+<li>Run WPT tests on every PR</li>
+<li>Generate coverage reports</li>
+</ol>
+<p><strong>Success Metrics:</strong>
+- [ ] 100% of Tier 1 tests passing (within WPT tolerances)
+- [ ] Coverage report showing tested operations
+- [ ] CI pipeline green</p>
+<h3 id="phase-3-validation-tests-week-4">Phase 3: Validation Tests (Week 4)<a class="headerlink" href="#phase-3-validation-tests-week-4" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Ensure proper error handling and parameter validation</p>
+<p><strong>Tasks:</strong></p>
+<ol>
+<li><strong>Convert validation test data</strong></li>
+<li>Extract validation tests from WPT</li>
+<li>Focus on operations we've implemented</li>
+<li>
+<p>Convert error-checking patterns to pytest assertions</p>
+</li>
+<li>
+<p><strong>Implement validation test runner</strong> (<code>tests/test_wpt_validation.py</code>)</p>
+</li>
+<li>Test parameter constraints (shape, type, range)</li>
+<li>Test error messages and exception types</li>
+<li>Test cross-builder validation</li>
+<li>
+<p>Test invalid input combinations</p>
+</li>
+<li>
+<p><strong>Enhance error handling</strong></p>
+</li>
+<li>Improve error messages to match WPT expectations</li>
+<li>Add missing validation checks</li>
+<li>Document validation behavior</li>
+</ol>
+<p><strong>Example Validation Test:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_reduce_sum_invalid_axes</span><span class="p">():</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Test that reduceSum rejects out-of-bounds axes&quot;&quot;&quot;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">builder</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">create_graph_builder</span><span class="p">()</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">x</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">input</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="c1"># Axis 5 is out of bounds for rank-3 tensor</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="k">with</span> <span class="n">pytest</span><span class="o">.</span><span class="n">raises</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="n">match</span><span class="o">=</span><span class="s2">&quot;out of bounds&quot;</span><span class="p">):</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="n">output</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+</span></code></pre></div></p>
+<p><strong>Success Metrics:</strong>
+- [ ] All validation tests passing for implemented ops
+- [ ] Consistent error messages with WPT expectations
+- [ ] Full parameter validation coverage</p>
+<h3 id="phase-4-continuous-integration-week-5">Phase 4: Continuous Integration (Week 5)<a class="headerlink" href="#phase-4-continuous-integration-week-5" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Automate WPT test execution and reporting</p>
+<p><strong>Tasks:</strong></p>
+<ol>
+<li><strong>Set up test automation</strong></li>
+<li>Create <code>make wpt-test</code> target</li>
+<li>Add to CI pipeline</li>
+<li>
+<p>Configure test matrix (backends, data types)</p>
+</li>
+<li>
+<p><strong>Implement test filtering</strong></p>
+</li>
+<li>Skip tests for unimplemented operations</li>
+<li>Mark known failures with xfail</li>
+<li>
+<p>Tag tests by operation category</p>
+</li>
+<li>
+<p><strong>Create test reports</strong></p>
+</li>
+<li>Generate HTML coverage report</li>
+<li>Show pass/fail/skip breakdown by operation</li>
+<li>
+<p>Track test status over time</p>
+</li>
+<li>
+<p><strong>Document test usage</strong></p>
+</li>
+<li>Update README with WPT test instructions</li>
+<li>Document how to add new test data</li>
+<li>Explain tolerance tuning process</li>
+</ol>
+<p><strong>Success Metrics:</strong>
+- [ ] WPT tests run automatically on every PR
+- [ ] Test coverage visible in CI
+- [ ] Clear documentation for contributors</p>
+<h2 id="technical-design">Technical Design<a class="headerlink" href="#technical-design" title="Permanent link">&para;</a></h2>
+<h3 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>rustnn/
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── tests/
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>│   ├── wpt_data/                    # WPT test data (converted)
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>│   │   ├── conformance/
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>│   │   │   ├── relu.json
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>│   │   │   ├── reduce_sum.json
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>│   │   │   └── ...
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>│   │   └── validation/
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>│   │       ├── relu.json
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>│   │       └── ...
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>│   ├── wpt_utils.py                 # WPT-compatible utilities
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>│   ├── test_wpt_conformance.py      # Conformance test runner
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>│   ├── test_wpt_validation.py       # Validation test runner
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>│   └── conftest.py                  # Pytest fixtures
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>├── scripts/
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>│   ├── convert_wpt_tests.py         # WPT test converter
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>│   └── update_wpt_tests.sh          # Auto-update script
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>└── docs/
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    ├── wpt-integration-plan.md      # This document
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    └── wpt-test-guide.md            # User guide (TBD)
+</span></code></pre></div>
+<h3 id="test-data-format">Test Data Format<a class="headerlink" href="#test-data-format" title="Permanent link">&para;</a></h3>
+<p><strong>JSON Test Case Structure:</strong>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reduce_sum float32 2D tensor with axes=[1]&quot;</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">&quot;input&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">&quot;data&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0</span><span class="p">,</span><span class="w"> </span><span class="mf">4.0</span><span class="p">,</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="mf">6.0</span><span class="p">],</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">&quot;shape&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">],</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">      </span><span class="nt">&quot;dataType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float32&quot;</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span><span class="nt">&quot;operators&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reduce_sum&quot;</span><span class="p">,</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">      </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">        </span><span class="nt">&quot;input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;input&quot;</span><span class="p">,</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">        </span><span class="nt">&quot;axes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">        </span><span class="nt">&quot;keepDimensions&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">      </span><span class="p">},</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">      </span><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;output&quot;</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">  </span><span class="nt">&quot;expectedOutputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">    </span><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">      </span><span class="nt">&quot;data&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">6.0</span><span class="p">,</span><span class="w"> </span><span class="mf">15.0</span><span class="p">],</span>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">      </span><span class="nt">&quot;shape&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="w">      </span><span class="nt">&quot;dataType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float32&quot;</span>
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="w">  </span><span class="nt">&quot;tolerance&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-29"><a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ULP&quot;</span><span class="p">,</span>
+</span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="w">    </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-5-31"><a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-5-32"><a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<h3 id="tolerance-checking-implementation">Tolerance Checking Implementation<a class="headerlink" href="#tolerance-checking-implementation" title="Permanent link">&para;</a></h3>
+<p><strong>ULP Distance Function:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">ulp_distance</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">dtype</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate ULP distance between two floating-point values&quot;&quot;&quot;</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;float32&quot;</span><span class="p">:</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>        <span class="c1"># Convert to int32 bit representation</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="n">a_bits</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;!i&#39;</span><span class="p">,</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;!f&#39;</span><span class="p">,</span> <span class="n">a</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>        <span class="n">b_bits</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s1">&#39;!i&#39;</span><span class="p">,</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s1">&#39;!f&#39;</span><span class="p">,</span> <span class="n">b</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="n">a_bits</span> <span class="o">-</span> <span class="n">b_bits</span><span class="p">)</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;float16&quot;</span><span class="p">:</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>        <span class="c1"># Use numpy float16</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>        <span class="n">a_half</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>        <span class="n">b_half</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>        <span class="n">a_bits</span> <span class="o">=</span> <span class="n">a_half</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>        <span class="n">b_bits</span> <span class="o">=</span> <span class="n">b_half</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">a_bits</span><span class="p">)</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">b_bits</span><span class="p">)))</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ULP not supported for </span><span class="si">{</span><span class="n">dtype</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div></p>
+<p><strong>Precision Tolerance Lookup:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">OPERATION_TOLERANCES</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="s2">&quot;relu&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;ULP&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="s2">&quot;sigmoid&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;ULP&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;float32&quot;</span><span class="p">:</span> <span class="mi">34</span><span class="p">,</span> <span class="s2">&quot;float16&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}},</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="s2">&quot;tanh&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;ULP&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;float32&quot;</span><span class="p">:</span> <span class="mi">44</span><span class="p">,</span> <span class="s2">&quot;float16&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">}},</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="s2">&quot;reduce_sum&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">test</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;ULP&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span>  <span class="c1"># Varies by input size</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="s2">&quot;reduce_mean&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">test</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="s2">&quot;ULP&quot;</span><span class="p">:</span> <span class="n">compute_reduce_tolerance</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">)</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="p">},</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="c1"># ... more operations</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<h3 id="test-parameterization">Test Parameterization<a class="headerlink" href="#test-parameterization" title="Permanent link">&para;</a></h3>
+<p><strong>Pytest Parameterization:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">wpt_test_loader</span><span class="p">():</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load WPT test data files&quot;&quot;&quot;</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="n">operation</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">category</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;conformance&quot;</span><span class="p">):</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>        <span class="n">path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;tests/wpt_data/</span><span class="si">{</span><span class="n">category</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">operation</span><span class="si">}</span><span class="s2">.json&quot;</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="k">return</span> <span class="n">load</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="k">def</span><span class="w"> </span><span class="nf">load_conformance_tests</span><span class="p">(</span><span class="n">operation</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate pytest parameters from WPT test data&quot;&quot;&quot;</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="n">test_data</span> <span class="o">=</span> <span class="n">load_wpt_test_data</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;conformance/</span><span class="si">{</span><span class="n">operation</span><span class="si">}</span><span class="s2">.json&quot;</span><span class="p">)</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="k">return</span> <span class="p">[</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>        <span class="n">pytest</span><span class="o">.</span><span class="n">param</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">test</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">])</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>        <span class="k">for</span> <span class="n">test</span> <span class="ow">in</span> <span class="n">test_data</span><span class="p">[</span><span class="s2">&quot;tests&quot;</span><span class="p">]</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>    <span class="p">]</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>    <span class="s2">&quot;test_case&quot;</span><span class="p">,</span>
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>    <span class="n">load_conformance_tests</span><span class="p">(</span><span class="s2">&quot;reduce_sum&quot;</span><span class="p">)</span>
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="p">)</span>
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_reduce_sum_conformance</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">test_case</span><span class="p">):</span>
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Run WPT conformance test for reduce_sum&quot;&quot;&quot;</span>
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">execute_wpt_test</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">test_case</span><span class="p">)</span>
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>    <span class="n">validate_wpt_result</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">test_case</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">get_tolerance</span><span class="p">(</span><span class="n">test_case</span><span class="p">))</span>
+</span></code></pre></div></p>
+<h2 id="migration-path">Migration Path<a class="headerlink" href="#migration-path" title="Permanent link">&para;</a></h2>
+<h3 id="short-term-immediate">Short-term (Immediate)<a class="headerlink" href="#short-term-immediate" title="Permanent link">&para;</a></h3>
+<p><strong>Focus:</strong> Get 10 reduction operations fully tested with WPT conformance tests</p>
+<ol>
+<li>Convert WPT test data for all 10 reduction operations</li>
+<li>Implement basic tolerance checking (ULP + ATOL)</li>
+<li>Run tests, fix any failures</li>
+<li>Document results and learnings</li>
+</ol>
+<p><strong>Effort:</strong> 2-3 days
+<strong>Value:</strong> High - validates our recent reduction implementation</p>
+<h3 id="medium-term-1-2-weeks">Medium-term (1-2 weeks)<a class="headerlink" href="#medium-term-1-2-weeks" title="Permanent link">&para;</a></h3>
+<p><strong>Focus:</strong> Expand coverage to all implemented operations (29 ops)</p>
+<ol>
+<li>Convert test data for remaining Tier 1 operations</li>
+<li>Add float16 support where needed</li>
+<li>Implement validation tests for parameter checking</li>
+<li>Integrate into CI pipeline</li>
+</ol>
+<p><strong>Effort:</strong> 1-2 weeks
+<strong>Value:</strong> High - comprehensive validation of current implementation</p>
+<h3 id="long-term-1-2-months">Long-term (1-2 months)<a class="headerlink" href="#long-term-1-2-months" title="Permanent link">&para;</a></h3>
+<p><strong>Focus:</strong> Full WPT compliance</p>
+<ol>
+<li>Implement missing Tier 2 operations</li>
+<li>Add all conformance and validation tests</li>
+<li>Track WPT upstream changes</li>
+<li>Contribute fixes back to WPT if needed</li>
+</ol>
+<p><strong>Effort:</strong> 1-2 months
+<strong>Value:</strong> Medium-High - full spec compliance, industry standard testing</p>
+<h2 id="risks-and-mitigation">Risks and Mitigation<a class="headerlink" href="#risks-and-mitigation" title="Permanent link">&para;</a></h2>
+<h3 id="risk-1-test-data-conversion-complexity">Risk 1: Test Data Conversion Complexity<a class="headerlink" href="#risk-1-test-data-conversion-complexity" title="Permanent link">&para;</a></h3>
+<p><strong>Risk:</strong> WPT tests use JavaScript; conversion may be error-prone
+<strong>Mitigation:</strong> Start with simple operations (reductions), validate manually, automate gradually</p>
+<h3 id="risk-2-precision-tolerance-mismatches">Risk 2: Precision Tolerance Mismatches<a class="headerlink" href="#risk-2-precision-tolerance-mismatches" title="Permanent link">&para;</a></h3>
+<p><strong>Risk:</strong> Our backends may have different numerical characteristics than WPT expects
+<strong>Mitigation:</strong> Make tolerances configurable, document backend-specific tolerances</p>
+<h3 id="risk-3-unsupported-data-types">Risk 3: Unsupported Data Types<a class="headerlink" href="#risk-3-unsupported-data-types" title="Permanent link">&para;</a></h3>
+<p><strong>Risk:</strong> ONNX Runtime may not support all WPT data types (float16, int4, uint4)
+<strong>Mitigation:</strong> Clearly document unsupported types, skip those tests gracefully</p>
+<h3 id="risk-4-test-maintenance-burden">Risk 4: Test Maintenance Burden<a class="headerlink" href="#risk-4-test-maintenance-burden" title="Permanent link">&para;</a></h3>
+<p><strong>Risk:</strong> WPT tests update frequently, keeping in sync is effort
+<strong>Mitigation:</strong> Automate test data updates, pin to specific WPT version initially</p>
+<h3 id="risk-5-performance-impact">Risk 5: Performance Impact<a class="headerlink" href="#risk-5-performance-impact" title="Permanent link">&para;</a></h3>
+<p><strong>Risk:</strong> 110+ conformance tests may slow down CI significantly
+<strong>Mitigation:</strong> Run subset on PR (smoke tests), full suite nightly or on-demand</p>
+<h2 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Permanent link">&para;</a></h2>
+<h3 id="milestone-1-reduction-operations-week-1">Milestone 1: Reduction Operations (Week 1)<a class="headerlink" href="#milestone-1-reduction-operations-week-1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] 10 reduction operations have WPT conformance tests</li>
+<li>[ ] All tests passing within specified tolerances</li>
+<li>[ ] Test infrastructure proven and documented</li>
+</ul>
+<h3 id="milestone-2-tier-1-coverage-week-3">Milestone 2: Tier 1 Coverage (Week 3)<a class="headerlink" href="#milestone-2-tier-1-coverage-week-3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] 29 implemented operations have WPT conformance tests</li>
+<li>[ ] 80%+ pass rate (some tolerance tuning expected)</li>
+<li>[ ] CI integration complete</li>
+</ul>
+<h3 id="milestone-3-validation-coverage-week-4">Milestone 3: Validation Coverage (Week 4)<a class="headerlink" href="#milestone-3-validation-coverage-week-4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Parameter validation tests for all Tier 1 operations</li>
+<li>[ ] Consistent error handling across API</li>
+<li>[ ] Test coverage report generated</li>
+</ul>
+<h3 id="milestone-4-production-ready-week-5">Milestone 4: Production Ready (Week 5)<a class="headerlink" href="#milestone-4-production-ready-week-5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] 90%+ WPT conformance test pass rate</li>
+<li>[ ] Full documentation and contributor guide</li>
+<li>[ ] Automated test updates from WPT upstream</li>
+</ul>
+<h2 id="open-questions">Open Questions<a class="headerlink" href="#open-questions" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Q:</strong> Should we fork WPT or reference it as a submodule?
+   <strong>A:</strong> TBD - Recommend submodule for official tests, convert to JSON as needed</p>
+</li>
+<li>
+<p><strong>Q:</strong> Do we need to support all WPT data types immediately?
+   <strong>A:</strong> No - Start with float32/int32, add float16 next, defer int4/uint4</p>
+</li>
+<li>
+<p><strong>Q:</strong> Should tolerance settings be configurable per backend?
+   <strong>A:</strong> Yes - Different backends (ONNX CPU vs CoreML) may need different tolerances</p>
+</li>
+<li>
+<p><strong>Q:</strong> How to handle flaky tests?
+   <strong>A:</strong> Mark with pytest.mark.flaky, investigate root cause, consider backend-specific skips</p>
+</li>
+<li>
+<p><strong>Q:</strong> Should we contribute test results back to WPT?
+   <strong>A:</strong> Future consideration - Once stable, could report implementation status</p>
+</li>
+</ol>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>WPT WebNN Tests:</strong> https://github.com/web-platform-tests/wpt/tree/master/webnn</li>
+<li><strong>WebNN Spec:</strong> https://www.w3.org/TR/webnn/</li>
+<li><strong>WPT Contributing Guide:</strong> https://web-platform-tests.org/writing-tests/</li>
+<li><strong>Local WebNN Spec Reference:</strong> <code>docs/webnn-spec-reference.md</code></li>
+</ul>
+<h2 id="appendices">Appendices<a class="headerlink" href="#appendices" title="Permanent link">&para;</a></h2>
+<h3 id="appendix-a-wpt-test-coverage-matrix">Appendix A: WPT Test Coverage Matrix<a class="headerlink" href="#appendix-a-wpt-test-coverage-matrix" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>WPT Tests</th>
+<th>Implemented</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>relu</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>sigmoid</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>tanh</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>softmax</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>add</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>sub</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>mul</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>div</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>matmul</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceSum</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceMean</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceMax</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceMin</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceProduct</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceL1</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceL2</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceLogSum</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceLogSumExp</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reduceSumSquare</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>averagePool2d</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>maxPool2d</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>globalAveragePool</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>globalMaxPool</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>conv2d</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>convTranspose2d</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>batchNormalization</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>instanceNormalization</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>layerNormalization</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>reshape</td>
+<td>✅</td>
+<td>✅</td>
+<td>Tier 1</td>
+</tr>
+<tr>
+<td>abs</td>
+<td>✅</td>
+<td>❌</td>
+<td>Tier 2</td>
+</tr>
+<tr>
+<td>exp</td>
+<td>✅</td>
+<td>❌</td>
+<td>Tier 2</td>
+</tr>
+<tr>
+<td>log</td>
+<td>✅</td>
+<td>❌</td>
+<td>Tier 2</td>
+</tr>
+<tr>
+<td>sqrt</td>
+<td>✅</td>
+<td>❌</td>
+<td>Tier 2</td>
+</tr>
+<tr>
+<td>transpose</td>
+<td>✅</td>
+<td>❌</td>
+<td>Tier 2</td>
+</tr>
+<tr>
+<td>concat</td>
+<td>✅</td>
+<td>❌</td>
+<td>Tier 2</td>
+</tr>
+<tr>
+<td>split</td>
+<td>✅</td>
+<td>❌</td>
+<td>Tier 2</td>
+</tr>
+<tr>
+<td>slice</td>
+<td>✅</td>
+<td>❌</td>
+<td>Tier 2</td>
+</tr>
+<tr>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+</tbody>
+</table>
+<h3 id="appendix-b-example-test-converter-pseudocode">Appendix B: Example Test Converter Pseudocode<a class="headerlink" href="#appendix-b-example-test-converter-pseudocode" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="ch">#!/usr/bin/env python3</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="sd">&quot;&quot;&quot;Convert WPT WebNN tests from JavaScript to JSON format&quot;&quot;&quot;</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">parse_js_test_file</span><span class="p">(</span><span class="n">js_content</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse JavaScript test array into Python dict&quot;&quot;&quot;</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="c1"># Extract test array using regex</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;const \w+Tests = (\[.*?\]);&#39;</span><span class="p">,</span> <span class="n">js_content</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No test array found&quot;</span><span class="p">)</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>    <span class="c1"># Use ast/esprima to parse JavaScript safely</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>    <span class="c1"># Or use simple regex for basic cases</span>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>    <span class="n">test_array_str</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>    <span class="c1"># Convert to JSON-compatible format</span>
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>    <span class="n">tests</span> <span class="o">=</span> <span class="n">parse_test_array</span><span class="p">(</span><span class="n">test_array_str</span><span class="p">)</span>
+</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;tests&quot;</span><span class="p">:</span> <span class="n">tests</span><span class="p">}</span>
+</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>
+</span><span id="__span-9-23"><a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a><span class="k">def</span><span class="w"> </span><span class="nf">convert_wpt_operation</span><span class="p">(</span><span class="n">wpt_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">operation</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
+</span><span id="__span-9-24"><a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a single operation&#39;s tests&quot;&quot;&quot;</span>
+</span><span id="__span-9-25"><a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a>    <span class="n">js_file</span> <span class="o">=</span> <span class="n">wpt_dir</span> <span class="o">/</span> <span class="s2">&quot;conformance_tests&quot;</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">operation</span><span class="si">}</span><span class="s2">.https.any.js&quot;</span>
+</span><span id="__span-9-26"><a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a>
+</span><span id="__span-9-27"><a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">js_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-9-28"><a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a>        <span class="n">js_content</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+</span><span id="__span-9-29"><a id="__codelineno-9-29" name="__codelineno-9-29" href="#__codelineno-9-29"></a>
+</span><span id="__span-9-30"><a id="__codelineno-9-30" name="__codelineno-9-30" href="#__codelineno-9-30"></a>    <span class="n">test_data</span> <span class="o">=</span> <span class="n">parse_js_test_file</span><span class="p">(</span><span class="n">js_content</span><span class="p">)</span>
+</span><span id="__span-9-31"><a id="__codelineno-9-31" name="__codelineno-9-31" href="#__codelineno-9-31"></a>
+</span><span id="__span-9-32"><a id="__codelineno-9-32" name="__codelineno-9-32" href="#__codelineno-9-32"></a>    <span class="n">output_file</span> <span class="o">=</span> <span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">operation</span><span class="si">}</span><span class="s2">.json&quot;</span>
+</span><span id="__span-9-33"><a id="__codelineno-9-33" name="__codelineno-9-33" href="#__codelineno-9-33"></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__span-9-34"><a id="__codelineno-9-34" name="__codelineno-9-34" href="#__codelineno-9-34"></a>        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</span><span id="__span-9-35"><a id="__codelineno-9-35" name="__codelineno-9-35" href="#__codelineno-9-35"></a>
+</span><span id="__span-9-36"><a id="__codelineno-9-36" name="__codelineno-9-36" href="#__codelineno-9-36"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Converted </span><span class="si">{</span><span class="n">operation</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="s1">&#39;tests&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> tests&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<hr />
+<p><strong>Document Status:</strong> Draft v1.0
+<strong>Next Review:</strong> After Phase 1 completion
+<strong>Feedback:</strong> Submit issues or PRs to rustnn repository</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024 Your Organization
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/your-org/rustnn" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/webnn/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.tabs.link", "content.code.annotation", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>

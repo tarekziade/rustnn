@@ -1,0 +1,1173 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Python bindings for the W3C WebNN API">
+      
+      
+        <meta name="author" content="Your Organization">
+      
+      
+        <link rel="canonical" href="https://your-org.github.io/rustnn/webnn-spec-reference/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../logo/rustnn.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>WebNN API Specification Reference - WebNN Python API</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#webnn-api-specification-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="WebNN Python API" class="md-header__button md-logo" aria-label="WebNN Python API" data-md-component="logo">
+      
+  <img src="../logo/rustnn.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WebNN Python API
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              WebNN API Specification Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/your-org/rustnn" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    your-org/rustnn
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../examples/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Examples
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../development/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Development
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../advanced/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Advanced Topics
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="WebNN Python API" class="md-nav__button md-logo" aria-label="WebNN Python API" data-md-component="logo">
+      
+  <img src="../logo/rustnn.png" alt="logo">
+
+    </a>
+    WebNN Python API
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/your-org/rustnn" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    your-org/rustnn
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Topics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Interfaces
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Interfaces">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ML
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mlcontext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLContext
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mlgraphbuilder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLGraphBuilder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mloperand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLOperand
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mlgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLGraph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mltensor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLTensor
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reduction-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reduction Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reduction Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-parameters-mlreduceoptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Parameters (MLReduceOptions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reducesum" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceSum()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reducemean" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceMean()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reducemax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceMax()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reducemin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceMin()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reduceproduct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceProduct()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reducel1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceL1()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reducel2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceL2()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reducelogsum" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceLogSum()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reducelogsumexp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceLogSumExp()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reducesumsquare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        reduceSumSquare()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shape-inference-for-reduction-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape Inference for Reduction Operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#excluded-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Excluded Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-type-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Type Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numerical-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Numerical Stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional Operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="webnn-api-specification-reference">WebNN API Specification Reference<a class="headerlink" href="#webnn-api-specification-reference" title="Permanent link">&para;</a></h1>
+<p><strong>Source:</strong> https://www.w3.org/TR/webnn/
+<strong>Status:</strong> W3C Candidate Recommendation Draft (December 3, 2025)
+<strong>Local Copy:</strong> Saved for offline reference and easy parsing</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The Web Neural Network API (WebNN) defines a dedicated low-level API for neural network inference hardware acceleration. It provides hardware-agnostic access to ML acceleration capabilities across CPU, GPU, and dedicated ML accelerators.</p>
+<h2 id="core-interfaces">Core Interfaces<a class="headerlink" href="#core-interfaces" title="Permanent link">&para;</a></h2>
+<h3 id="ml">ML<a class="headerlink" href="#ml" title="Permanent link">&para;</a></h3>
+<p>Entry point for creating ML contexts.</p>
+<h3 id="mlcontext">MLContext<a class="headerlink" href="#mlcontext" title="Permanent link">&para;</a></h3>
+<p>Global execution state managing device resources and graph compilation.</p>
+<h3 id="mlgraphbuilder">MLGraphBuilder<a class="headerlink" href="#mlgraphbuilder" title="Permanent link">&para;</a></h3>
+<p>Constructs computational graphs using operator methods.</p>
+<h3 id="mloperand">MLOperand<a class="headerlink" href="#mloperand" title="Permanent link">&para;</a></h3>
+<p>Represents data flowing through the graph (inputs, constants, intermediate values, outputs).</p>
+<h3 id="mlgraph">MLGraph<a class="headerlink" href="#mlgraph" title="Permanent link">&para;</a></h3>
+<p>Compiled, immutable representation of the computational graph.</p>
+<h3 id="mltensor">MLTensor<a class="headerlink" href="#mltensor" title="Permanent link">&para;</a></h3>
+<p>Runtime data binding for graph execution.</p>
+<h2 id="reduction-operations">Reduction Operations<a class="headerlink" href="#reduction-operations" title="Permanent link">&para;</a></h2>
+<p>Reduction operations reduce input tensor dimensions by applying a reduction function across specified axes.</p>
+<h3 id="common-parameters-mlreduceoptions">Common Parameters (MLReduceOptions)<a class="headerlink" href="#common-parameters-mlreduceoptions" title="Permanent link">&para;</a></h3>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">dictionary</span> <span class="nc">MLReduceOptions</span> <span class="p">:</span> <span class="nc">MLOperatorOptions</span> <span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  <span class="kt">sequence</span><span class="p">&lt;</span><span class="err">[</span><span class="nc">EnforceRange</span><span class="err">]</span> <span class="kt">unsigned long</span><span class="p">&gt;</span> <span class="nv">axes</span><span class="p">;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  <span class="kt">boolean</span> <span class="nv">keepDimensions</span> <span class="p">=</span> <span class="kc">false</span><span class="p">;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">};</span>
+</span></code></pre></div>
+<p><strong>Parameters:</strong>
+- <code>axes</code>: Array of dimension indices to reduce. If not specified, reduces all dimensions.
+- <code>keepDimensions</code>: If true, retains reduced dimensions with size 1. Default is false.</p>
+<h3 id="reducesum">reduceSum()<a class="headerlink" href="#reducesum" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by summing elements along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = Σ input[i]</code> for i in reduced dimensions</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceSum</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceSum</code></p>
+<h3 id="reducemean">reduceMean()<a class="headerlink" href="#reducemean" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by computing the arithmetic mean along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = (Σ input[i]) / n</code> where n is the number of elements reduced</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceMean</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceMean</code></p>
+<h3 id="reducemax">reduceMax()<a class="headerlink" href="#reducemax" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by computing the maximum value along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = max(input[i])</code> for i in reduced dimensions</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceMax</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceMax</code></p>
+<h3 id="reducemin">reduceMin()<a class="headerlink" href="#reducemin" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by computing the minimum value along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = min(input[i])</code> for i in reduced dimensions</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceMin</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceMin</code></p>
+<h3 id="reduceproduct">reduceProduct()<a class="headerlink" href="#reduceproduct" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by computing the product of elements along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = Π input[i]</code> for i in reduced dimensions</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceProduct</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceProd</code></p>
+<h3 id="reducel1">reduceL1()<a class="headerlink" href="#reducel1" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by computing the L1 norm (sum of absolute values) along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = Σ |input[i]|</code> for i in reduced dimensions</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceL1</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceL1</code></p>
+<h3 id="reducel2">reduceL2()<a class="headerlink" href="#reducel2" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by computing the L2 norm (Euclidean norm) along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = sqrt(Σ input[i]²)</code> for i in reduced dimensions</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceL2</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceL2</code></p>
+<h3 id="reducelogsum">reduceLogSum()<a class="headerlink" href="#reducelogsum" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by computing the natural logarithm of the sum along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = log(Σ input[i])</code> for i in reduced dimensions</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceLogSum</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceLogSum</code></p>
+<h3 id="reducelogsumexp">reduceLogSumExp()<a class="headerlink" href="#reducelogsumexp" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by computing the log of the sum of exponentials along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = log(Σ exp(input[i]))</code> for i in reduced dimensions</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceLogSumExp</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceLogSumExp</code></p>
+<h3 id="reducesumsquare">reduceSumSquare()<a class="headerlink" href="#reducesumsquare" title="Permanent link">&para;</a></h3>
+<p>Reduces the input tensor by computing the sum of squares along specified axes.</p>
+<p><strong>Formula:</strong> <code>output = Σ input[i]²</code> for i in reduced dimensions</p>
+<p><strong>Signature:</strong>
+<div class="language-webidl highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nc">MLOperand</span> <span class="nc">reduceSumSquare</span><span class="err">(</span><span class="nc">MLOperand</span> <span class="nc">input</span><span class="err">,</span> <span class="nc">optional</span> <span class="nc">MLReduceOptions</span> <span class="nc">options</span> <span class="err">=</span> <span class="err">{})</span><span class="p">;</span>
+</span></code></pre></div></p>
+<p><strong>ONNX Mapping:</strong> <code>ReduceSumSquare</code></p>
+<h2 id="shape-inference-for-reduction-operations">Shape Inference for Reduction Operations<a class="headerlink" href="#shape-inference-for-reduction-operations" title="Permanent link">&para;</a></h2>
+<p><strong>Input shape:</strong> <code>[d0, d1, d2, ..., dn]</code></p>
+<p><strong>If keepDimensions = false:</strong>
+- Output shape removes the reduced dimensions
+- Example: <code>[2, 3, 4]</code> with <code>axes=[1]</code> → <code>[2, 4]</code></p>
+<p><strong>If keepDimensions = true:</strong>
+- Output shape keeps reduced dimensions with size 1
+- Example: <code>[2, 3, 4]</code> with <code>axes=[1]</code> and <code>keepDimensions=true</code> → <code>[2, 1, 4]</code></p>
+<p><strong>If axes is empty or not specified:</strong>
+- Reduces all dimensions
+- Output is a scalar (rank-0 tensor) with <code>keepDimensions=false</code>
+- Output is <code>[1, 1, ..., 1]</code> with <code>keepDimensions=true</code></p>
+<h2 id="implementation-notes">Implementation Notes<a class="headerlink" href="#implementation-notes" title="Permanent link">&para;</a></h2>
+<h3 id="excluded-operations">Excluded Operations<a class="headerlink" href="#excluded-operations" title="Permanent link">&para;</a></h3>
+<p><strong>localResponseNormalization</strong> - NOT part of WebNN spec as of 2025-12-07
+- Decision: Use decomposition in higher layers (e.g., ONNX Runtime's WebNN EP)
+- Reason: Rarity in modern models, awkward backend differences
+- Source: W3C WebML WG meeting notes (2024-10-31)</p>
+<h3 id="data-type-support">Data Type Support<a class="headerlink" href="#data-type-support" title="Permanent link">&para;</a></h3>
+<p>Reduction operations typically support:
+- <code>float32</code> (required)
+- <code>float16</code> (optional)
+- <code>int32</code> (optional, for min/max operations)
+- <code>int8</code>/<code>uint8</code> (optional, for min/max operations)</p>
+<h3 id="numerical-stability">Numerical Stability<a class="headerlink" href="#numerical-stability" title="Permanent link">&para;</a></h3>
+<p><strong>reduceLogSumExp</strong> uses the log-sum-exp trick for numerical stability:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>output = log(Σ exp(input[i]))
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>       = max_val + log(Σ exp(input[i] - max_val))
+</span></code></pre></div>
+where <code>max_val = max(input[i])</code> for i in reduced dimensions.</p>
+<h2 id="additional-operations">Additional Operations<a class="headerlink" href="#additional-operations" title="Permanent link">&para;</a></h2>
+<p>For a complete list of all WebNN operations, see:
+- Official spec: https://www.w3.org/TR/webnn/
+- Implementation status: https://webmachinelearning.github.io/webnn-status/</p>
+<hr />
+<p><strong>Last Updated:</strong> 2025-12-07
+<strong>Spec Version:</strong> W3C Candidate Recommendation Draft (2025-12-03)</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024 Your Organization
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/your-org/rustnn" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/webnn/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.tabs.link", "content.code.annotation", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>
