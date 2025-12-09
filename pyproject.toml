@@ -6,7 +6,7 @@ build-backend = "maturin"
 name = "pywebnn"
 # Version is read from Cargo.toml by maturin
 dynamic = ["version"]
-description = "EXPERIMENTAL: Python implementation of the W3C WebNN API with ONNX Runtime and CoreML execution support (NOT for production use)"
+description = "EXPERIMENTAL: Python bindings for W3C WebNN API - Neural network graph validation, ONNX/CoreML conversion, and cross-platform execution with CPU/GPU/NPU support"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

@@ -4,54 +4,74 @@ This guide will help you get started with the WebNN Python API.
 
 ## Installation
 
-### Prerequisites
+### From PyPI (Quick Start)
+
+For validation and conversion only:
+
+```bash
+pip install pywebnn
+```
+
+For full execution support, add ONNX Runtime:
+
+```bash
+pip install pywebnn onnxruntime
+```
+
+### Building from Source (Recommended for Full Features)
+
+#### Prerequisites
 
 - Python 3.11 or later
-- Rust toolchain (for building from source)
-- NumPy (automatically installed as a dependency)
+- Rust toolchain
+- NumPy (automatically installed)
+- ONNX Runtime 1.23+ (for execution support)
 
-### Building from Source
+#### Quick Setup with Makefile (Easiest)
+
+The Makefile handles everything automatically:
+
+```bash
+# Clone the repository
+git clone https://github.com/tarekziade/rustnn.git
+cd rustnn
+
+# Install with ONNX Runtime support (downloads ONNX Runtime automatically)
+make python-dev
+
+# Run tests to verify
+make python-test
+```
+
+This creates a `.venv-webnn` virtual environment with everything configured.
+
+#### Manual Setup with Maturin
 
 1. **Install Rust** (if not already installed):
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
 
-2. **Clone the repository**:
+2. **Clone and setup**:
    ```bash
    git clone https://github.com/tarekziade/rustnn.git
    cd rustnn
-   ```
-
-3. **Install maturin**:
-   ```bash
    pip install maturin
    ```
 
-4. **Build and install**:
+3. **Build with features**:
    ```bash
-   # Development mode (editable install)
-   maturin develop --features python
+   # With ONNX Runtime support (requires ONNX Runtime 1.23+)
+   maturin develop --features python,onnx-runtime
 
-   # Or build a release wheel
-   maturin build --release --features python
-   pip install target/wheels/webnn-*.whl
+   # macOS: Add CoreML support
+   maturin develop --features python,onnx-runtime,coreml-runtime
+
+   # Basic (validation/conversion only, no execution)
+   maturin develop --features python
    ```
 
-### Optional Features
-
-Build with additional runtime support:
-
-```bash
-# With ONNX runtime support
-maturin develop --features python,onnx-runtime
-
-# With CoreML runtime support (macOS only)
-maturin develop --features python,coreml-runtime
-
-# With all features
-maturin develop --features python,onnx-runtime,coreml-runtime
-```
+**Note:** When building with `onnx-runtime` feature, you need ONNX Runtime libraries available. The Makefile handles this automatically. For manual setup, see the [development guide](development.md).
 
 ## Your First Graph
 

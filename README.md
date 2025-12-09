@@ -34,28 +34,52 @@ This is an early-stage experiment to explore WebNN graph handling and format con
 
 ### Python Package (PyWebNN)
 
-Install from PyPI:
+**Quick Start (Validation & Conversion Only):**
 
 ```bash
 pip install pywebnn
 ```
 
-Or install from source with maturin:
+This installs the base package for graph validation and format conversion (no execution).
+
+**For Full Execution Support:**
+
+To execute neural networks, you need ONNX Runtime:
+
+```bash
+# Install PyWebNN + ONNX Runtime for CPU execution
+pip install pywebnn onnxruntime
+
+# Or for GPU execution (requires CUDA)
+pip install pywebnn onnxruntime-gpu
+```
+
+**Note:** The PyPI package currently includes validation and conversion features. ONNX Runtime execution requires the `onnxruntime` package to be installed separately. We're working on better integration in future releases.
+
+**Build from Source (with Execution Built-in):**
+
+For a fully integrated package with execution support:
 
 ```bash
 # Clone the repository
 git clone https://github.com/tarekziade/rustnn.git
 cd rustnn
 
-# Install in development mode
-pip install maturin
-maturin develop --features python
+# Install with ONNX Runtime support (recommended)
+make python-dev  # Sets up venv and builds with ONNX Runtime
 
-# With optional runtime features
+# Or manually with maturin
+pip install maturin
+maturin develop --features python,onnx-runtime
+
+# macOS only: Add CoreML support
 maturin develop --features python,onnx-runtime,coreml-runtime
 ```
 
-**Requirements:** Python 3.11+, NumPy 1.20+
+**Requirements:**
+- Python 3.11+
+- NumPy 1.20+
+- ONNX Runtime 1.23+ (for execution)
 
 ### Rust Library
 
