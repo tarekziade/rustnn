@@ -18,15 +18,15 @@ The WebNN Python API allows you to:
 
 ## Key Features
 
-✅ **W3C Standard Compliant** - Implements the official WebNN specification
-✅ **85 Operations** - 89% coverage of WebNN spec operations
-✅ **Type-Safe** - Full type hints for IDE autocomplete
-✅ **NumPy Integration** - Seamless conversion between NumPy arrays
-✅ **Multiple Backends** - ONNX Runtime (CPU/GPU) and CoreML (macOS)
-✅ **Actual Execution** - Run models with real tensor inputs/outputs
-✅ **Async Support** - Non-blocking execution with Python asyncio
-✅ **Fast** - Built with Rust and PyO3 for maximum performance
-✅ **Cross-Platform** - Works on Linux, macOS, and Windows
+[OK] **W3C Standard Compliant** - Implements the official WebNN specification
+[OK] **85 Operations** - 89% coverage of WebNN spec operations
+[OK] **Type-Safe** - Full type hints for IDE autocomplete
+[OK] **NumPy Integration** - Seamless conversion between NumPy arrays
+[OK] **Multiple Backends** - ONNX Runtime (CPU/GPU) and CoreML (macOS)
+[OK] **Actual Execution** - Run models with real tensor inputs/outputs
+[OK] **Async Support** - Non-blocking execution with Python asyncio
+[OK] **Fast** - Built with Rust and PyO3 for maximum performance
+[OK] **Cross-Platform** - Works on Linux, macOS, and Windows
 
 ## Quick Example
 

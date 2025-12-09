@@ -403,12 +403,12 @@ Note:
             results.append(result)
 
             if result["status"] == "converted":
-                status_icon = "⚠️" if result.get("requires_manual_review") else "✅"
+                status_icon = "[WARNING]" if result.get("requires_manual_review") else "[OK]"
                 print(f"  {status_icon} Output: {result['output_file']}")
                 if result.get("requires_manual_review"):
                     print(f"     Note: Requires manual test case population")
             else:
-                print(f"  ❌ {result['message']}")
+                print(f"   {result['message']}")
 
     # Summary
     print("\n" + "="*70)

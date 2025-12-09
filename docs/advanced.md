@@ -266,24 +266,24 @@ def safe_graph_export(graph_fn, output_path):
             output = graph_fn(builder)
             graph = builder.build({"output": output})
         except ValueError as e:
-            print(f"❌ Graph validation failed: {e}", file=sys.stderr)
+            print(f" Graph validation failed: {e}", file=sys.stderr)
             traceback.print_exc()
             return False
 
         # Export to ONNX
         try:
             context.convert_to_onnx(graph, output_path)
-            print(f"✅ Successfully exported to {output_path}")
+            print(f"[OK] Successfully exported to {output_path}")
             return True
         except IOError as e:
-            print(f"❌ File I/O error: {e}", file=sys.stderr)
+            print(f" File I/O error: {e}", file=sys.stderr)
             return False
         except RuntimeError as e:
-            print(f"❌ Conversion failed: {e}", file=sys.stderr)
+            print(f" Conversion failed: {e}", file=sys.stderr)
             return False
 
     except Exception as e:
-        print(f"❌ Unexpected error: {e}", file=sys.stderr)
+        print(f" Unexpected error: {e}", file=sys.stderr)
         traceback.print_exc()
         return False
 
@@ -463,14 +463,14 @@ print(f"Result: {results['y']}")
 
 # Export for different platforms
 context.convert_to_onnx(graph, "model.onnx")
-print("✓ Exported ONNX (cross-platform)")
+print("[OK] Exported ONNX (cross-platform)")
 
 if platform.system() == "Darwin":
     try:
         context.convert_to_coreml(graph, "model.mlmodel")
-        print("✓ Exported CoreML (macOS GPU/Neural Engine)")
+        print("[OK] Exported CoreML (macOS GPU/Neural Engine)")
     except Exception as e:
-        print(f"⚠ CoreML export: {e}")
+        print(f" CoreML export: {e}")
 ```
 
 ## Best Practices Summary

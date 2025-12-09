@@ -3,7 +3,7 @@
 Train the Text Generation Model
 ===============================
 
-⚠️  NOTE: This is a TOY training script for DEMONSTRATION ONLY.
+[WARNING]  NOTE: This is a TOY training script for DEMONSTRATION ONLY.
     It uses simple finite-difference gradients and won't produce
     quality results. The real purpose is to show how to save/load
     weights and demonstrate the training workflow concept.
@@ -234,19 +234,19 @@ def main():
     # Load data
     print("Loading text data...")
     text = load_text_data(args.data)
-    print(f"✓ Loaded {len(text)} characters")
+    print(f"[OK] Loaded {len(text)} characters")
     print()
 
     # Prepare training data
     print("Preparing training sequences (ASCII-only)...")
     X, y = prepare_training_data(text, vocab_size=128, seq_len=32)
-    print(f"✓ Created {len(X)} training samples")
+    print(f"[OK] Created {len(X)} training samples")
     print()
 
     # Initialize model
     print("Initializing model (ASCII vocab)...")
     model = SimpleTransformerLM(vocab_size=128, d_model=64, max_seq_len=32)
-    print("✓ Model initialized")
+    print("[OK] Model initialized")
 
     # Train
     train(model, X, y, epochs=args.epochs, batch_size=args.batch_size, lr=args.lr)

@@ -1,4 +1,4 @@
-## ⚠️ EXPERIMENTAL RELEASE - NOT FOR PRODUCTION
+## [WARNING] EXPERIMENTAL RELEASE - NOT FOR PRODUCTION
 
 **DO NOT USE IN PRODUCTION.** This is a proof-of-concept for research and experimentation only.
 
@@ -6,23 +6,23 @@ This is the first experimental release of PyWebNN, a Python implementation of th
 
 ---
 
-### 🎯 Features
+### [TARGET] Features
 
-- 🐍 **Python WebNN API** - Complete W3C WebNN specification implementation
-- 📊 **ONNX Conversion** - Full operation support, cross-platform
-- 🍎 **CoreML Conversion** - Basic operations (add, matmul) for macOS
-- ✅ **Graph Validation** - Comprehensive validation matching Chromium's WebNN
-- 🔍 **Visualization** - Generate Graphviz diagrams
-- 📦 **NumPy Integration** - Seamless tensor data conversion
-- 🌐 **Cross-platform** - Linux, macOS, Windows wheels
+- Python **Python WebNN API** - Complete W3C WebNN specification implementation
+- [STATS] **ONNX Conversion** - Full operation support, cross-platform
+-  **CoreML Conversion** - Basic operations (add, matmul) for macOS
+- [OK] **Graph Validation** - Comprehensive validation matching Chromium's WebNN
+- [SEARCH] **Visualization** - Generate Graphviz diagrams
+- [PACKAGE] **NumPy Integration** - Seamless tensor data conversion
+-  **Cross-platform** - Linux, macOS, Windows wheels
 
-### 📥 Installation
+###  Installation
 
 ```bash
 pip install pywebnn
 ```
 
-### 🚀 Quick Start
+### [DEPLOY] Quick Start
 
 ```python
 import webnn
@@ -42,24 +42,24 @@ output = builder.matmul(input_tensor, weights_const)
 # Compile and convert
 graph = builder.build({"output": output})
 context.convert_to_onnx(graph, "model.onnx")
-print("✓ Model saved to model.onnx")
+print("[OK] Model saved to model.onnx")
 ```
 
-### 📚 Documentation
+###  Documentation
 
 - [Getting Started Guide](https://github.com/tarekziade/rustnn/blob/main/docs/getting-started.md)
 - [API Reference](https://github.com/tarekziade/rustnn/blob/main/docs/api-reference.md)
 - [Examples](https://github.com/tarekziade/rustnn/blob/main/docs/examples.md)
 - [Full Documentation](https://tarekziade.github.io/rustnn/)
 
-### ⚠️ Known Limitations
+### [WARNING] Known Limitations
 
 - **CoreML**: Only supports add and matmul operations (activations coming soon)
 - **Execution**: No actual tensor computation in `compute()` yet - only conversion
 - **Operations**: Subset of WebNN spec implemented (see [TODO.txt](https://github.com/tarekziade/rustnn/blob/main/TODO.txt))
 - **Testing**: Limited test coverage, use for experimentation only
 
-### 🛠️ What's Included
+###  What's Included
 
 This release includes pre-built wheels for:
 - **Linux**: x86_64, aarch64 (manylinux)
@@ -67,17 +67,17 @@ This release includes pre-built wheels for:
 - **Windows**: x64, x86
 - **Python**: 3.12, 3.13
 
-### 🔗 Links
+###  Links
 
 - **PyPI**: https://pypi.org/project/pywebnn/
 - **Repository**: https://github.com/tarekziade/rustnn
 - **Issues**: https://github.com/tarekziade/rustnn/issues
 - **W3C WebNN Spec**: https://www.w3.org/TR/webnn/
 
-### 🙏 Acknowledgments
+###  Acknowledgments
 
 Built with PyO3, Maturin, and inspired by the W3C WebNN Community Group.
 
 ---
 
-**Made with ❤️ by Tarek Ziadé**
+**Made with  by Tarek Ziadé**

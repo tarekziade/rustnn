@@ -8,7 +8,7 @@ This document compares our WebNN implementation with Chromium's reference implem
 
 ---
 
-## 🎯 Overall Assessment
+## [TARGET] Overall Assessment
 
 Our implementation follows Chromium's architectural patterns closely, with a few documented differences primarily due to library limitations and intentional design choices for a Rust-first approach.
 
@@ -16,7 +16,7 @@ Our implementation follows Chromium's architectural patterns closely, with a few
 
 ## ONNX Runtime Backend Comparison
 
-### ✅ What We Match
+### [OK] What We Match
 
 1. **Cast Node Pattern**: We correctly insert Cast nodes for type conversions, matching Chromium's approach
    ```rust
@@ -39,42 +39,31 @@ Our implementation follows Chromium's architectural patterns closely, with a few
 
 4. **Reshape Handling**: Shape passed as operand (not attribute) - matches Chromium
 
-### ⚠️ Known Differences
+5. **Bool → Uint8 Casting**: Logical operations correctly cast bool → uint8 outputs
+   - Cast inputs to bool, execute operation, cast output to uint8
+   - ONNX executor dynamically extracts f32 or u8 types
+   - Python API automatically converts u8 → f32 for compatibility
+   - Fully spec-compliant with Chromium's implementation
 
-1. **Bool → Uint8 Casting**: ✅ **FIXED** (Dec 9, 2024)
-   ```rust
-   // Cast bool → uint8 (matching Chromium's WebNN implementation)
-   nodes.push(Self::create_cast_node(
-       &format!("cast_to_uint8_{}", cast_counter),
-       bool_output_name,
-       Self::operand_name(graph, op.output_operand),
-       ProtoDataType::Uint8,
-   ));
-   ```
-   - **Status**: ✅ Fully implemented and matching Chromium
-   - **Implementation**:
-     - ONNX converter: Cast(bool → uint8) for logical operations
-     - Executor: Dynamic extraction (try f32, fallback to u8)
-     - Python: Automatic u8 → f32 conversion for compatibility
-   - **Result**: ONNX models now spec-compliant with Chromium
+### Known Differences
 
-2. **Conv Transpose Output Padding**:
+1. **Conv Transpose Output Padding**:
    - **Chromium**: Explicitly calculates output padding
    - **Ours**: Uses attributes from operation directly
-   - **Status**: ✅ Working, needs verification for edge cases
+   - **Status**: [OK] Working, needs verification for edge cases
 
-### 📊 Compatibility Score: 98%
+### Compatibility Score: 98%
 
-- Core patterns: ✅ 100% match
-- Type handling: ✅ 100% match (bool → uint8 fixed!)
-- Attribute handling: ✅ 100% match
-- Conv Transpose: ⚠️ 95% (output padding needs edge case verification)
+- Core patterns: 100% match
+- Type handling: 100% match
+- Attribute handling: 100% match
+- Conv Transpose: 95% (output padding needs edge case verification)
 
 ---
 
 ## CoreML MLProgram Backend Comparison
 
-### ✅ What We Match
+### [OK] What We Match
 
 1. **MIL Operation Names**: We use identical operation type strings
    ```rust
@@ -96,43 +85,43 @@ Our implementation follows Chromium's architectural patterns closely, with a few
    - reduce_sum, reduce_mean, reduce_max, reduce_min, reduce_prod
    - reduce_l1_norm, reduce_l2_norm, reduce_log_sum, reduce_log_sum_exp, reduce_sum_square
 
-### ⚠️ Potential Gaps (Need Investigation)
+### [WARNING] Potential Gaps (Need Investigation)
 
 1. **Weights File Management**:
    - **Chromium**: Uses `.mlpackage/Data/weights/weights.bin` with 64-byte aligned headers
    - **Ours**: Inline constants in protobuf
-   - **Impact**: ⚠️ May affect large models (>100MB)
-   - **Status**: ⏸️ Needs investigation for production use
+   - **Impact**: [WARNING] May affect large models (>100MB)
+   - **Status**: [PAUSE] Needs investigation for production use
 
 2. **Scalar Handling**:
    - **Chromium**: Reshapes scalars to 1D for some operations
    - **Ours**: Direct scalar handling
-   - **Impact**: ⚠️ May fail on certain scalar operations
-   - **Status**: ⏸️ Needs testing
+   - **Impact**: [WARNING] May fail on certain scalar operations
+   - **Status**: [PAUSE] Needs testing
 
 3. **Bool Type Casting**:
    - **Chromium**: Explicit bool → uint8 cast for logical operations
    - **Ours**: Direct bool output
-   - **Impact**: ⚠️ Type mismatch with WebNN spec (expects uint8)
-   - **Status**: ⏸️ Needs implementation
+   - **Impact**: [WARNING] Type mismatch with WebNN spec (expects uint8)
+   - **Status**: [PAUSE] Needs implementation
 
 4. **Quantization Scale/Zero-point**:
    - **Chromium**: Special handling for scale shape (scalar vs vector)
    - **Ours**: Direct parameter passing
-   - **Impact**: ⚠️ May fail on certain quantization operations
-   - **Status**: ⏸️ Needs verification
+   - **Impact**: [WARNING] May fail on certain quantization operations
+   - **Status**: [PAUSE] Needs verification
 
 5. **Batch Norm Rank 5 Workaround**:
    - **Chromium**: Flattens 5D to 4D on non-CPU devices (crbug.com/391566721)
    - **Ours**: No special handling
-   - **Impact**: ⚠️ May fail on 5D batch norm
-   - **Status**: ⏸️ Needs implementation if supporting 5D
+   - **Impact**: [WARNING] May fail on 5D batch norm
+   - **Status**: [PAUSE] Needs implementation if supporting 5D
 
-### 📊 Compatibility Score: 85%
+### [STATS] Compatibility Score: 85%
 
-- Operation mapping: ✅ 100% match
-- MIL naming: ✅ 100% match
-- Advanced features: ⚠️ 70% (weights, scalars, bool casting)
+- Operation mapping: [OK] 100% match
+- MIL naming: [OK] 100% match
+- Advanced features: [WARNING] 70% (weights, scalars, bool casting)
 
 ---
 
@@ -154,11 +143,11 @@ Our implementation follows Chromium's architectural patterns closely, with a few
 
 | Aspect | Chromium | Ours | Assessment |
 |--------|----------|------|------------|
-| Type Safety | C++ | Rust | ✅ Ours is safer |
-| Memory Safety | Manual | RAII + Borrow Checker | ✅ Ours is safer |
-| Protobuf Generation | Runtime | Build-time (prost) | ✅ Ours is faster |
-| Weights Handling | External file | Inline protobuf | ⚠️ Chromium better for large models |
-| Platform Integration | Direct API | Through FFI | ✅ Both work, different approaches |
+| Type Safety | C++ | Rust | [OK] Ours is safer |
+| Memory Safety | Manual | RAII + Borrow Checker | [OK] Ours is safer |
+| Protobuf Generation | Runtime | Build-time (prost) | [OK] Ours is faster |
+| Weights Handling | External file | Inline protobuf | [WARNING] Chromium better for large models |
+| Platform Integration | Direct API | Through FFI | [OK] Both work, different approaches |
 
 ---
 
@@ -166,20 +155,18 @@ Our implementation follows Chromium's architectural patterns closely, with a few
 
 ### High Priority
 
-1. ✅ **ONNX Cast Nodes**: Fully implemented with bool → uint8 (Dec 9, 2024)
-2. ⚠️ **CoreML Bool Casting**: Add explicit bool → uint8 cast for logical operations
-3. ⚠️ **Weights File Support**: Consider adding `.mlpackage` format for large models
+1. **CoreML Bool Casting**: Add explicit bool → uint8 cast for logical operations
+2. **Weights File Support**: Consider adding `.mlpackage` format for large models
 
 ### Medium Priority
 
-4. ⏸️ **Scalar Reshaping**: Add reshape workaround for scalar operations if needed
-5. ⏸️ **Quantization Scale**: Verify scale/zero-point shape handling
-6. ⏸️ **Conv Transpose**: Verify output padding calculation matches Chromium
+3. **Scalar Reshaping**: Add reshape workaround for scalar operations if needed
+4. **Quantization Scale**: Verify scale/zero-point shape handling
+5. **Conv Transpose**: Verify output padding calculation matches Chromium
 
 ### Low Priority
 
-7. ⏸️ **Batch Norm Rank 5**: Add workaround if supporting 5D tensors
-8. ✅ **Documentation**: All workarounds are documented in code
+6. **Batch Norm Rank 5**: Add workaround if supporting 5D tensors
 
 ---
 
@@ -187,40 +174,31 @@ Our implementation follows Chromium's architectural patterns closely, with a few
 
 ### Strengths
 
-- ✅ **Correct architectural patterns** matching Chromium's design
-- ✅ **Type-safe Rust implementation** with better memory safety
-- ✅ **Documented workarounds** for library limitations
-- ✅ **85 operations implemented** across both backends
-- ✅ **Well-structured codebase** following Rust best practices
+- [OK] **Correct architectural patterns** matching Chromium's design
+- [OK] **Type-safe Rust implementation** with better memory safety
+- [OK] **Documented workarounds** for library limitations
+- [OK] **85 operations implemented** across both backends
+- [OK] **Well-structured codebase** following Rust best practices
 
 ### Areas for Improvement
 
-- ✅ **ONNX Runtime upgrade**: Migrated to ort v2.0.0-rc.10 (Dec 2024)
-  - Replaces deprecated onnxruntime-rs
-  - ONNX Runtime 1.23.2 (stable, no cleanup crashes)
-  - Enables uint8 tensor extraction via `try_extract_tensor<T>()`
-- ✅ **ONNX bool → uint8 casting**: **FIXED** (Dec 9, 2024)
-  - ONNX models now correctly cast bool → uint8 for logical operations
-  - Executor dynamically extracts f32 or u8 types
-  - Python receives automatic u8 → f32 conversion for compatibility
-  - **100% spec-compliant with Chromium's implementation**
-- ⚠️ **CoreML bool casting**: Add explicit type conversion for logical ops
-- ⚠️ **Weights file format**: Consider MLPackage support for large models
+- **CoreML bool casting**: Add explicit type conversion for logical ops
+- **Weights file format**: Consider MLPackage support for large models
 
 ### Overall Verdict
 
 **Our implementation is architecturally sound and follows Chromium's patterns correctly.**
 
 The differences are primarily:
-1. **Library capabilities**: ✅ Now using modern ort v2.0 with full type support
+1. **Library capabilities**: Now using modern ort v2.0 with full type support
 2. **Design choices**: (inline vs external weights) - intentional trade-offs
-3. **Minor gaps**: (bool casting, scalar handling) - easily addressable with current library
+3. **Minor gaps**: (CoreML bool casting, scalar handling) - easily addressable with current library
 
 **Latest Update (Dec 9, 2024):**
-- ✅ Successfully migrated to ort v2.0.0-rc.10
-- ✅ ONNX Runtime 1.23.2 (stable, tested with 257 Python tests)
-- ✅ All tests passing (115 Rust + 257 Python)
-- ✅ **Bool → uint8 casting implemented** - 98% ONNX compatibility achieved!
-- 🎯 Next: CoreML bool casting, weights file support
+- [OK] Successfully migrated to ort v2.0.0-rc.10
+- [OK] ONNX Runtime 1.23.2 (stable, tested with 257 Python tests)
+- [OK] All tests passing (115 Rust + 257 Python)
+- [OK] **Bool → uint8 casting implemented** - 98% ONNX compatibility achieved!
+- [TARGET] Next: CoreML bool casting, weights file support
 
 **Recommendation**: ONNX backend is now production-ready at 98% Chromium compatibility. Focus on CoreML improvements for full parity.

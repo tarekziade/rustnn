@@ -5,7 +5,7 @@
 
 ---
 
-## 🎯 Overview
+## [TARGET] Overview
 
 This document outlines the integration of [NVIDIA TensorRT](https://developer.nvidia.com/tensorrt) as a fourth execution backend for rustnn, optimized for NVIDIA GPU inference alongside ONNX Runtime, CoreML, and GGML.
 
@@ -24,7 +24,7 @@ This document outlines the integration of [NVIDIA TensorRT](https://developer.nv
 
 ---
 
-## 📚 TensorRT Background
+##  TensorRT Background
 
 ### What is TensorRT?
 
@@ -128,7 +128,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL
 
 ---
 
-## 🏗️ Integration Architecture
+##  Integration Architecture
 
 ### Following rustnn Patterns
 
@@ -152,25 +152,25 @@ WebNN GraphInfo → Converter → ONNX → TensorRT Engine → Executor → Resu
 
 ```
 src/
-├── converters/
-│   ├── mod.rs              # Already has OnnxConverter (reuse!)
-│   ├── onnx.rs
-│   ├── coreml_mlprogram.rs
-│   ├── ggml.rs
-│   └── tensorrt.rs         # NEW: TensorRT-specific converter (optional)
-├── executors/
-│   ├── mod.rs              # Add #[cfg(feature = "tensorrt-runtime")]
-│   ├── onnx.rs
-│   ├── coreml.rs
-│   ├── ggml.rs
-│   └── tensorrt.rs         # NEW: TensorRT executor
-└── python/
-    └── context.rs          # Add Backend::TensorRT variant
+ converters/
+    mod.rs              # Already has OnnxConverter (reuse!)
+    onnx.rs
+    coreml_mlprogram.rs
+    ggml.rs
+    tensorrt.rs         # NEW: TensorRT-specific converter (optional)
+ executors/
+    mod.rs              # Add #[cfg(feature = "tensorrt-runtime")]
+    onnx.rs
+    coreml.rs
+    ggml.rs
+    tensorrt.rs         # NEW: TensorRT executor
+ python/
+     context.rs          # Add Backend::TensorRT variant
 ```
 
 ---
 
-## 🔧 Implementation Plan
+##  Implementation Plan
 
 ### Phase 1: Executor (ONNX → TensorRT Engine)
 
@@ -441,45 +441,45 @@ pub fn run_tensorrt_with_caching(
 
 ---
 
-## 📊 Operation Coverage Analysis
+## [STATS] Operation Coverage Analysis
 
 ### WebNN Operations → TensorRT Support
 
 | WebNN Operation | TensorRT Support | Notes |
 |----------------|------------------|-------|
 | **Binary Ops** | | |
-| `add`, `sub`, `mul`, `div` | ✅ Full | Via Add, Sub, Mul, Div |
-| `matmul` | ✅ Full | Via MatMul |
-| `pow` | ✅ Full | Via Pow |
+| `add`, `sub`, `mul`, `div` | [OK] Full | Via Add, Sub, Mul, Div |
+| `matmul` | [OK] Full | Via MatMul |
+| `pow` | [OK] Full | Via Pow |
 | **Activations** | | |
-| `relu`, `sigmoid`, `tanh`, `softmax` | ✅ Full | Native support |
-| `gelu`, `elu`, `leakyRelu`, `prelu` | ✅ Full | Native support |
-| `hardSigmoid`, `hardSwish`, `softplus`, `softsign` | ✅ Full | Native support |
+| `relu`, `sigmoid`, `tanh`, `softmax` | [OK] Full | Native support |
+| `gelu`, `elu`, `leakyRelu`, `prelu` | [OK] Full | Native support |
+| `hardSigmoid`, `hardSwish`, `softplus`, `softsign` | [OK] Full | Native support |
 | **Convolution** | | |
-| `conv2d`, `convTranspose2d` | ✅ Full | 2D and 3D supported |
+| `conv2d`, `convTranspose2d` | [OK] Full | 2D and 3D supported |
 | **Pooling** | | |
-| `averagePool2d`, `maxPool2d` | ✅ Full | 2D/3D, indices unsupported for MaxPool |
-| `globalAveragePool`, `globalMaxPool` | ✅ Full | Native support |
+| `averagePool2d`, `maxPool2d` | [OK] Full | 2D/3D, indices unsupported for MaxPool |
+| `globalAveragePool`, `globalMaxPool` | [OK] Full | Native support |
 | **Normalization** | | |
-| `batchNormalization` | ✅ Full | Native support |
-| `instanceNormalization` | ✅ Full | Native support |
-| `layerNormalization` | ✅ Full | Native support |
+| `batchNormalization` | [OK] Full | Native support |
+| `instanceNormalization` | [OK] Full | Native support |
+| `layerNormalization` | [OK] Full | Native support |
 | **Reduction** | | |
-| All `reduce*` operations | ✅ Full | 10 reduction ops supported |
+| All `reduce*` operations | [OK] Full | 10 reduction ops supported |
 | **Tensor Ops** | | |
-| `reshape`, `transpose`, `concat`, `split` | ✅ Full | Native support |
-| `slice`, `gather`, `scatter`, `pad`, `tile` | ✅ Full | Native support |
-| `squeeze`, `unsqueeze`, `expand` | ✅ Full | Native support |
+| `reshape`, `transpose`, `concat`, `split` | [OK] Full | Native support |
+| `slice`, `gather`, `scatter`, `pad`, `tile` | [OK] Full | Native support |
+| `squeeze`, `unsqueeze`, `expand` | [OK] Full | Native support |
 | **Logic** | | |
-| All comparison and logical ops | ✅ Full | 9 ops supported |
+| All comparison and logical ops | [OK] Full | 9 ops supported |
 | **Math** | | |
-| All element-wise math | ✅ Full | 23 ops supported |
+| All element-wise math | [OK] Full | 23 ops supported |
 | **Quantization** | | |
-| `quantizeLinear`, `dequantizeLinear` | ✅ Full | Native support |
+| `quantizeLinear`, `dequantizeLinear` | [OK] Full | Native support |
 | **Advanced** | | |
-| `argMax`, `argMin` | ✅ Full | Via ArgMax, ArgMin |
-| `cast`, `clamp`, `where` | ✅ Full | Via Cast, Clip, Where |
-| `gemm` | ✅ Full | Via Gemm |
+| `argMax`, `argMin` | [OK] Full | Via ArgMax, ArgMin |
+| `cast`, `clamp`, `where` | [OK] Full | Via Cast, Clip, Where |
+| `gemm` | [OK] Full | Via Gemm |
 
 **Coverage:** ~95%+ of WebNN spec (TensorRT has 300+ ONNX ops, WebNN has 85-95 ops)
 
@@ -491,7 +491,7 @@ pub fn run_tensorrt_with_caching(
 
 ---
 
-## 🚧 Challenges & Solutions
+##  Challenges & Solutions
 
 ### Challenge 1: Rust Bindings Maturity
 
@@ -559,7 +559,7 @@ pub fn run_tensorrt_with_caching(
 
 ---
 
-## 🎯 Implementation Roadmap
+## [TARGET] Implementation Roadmap
 
 ### Phase 1: Proof of Concept (2-3 days)
 - [ ] Research TensorRT C++ API and identify core interfaces needed
@@ -610,7 +610,7 @@ pub fn run_tensorrt_with_caching(
 
 ---
 
-## 📝 Testing Strategy
+##  Testing Strategy
 
 ### Unit Tests (Rust)
 
@@ -780,7 +780,7 @@ benchmark-tensorrt:
 
 ---
 
-## 🔗 References
+##  References
 
 ### TensorRT Resources
 - [TensorRT Documentation](https://docs.nvidia.com/deeplearning/tensorrt/latest/index.html)
@@ -812,15 +812,15 @@ benchmark-tensorrt:
 
 ---
 
-## 📌 Summary
+##  Summary
 
 **TensorRT Integration Value:**
-- ✅ **Best GPU performance** on NVIDIA hardware (RTX, A100, H100)
-- ✅ **Advanced quantization** (FP16, INT8, FP8, FP4)
-- ✅ **Production-ready** (widely deployed in NVIDIA ecosystem)
-- ✅ **ONNX-native** (reuse existing ONNX converter)
-- ✅ **95%+ operation coverage** (300+ ONNX ops)
-- ✅ **TensorRT for RTX** (optimized for Windows 11 + RTX GPUs)
+- [OK] **Best GPU performance** on NVIDIA hardware (RTX, A100, H100)
+- [OK] **Advanced quantization** (FP16, INT8, FP8, FP4)
+- [OK] **Production-ready** (widely deployed in NVIDIA ecosystem)
+- [OK] **ONNX-native** (reuse existing ONNX converter)
+- [OK] **95%+ operation coverage** (300+ ONNX ops)
+- [OK] **TensorRT for RTX** (optimized for Windows 11 + RTX GPUs)
 
 **Key Design Decisions:**
 1. **Reuse ONNX converter** (no new converter needed!)

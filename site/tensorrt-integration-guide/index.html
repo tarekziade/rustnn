@@ -661,10 +661,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#target-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🎯 Overview
+        [TARGET] Overview
       
     </span>
   </a>
@@ -675,12 +675,12 @@
   <a href="#tensorrt-background" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📚 TensorRT Background
+        TensorRT Background
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="📚 TensorRT Background">
+    <nav class="md-nav" aria-label="TensorRT Background">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -725,12 +725,12 @@
   <a href="#integration-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🏗️ Integration Architecture
+        Integration Architecture
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🏗️ Integration Architecture">
+    <nav class="md-nav" aria-label="Integration Architecture">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -764,12 +764,12 @@
   <a href="#implementation-plan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🔧 Implementation Plan
+        Implementation Plan
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🔧 Implementation Plan">
+    <nav class="md-nav" aria-label="Implementation Plan">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -833,15 +833,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#operation-coverage-analysis" class="md-nav__link">
+  <a href="#stats-operation-coverage-analysis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📊 Operation Coverage Analysis
+        [STATS] Operation Coverage Analysis
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="📊 Operation Coverage Analysis">
+    <nav class="md-nav" aria-label="[STATS] Operation Coverage Analysis">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -864,12 +864,12 @@
   <a href="#challenges-solutions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🚧 Challenges &amp; Solutions
+        Challenges &amp; Solutions
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🚧 Challenges &amp; Solutions">
+    <nav class="md-nav" aria-label="Challenges &amp; Solutions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -944,15 +944,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation-roadmap" class="md-nav__link">
+  <a href="#target-implementation-roadmap" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🎯 Implementation Roadmap
+        [TARGET] Implementation Roadmap
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🎯 Implementation Roadmap">
+    <nav class="md-nav" aria-label="[TARGET] Implementation Roadmap">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1030,12 +1030,12 @@
   <a href="#testing-strategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📝 Testing Strategy
+        Testing Strategy
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="📝 Testing Strategy">
+    <nav class="md-nav" aria-label="Testing Strategy">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1091,12 +1091,12 @@
   <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🔗 References
+        References
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🔗 References">
+    <nav class="md-nav" aria-label="References">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1163,7 +1163,7 @@
   <a href="#summary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📌 Summary
+        Summary
       
     </span>
   </a>
@@ -1194,7 +1194,7 @@
 <p><strong>Date:</strong> December 8, 2024
 <strong>Purpose:</strong> Guide for adding NVIDIA TensorRT converter and executor to rustnn</p>
 <hr />
-<h2 id="overview">🎯 Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<h2 id="target-overview">[TARGET] Overview<a class="headerlink" href="#target-overview" title="Permanent link">&para;</a></h2>
 <p>This document outlines the integration of <a href="https://developer.nvidia.com/tensorrt">NVIDIA TensorRT</a> as a fourth execution backend for rustnn, optimized for NVIDIA GPU inference alongside ONNX Runtime, CoreML, and GGML.</p>
 <p><strong>Why TensorRT?</strong>
 - <strong>GPU-optimized inference</strong>: Best-in-class performance on NVIDIA GPUs (RTX, A100, H100)
@@ -1208,7 +1208,7 @@
 - JIT compilation in &lt;30 seconds
 - Supports Turing through Blackwell GPU generations</p>
 <hr />
-<h2 id="tensorrt-background">📚 TensorRT Background<a class="headerlink" href="#tensorrt-background" title="Permanent link">&para;</a></h2>
+<h2 id="tensorrt-background">TensorRT Background<a class="headerlink" href="#tensorrt-background" title="Permanent link">&para;</a></h2>
 <h3 id="what-is-tensorrt">What is TensorRT?<a class="headerlink" href="#what-is-tensorrt" title="Permanent link">&para;</a></h3>
 <p>TensorRT is NVIDIA's high-performance deep learning inference SDK. It optimizes trained models through:
 - <strong>Layer fusion</strong>: Combines operations to reduce kernel launches
@@ -1287,7 +1287,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 - INT8/INT4/FP8 require quantization from FP32/FP16
 - Some ops restricted to 2D/3D (e.g., pooling)</p>
 <hr />
-<h2 id="integration-architecture">🏗️ Integration Architecture<a class="headerlink" href="#integration-architecture" title="Permanent link">&para;</a></h2>
+<h2 id="integration-architecture">Integration Architecture<a class="headerlink" href="#integration-architecture" title="Permanent link">&para;</a></h2>
 <h3 id="following-rustnn-patterns">Following rustnn Patterns<a class="headerlink" href="#following-rustnn-patterns" title="Permanent link">&para;</a></h3>
 <p>rustnn uses a <strong>converter + executor</strong> pattern:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>WebNN GraphInfo → Converter → ONNX → TensorRT Engine → Executor → Results
@@ -1301,23 +1301,23 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 <p><strong>Key Advantage:</strong> We already have ONNX converter! TensorRT can consume ONNX directly.</p>
 <h3 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>src/
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── converters/
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>│   ├── mod.rs              # Already has OnnxConverter (reuse!)
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>│   ├── onnx.rs
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│   ├── coreml_mlprogram.rs
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│   ├── ggml.rs
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>│   └── tensorrt.rs         # NEW: TensorRT-specific converter (optional)
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>├── executors/
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>│   ├── mod.rs              # Add #[cfg(feature = &quot;tensorrt-runtime&quot;)]
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>│   ├── onnx.rs
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>│   ├── coreml.rs
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>│   ├── ggml.rs
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>│   └── tensorrt.rs         # NEW: TensorRT executor
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>└── python/
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    └── context.rs          # Add Backend::TensorRT variant
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a> converters/
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    mod.rs              # Already has OnnxConverter (reuse!)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    onnx.rs
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    coreml_mlprogram.rs
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    ggml.rs
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    tensorrt.rs         # NEW: TensorRT-specific converter (optional)
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a> executors/
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    mod.rs              # Add #[cfg(feature = &quot;tensorrt-runtime&quot;)]
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    onnx.rs
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    coreml.rs
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    ggml.rs
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    tensorrt.rs         # NEW: TensorRT executor
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a> python/
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>     context.rs          # Add Backend::TensorRT variant
 </span></code></pre></div>
 <hr />
-<h2 id="implementation-plan">🔧 Implementation Plan<a class="headerlink" href="#implementation-plan" title="Permanent link">&para;</a></h2>
+<h2 id="implementation-plan">Implementation Plan<a class="headerlink" href="#implementation-plan" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-executor-onnx-tensorrt-engine">Phase 1: Executor (ONNX → TensorRT Engine)<a class="headerlink" href="#phase-1-executor-onnx-tensorrt-engine" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>src/executors/tensorrt.rs</code></p>
 <p><strong>Feature Gate:</strong> <code>#[cfg(feature = "tensorrt-runtime")]</code></p>
@@ -1578,7 +1578,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </span><span id="__span-8-42"><a id="__codelineno-8-42" name="__codelineno-8-42" href="#__codelineno-8-42"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <hr />
-<h2 id="operation-coverage-analysis">📊 Operation Coverage Analysis<a class="headerlink" href="#operation-coverage-analysis" title="Permanent link">&para;</a></h2>
+<h2 id="stats-operation-coverage-analysis">[STATS] Operation Coverage Analysis<a class="headerlink" href="#stats-operation-coverage-analysis" title="Permanent link">&para;</a></h2>
 <h3 id="webnn-operations-tensorrt-support">WebNN Operations → TensorRT Support<a class="headerlink" href="#webnn-operations-tensorrt-support" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1596,17 +1596,17 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td><code>add</code>, <code>sub</code>, <code>mul</code>, <code>div</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Via Add, Sub, Mul, Div</td>
 </tr>
 <tr>
 <td><code>matmul</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Via MatMul</td>
 </tr>
 <tr>
 <td><code>pow</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Via Pow</td>
 </tr>
 <tr>
@@ -1616,17 +1616,17 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td><code>relu</code>, <code>sigmoid</code>, <code>tanh</code>, <code>softmax</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
 <td><code>gelu</code>, <code>elu</code>, <code>leakyRelu</code>, <code>prelu</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
 <td><code>hardSigmoid</code>, <code>hardSwish</code>, <code>softplus</code>, <code>softsign</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
@@ -1636,7 +1636,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td><code>conv2d</code>, <code>convTranspose2d</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>2D and 3D supported</td>
 </tr>
 <tr>
@@ -1646,12 +1646,12 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td><code>averagePool2d</code>, <code>maxPool2d</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>2D/3D, indices unsupported for MaxPool</td>
 </tr>
 <tr>
 <td><code>globalAveragePool</code>, <code>globalMaxPool</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
@@ -1661,17 +1661,17 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td><code>batchNormalization</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
 <td><code>instanceNormalization</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
 <td><code>layerNormalization</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
@@ -1681,7 +1681,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td>All <code>reduce*</code> operations</td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>10 reduction ops supported</td>
 </tr>
 <tr>
@@ -1691,17 +1691,17 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td><code>reshape</code>, <code>transpose</code>, <code>concat</code>, <code>split</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
 <td><code>slice</code>, <code>gather</code>, <code>scatter</code>, <code>pad</code>, <code>tile</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
 <td><code>squeeze</code>, <code>unsqueeze</code>, <code>expand</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
@@ -1711,7 +1711,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td>All comparison and logical ops</td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>9 ops supported</td>
 </tr>
 <tr>
@@ -1721,7 +1721,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td>All element-wise math</td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>23 ops supported</td>
 </tr>
 <tr>
@@ -1731,7 +1731,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td><code>quantizeLinear</code>, <code>dequantizeLinear</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Native support</td>
 </tr>
 <tr>
@@ -1741,17 +1741,17 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </tr>
 <tr>
 <td><code>argMax</code>, <code>argMin</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Via ArgMax, ArgMin</td>
 </tr>
 <tr>
 <td><code>cast</code>, <code>clamp</code>, <code>where</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Via Cast, Clip, Where</td>
 </tr>
 <tr>
 <td><code>gemm</code></td>
-<td>✅ Full</td>
+<td>[OK] Full</td>
 <td>Via Gemm</td>
 </tr>
 </tbody>
@@ -1763,7 +1763,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 - Certain dilation/padding combinations
 - DOUBLE precision (cast to FLOAT32)</p>
 <hr />
-<h2 id="challenges-solutions">🚧 Challenges &amp; Solutions<a class="headerlink" href="#challenges-solutions" title="Permanent link">&para;</a></h2>
+<h2 id="challenges-solutions">Challenges &amp; Solutions<a class="headerlink" href="#challenges-solutions" title="Permanent link">&para;</a></h2>
 <h3 id="challenge-1-rust-bindings-maturity">Challenge 1: Rust Bindings Maturity<a class="headerlink" href="#challenge-1-rust-bindings-maturity" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> Existing Rust bindings (<code>tensorrt-rs</code>) are outdated (TensorRT 5-7, last update 2020).</p>
 <p><strong>Solutions:</strong>
@@ -1810,7 +1810,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 - <strong>Runtime binding</strong>: Bind shapes at execution time
 - <strong>Future work</strong>: Add dynamic shape support incrementally</p>
 <hr />
-<h2 id="implementation-roadmap">🎯 Implementation Roadmap<a class="headerlink" href="#implementation-roadmap" title="Permanent link">&para;</a></h2>
+<h2 id="target-implementation-roadmap">[TARGET] Implementation Roadmap<a class="headerlink" href="#target-implementation-roadmap" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-proof-of-concept-2-3-days">Phase 1: Proof of Concept (2-3 days)<a class="headerlink" href="#phase-1-proof-of-concept-2-3-days" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Research TensorRT C++ API and identify core interfaces needed</li>
@@ -1864,7 +1864,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </ul>
 <p><strong>Total Estimated Time:</strong> 14-21 days for phases 1-5</p>
 <hr />
-<h2 id="testing-strategy">📝 Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h2>
+<h2 id="testing-strategy">Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h2>
 <h3 id="unit-tests-rust">Unit Tests (Rust)<a class="headerlink" href="#unit-tests-rust" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>src/executors/tensorrt.rs</code>
 <div class="language-rust highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="cp">#[cfg(all(test, feature = </span><span class="s">&quot;tensorrt-runtime&quot;</span><span class="cp">))]</span>
@@ -2020,7 +2020,7 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 </span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">    </span>python<span class="w"> </span>benchmarks/tensorrt_vs_onnx.py
 </span></code></pre></div>
 <hr />
-<h2 id="references">🔗 References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <h3 id="tensorrt-resources">TensorRT Resources<a class="headerlink" href="#tensorrt-resources" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="https://docs.nvidia.com/deeplearning/tensorrt/latest/index.html">TensorRT Documentation</a></li>
@@ -2055,14 +2055,14 @@ DOUBLE, FLOAT32, FLOAT16, BFLOAT16, INT32, INT64, FP8, INT8, INT4, UINT8, BOOL</
 <li><a href="https://github.com/pytorch/TensorRT">Torch-TensorRT</a></li>
 </ul>
 <hr />
-<h2 id="summary">📌 Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
 <p><strong>TensorRT Integration Value:</strong>
-- ✅ <strong>Best GPU performance</strong> on NVIDIA hardware (RTX, A100, H100)
-- ✅ <strong>Advanced quantization</strong> (FP16, INT8, FP8, FP4)
-- ✅ <strong>Production-ready</strong> (widely deployed in NVIDIA ecosystem)
-- ✅ <strong>ONNX-native</strong> (reuse existing ONNX converter)
-- ✅ <strong>95%+ operation coverage</strong> (300+ ONNX ops)
-- ✅ <strong>TensorRT for RTX</strong> (optimized for Windows 11 + RTX GPUs)</p>
+- [OK] <strong>Best GPU performance</strong> on NVIDIA hardware (RTX, A100, H100)
+- [OK] <strong>Advanced quantization</strong> (FP16, INT8, FP8, FP4)
+- [OK] <strong>Production-ready</strong> (widely deployed in NVIDIA ecosystem)
+- [OK] <strong>ONNX-native</strong> (reuse existing ONNX converter)
+- [OK] <strong>95%+ operation coverage</strong> (300+ ONNX ops)
+- [OK] <strong>TensorRT for RTX</strong> (optimized for Windows 11 + RTX GPUs)</p>
 <p><strong>Key Design Decisions:</strong>
 1. <strong>Reuse ONNX converter</strong> (no new converter needed!)
 2. <strong>Custom FFI bindings</strong> for TensorRT 10.x C++ API

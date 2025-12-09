@@ -50,7 +50,7 @@ onnxruntime-download:
 		mkdir -p $(ORT_DIR); \
 		curl -L $(ORT_BASE)/$(ORT_TARBALL) -o $(ORT_DIR)/$(ORT_TARBALL); \
 		tar -xzf $(ORT_DIR)/$(ORT_TARBALL) -C $(ORT_DIR); \
-		echo "✓ ONNX Runtime downloaded and extracted"; \
+		echo "[OK] ONNX Runtime downloaded and extracted"; \
 	fi
 
 onnx: onnxruntime-download
@@ -108,8 +108,8 @@ python-test: python-dev
 		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) .venv-webnn/bin/python -m pytest tests/ -v; \
 		EXIT_CODE=$$?; \
 		if [ $$EXIT_CODE -eq 134 ] || [ $$EXIT_CODE -eq 139 ]; then \
-			echo "⚠️  Note: Python crashed during cleanup"; \
-			echo "✅  All tests passed successfully before the crash"; \
+			echo "[WARNING]  Note: Python crashed during cleanup"; \
+			echo "[OK]  All tests passed successfully before the crash"; \
 			exit 0; \
 		else \
 			exit $$EXIT_CODE; \
@@ -118,8 +118,8 @@ python-test: python-dev
 		DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) python -m pytest tests/ -v; \
 		EXIT_CODE=$$?; \
 		if [ $$EXIT_CODE -eq 134 ] || [ $$EXIT_CODE -eq 139 ]; then \
-			echo "⚠️  Note: Python crashed during cleanup"; \
-			echo "✅  All tests passed successfully before the crash"; \
+			echo "[WARNING]  Note: Python crashed during cleanup"; \
+			echo "[OK]  All tests passed successfully before the crash"; \
 			exit 0; \
 		else \
 			exit $$EXIT_CODE; \

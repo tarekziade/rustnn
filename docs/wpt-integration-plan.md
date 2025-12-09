@@ -56,18 +56,18 @@ The [Web Platform Tests for WebNN](https://github.com/web-platform-tests/wpt/tre
 ## Current State Analysis
 
 ### What We Have
-✅ **Python API**: Full WebNN-compliant API with all reduction operations
-✅ **Graph Builder**: Backend-agnostic graph construction
-✅ **ONNX Backend**: Cross-platform execution via ONNX Runtime
-✅ **CoreML Backend**: macOS-optimized execution
-✅ **Basic Tests**: 109 Python tests (18 for reduction operations)
+[OK] **Python API**: Full WebNN-compliant API with all reduction operations
+[OK] **Graph Builder**: Backend-agnostic graph construction
+[OK] **ONNX Backend**: Cross-platform execution via ONNX Runtime
+[OK] **CoreML Backend**: macOS-optimized execution
+[OK] **Basic Tests**: 109 Python tests (18 for reduction operations)
 
 ### What We're Missing
-❌ **Comprehensive test coverage**: Only ~10% of WPT test cases covered
-❌ **Precision validation**: No ULP-based tolerance checking
-❌ **Data type coverage**: Missing float16, int64, int4/uint4 support
-❌ **Validation tests**: No systematic parameter validation testing
-❌ **Test automation**: Manual test writing vs. data-driven approach
+ **Comprehensive test coverage**: Only ~10% of WPT test cases covered
+ **Precision validation**: No ULP-based tolerance checking
+ **Data type coverage**: Missing float16, int64, int4/uint4 support
+ **Validation tests**: No systematic parameter validation testing
+ **Test automation**: Manual test writing vs. data-driven approach
 
 ## Integration Strategy
 
@@ -82,15 +82,15 @@ We propose creating a **Python-based test adapter** that:
 ### Why Python (not JavaScript)?
 
 **Advantages:**
-- ✅ Our Python API already implements WebNN spec
-- ✅ Can reuse existing pytest infrastructure
-- ✅ Direct access to NumPy for numerical validation
-- ✅ Easier to integrate with CI/CD
-- ✅ No need for JavaScript runtime
+- [OK] Our Python API already implements WebNN spec
+- [OK] Can reuse existing pytest infrastructure
+- [OK] Direct access to NumPy for numerical validation
+- [OK] Easier to integrate with CI/CD
+- [OK] No need for JavaScript runtime
 
 **Trade-offs:**
-- ⚠️ Need to convert JS test data to Python/JSON format
-- ⚠️ Some WPT utilities need reimplementation (tolerance checking, type conversion)
+- [WARNING] Need to convert JS test data to Python/JSON format
+- [WARNING] Some WPT utilities need reimplementation (tolerance checking, type conversion)
 
 ## Implementation Plan
 
@@ -131,13 +131,13 @@ We propose creating a **Python-based test adapter** that:
 **Priority Operations (in order):**
 
 **Tier 1 - Already Implemented:**
-1. ✅ Binary ops: add, sub, mul, div, matmul (5 ops)
-2. ✅ Activations: relu, sigmoid, tanh, softmax (4 ops)
-3. ✅ Reductions: reduceSum, reduceMean, reduceMax, reduceMin, reduceProduct, reduceL1, reduceL2, reduceLogSum, reduceLogSumExp, reduceSumSquare (10 ops)
-4. ✅ Pooling: averagePool2d, maxPool2d, globalAveragePool, globalMaxPool (4 ops)
-5. ✅ Convolution: conv2d, convTranspose2d (2 ops)
-6. ✅ Normalization: batchNormalization, instanceNormalization, layerNormalization (3 ops)
-7. ✅ Shape: reshape (1 op)
+1. [OK] Binary ops: add, sub, mul, div, matmul (5 ops)
+2. [OK] Activations: relu, sigmoid, tanh, softmax (4 ops)
+3. [OK] Reductions: reduceSum, reduceMean, reduceMax, reduceMin, reduceProduct, reduceL1, reduceL2, reduceLogSum, reduceLogSumExp, reduceSumSquare (10 ops)
+4. [OK] Pooling: averagePool2d, maxPool2d, globalAveragePool, globalMaxPool (4 ops)
+5. [OK] Convolution: conv2d, convTranspose2d (2 ops)
+6. [OK] Normalization: batchNormalization, instanceNormalization, layerNormalization (3 ops)
+7. [OK] Shape: reshape (1 op)
 
 **Total Tier 1:** 29 operations (estimated ~35-40 WPT test files)
 
@@ -262,25 +262,25 @@ def test_reduce_sum_invalid_axes():
 
 ```
 rustnn/
-├── tests/
-│   ├── wpt_data/                    # WPT test data (converted)
-│   │   ├── conformance/
-│   │   │   ├── relu.json
-│   │   │   ├── reduce_sum.json
-│   │   │   └── ...
-│   │   └── validation/
-│   │       ├── relu.json
-│   │       └── ...
-│   ├── wpt_utils.py                 # WPT-compatible utilities
-│   ├── test_wpt_conformance.py      # Conformance test runner
-│   ├── test_wpt_validation.py       # Validation test runner
-│   └── conftest.py                  # Pytest fixtures
-├── scripts/
-│   ├── convert_wpt_tests.py         # WPT test converter
-│   └── update_wpt_tests.sh          # Auto-update script
-└── docs/
-    ├── wpt-integration-plan.md      # This document
-    └── wpt-test-guide.md            # User guide (TBD)
+ tests/
+    wpt_data/                    # WPT test data (converted)
+       conformance/
+          relu.json
+          reduce_sum.json
+          ...
+       validation/
+           relu.json
+           ...
+    wpt_utils.py                 # WPT-compatible utilities
+    test_wpt_conformance.py      # Conformance test runner
+    test_wpt_validation.py       # Validation test runner
+    conftest.py                  # Pytest fixtures
+ scripts/
+    convert_wpt_tests.py         # WPT test converter
+    update_wpt_tests.sh          # Auto-update script
+ docs/
+     wpt-integration-plan.md      # This document
+     wpt-test-guide.md            # User guide (TBD)
 ```
 
 ### Test Data Format
@@ -500,43 +500,43 @@ def test_reduce_sum_conformance(context, test_case):
 
 | Operation | WPT Tests | Implemented | Priority |
 |-----------|-----------|-------------|----------|
-| relu | ✅ | ✅ | Tier 1 |
-| sigmoid | ✅ | ✅ | Tier 1 |
-| tanh | ✅ | ✅ | Tier 1 |
-| softmax | ✅ | ✅ | Tier 1 |
-| add | ✅ | ✅ | Tier 1 |
-| sub | ✅ | ✅ | Tier 1 |
-| mul | ✅ | ✅ | Tier 1 |
-| div | ✅ | ✅ | Tier 1 |
-| matmul | ✅ | ✅ | Tier 1 |
-| reduceSum | ✅ | ✅ | Tier 1 |
-| reduceMean | ✅ | ✅ | Tier 1 |
-| reduceMax | ✅ | ✅ | Tier 1 |
-| reduceMin | ✅ | ✅ | Tier 1 |
-| reduceProduct | ✅ | ✅ | Tier 1 |
-| reduceL1 | ✅ | ✅ | Tier 1 |
-| reduceL2 | ✅ | ✅ | Tier 1 |
-| reduceLogSum | ✅ | ✅ | Tier 1 |
-| reduceLogSumExp | ✅ | ✅ | Tier 1 |
-| reduceSumSquare | ✅ | ✅ | Tier 1 |
-| averagePool2d | ✅ | ✅ | Tier 1 |
-| maxPool2d | ✅ | ✅ | Tier 1 |
-| globalAveragePool | ✅ | ✅ | Tier 1 |
-| globalMaxPool | ✅ | ✅ | Tier 1 |
-| conv2d | ✅ | ✅ | Tier 1 |
-| convTranspose2d | ✅ | ✅ | Tier 1 |
-| batchNormalization | ✅ | ✅ | Tier 1 |
-| instanceNormalization | ✅ | ✅ | Tier 1 |
-| layerNormalization | ✅ | ✅ | Tier 1 |
-| reshape | ✅ | ✅ | Tier 1 |
-| abs | ✅ | ❌ | Tier 2 |
-| exp | ✅ | ❌ | Tier 2 |
-| log | ✅ | ❌ | Tier 2 |
-| sqrt | ✅ | ❌ | Tier 2 |
-| transpose | ✅ | ❌ | Tier 2 |
-| concat | ✅ | ❌ | Tier 2 |
-| split | ✅ | ❌ | Tier 2 |
-| slice | ✅ | ❌ | Tier 2 |
+| relu | [OK] | [OK] | Tier 1 |
+| sigmoid | [OK] | [OK] | Tier 1 |
+| tanh | [OK] | [OK] | Tier 1 |
+| softmax | [OK] | [OK] | Tier 1 |
+| add | [OK] | [OK] | Tier 1 |
+| sub | [OK] | [OK] | Tier 1 |
+| mul | [OK] | [OK] | Tier 1 |
+| div | [OK] | [OK] | Tier 1 |
+| matmul | [OK] | [OK] | Tier 1 |
+| reduceSum | [OK] | [OK] | Tier 1 |
+| reduceMean | [OK] | [OK] | Tier 1 |
+| reduceMax | [OK] | [OK] | Tier 1 |
+| reduceMin | [OK] | [OK] | Tier 1 |
+| reduceProduct | [OK] | [OK] | Tier 1 |
+| reduceL1 | [OK] | [OK] | Tier 1 |
+| reduceL2 | [OK] | [OK] | Tier 1 |
+| reduceLogSum | [OK] | [OK] | Tier 1 |
+| reduceLogSumExp | [OK] | [OK] | Tier 1 |
+| reduceSumSquare | [OK] | [OK] | Tier 1 |
+| averagePool2d | [OK] | [OK] | Tier 1 |
+| maxPool2d | [OK] | [OK] | Tier 1 |
+| globalAveragePool | [OK] | [OK] | Tier 1 |
+| globalMaxPool | [OK] | [OK] | Tier 1 |
+| conv2d | [OK] | [OK] | Tier 1 |
+| convTranspose2d | [OK] | [OK] | Tier 1 |
+| batchNormalization | [OK] | [OK] | Tier 1 |
+| instanceNormalization | [OK] | [OK] | Tier 1 |
+| layerNormalization | [OK] | [OK] | Tier 1 |
+| reshape | [OK] | [OK] | Tier 1 |
+| abs | [OK] |  | Tier 2 |
+| exp | [OK] |  | Tier 2 |
+| log | [OK] |  | Tier 2 |
+| sqrt | [OK] |  | Tier 2 |
+| transpose | [OK] |  | Tier 2 |
+| concat | [OK] |  | Tier 2 |
+| split | [OK] |  | Tier 2 |
+| slice | [OK] |  | Tier 2 |
 | ... | ... | ... | ... |
 
 ### Appendix B: Example Test Converter Pseudocode

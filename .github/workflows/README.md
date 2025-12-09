@@ -147,7 +147,7 @@ You can manually trigger documentation deployment:
 If deployment fails with permissions error:
 1. Go to Settings → Actions → General
 2. Under "Workflow permissions", select:
-   - ✅ Read and write permissions
+   - [OK] Read and write permissions
 3. Save and re-run the workflow
 
 ### Build Fails

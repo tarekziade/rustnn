@@ -2,7 +2,7 @@
 
 Complete documentation setup for the WebNN Python API.
 
-## 📚 Documentation Site
+##  Documentation Site
 
 The documentation is built with **MkDocs** using the **Material** theme and includes:
 
@@ -43,7 +43,7 @@ The documentation is built with **MkDocs** using the **Material** theme and incl
    - Platform-specific features
    - Best practices
 
-## 🚀 Building Locally
+## [DEPLOY] Building Locally
 
 ### Install Dependencies
 
@@ -73,7 +73,7 @@ The built site will be in `site/`.
 mkdocs build --strict
 ```
 
-## 🤖 GitHub Actions
+## [BOT] GitHub Actions
 
 ### Automatic Deployment
 
@@ -82,11 +82,11 @@ Documentation is automatically built and deployed to GitHub Pages on every push 
 **Workflow**: `.github/workflows/docs.yml`
 
 **What it does**:
-1. ✅ Checks out the repository
-2. ✅ Installs Python and dependencies
-3. ✅ Builds documentation with `mkdocs build --strict`
-4. ✅ Uploads build artifact
-5. ✅ Deploys to GitHub Pages (main branch only)
+1. [OK] Checks out the repository
+2. [OK] Installs Python and dependencies
+3. [OK] Builds documentation with `mkdocs build --strict`
+4. [OK] Uploads build artifact
+5. [OK] Deploys to GitHub Pages (main branch only)
 
 **Triggers**:
 - Push to `main` (with docs changes)
@@ -100,21 +100,21 @@ Documentation quality is checked on all PRs:
 **Workflow**: `.github/workflows/docs-pr.yml`
 
 **What it does**:
-1. ✅ Builds documentation
-2. ✅ Checks for broken links
-3. ✅ Comments on PR with status
+1. [OK] Builds documentation
+2. [OK] Checks for broken links
+3. [OK] Comments on PR with status
 
-## 🎨 Features
+## [STYLE] Features
 
 ### Material for MkDocs Theme
 
-- 🌓 Dark/light mode toggle
-- 🔍 Full-text search
-- 📱 Mobile-responsive design
-- 🎯 Navigation tabs
-- 📂 Expandable sections
-- 🔝 "Back to top" button
-- 📋 Code copy buttons
+-  Dark/light mode toggle
+- [SEARCH] Full-text search
+-  Mobile-responsive design
+- [TARGET] Navigation tabs
+-  Expandable sections
+-  "Back to top" button
+-  Code copy buttons
 
 ### Markdown Extensions
 
@@ -133,30 +133,30 @@ All code examples include:
 - Line numbers (where appropriate)
 - Type hints
 
-## 📁 File Structure
+##  File Structure
 
 ```
 rustnn/
-├── docs/                       # Documentation source
-│   ├── index.md               # Home page
-│   ├── getting-started.md     # Getting started guide
-│   ├── api-reference.md       # API documentation
-│   ├── examples.md            # Code examples
-│   ├── advanced.md            # Advanced topics
-│   ├── requirements.txt       # Python deps for building
-│   └── README.md              # Docs development guide
-│
-├── mkdocs.yml                 # MkDocs configuration
-│
-├── .github/workflows/
-│   ├── docs.yml              # Build & deploy workflow
-│   ├── docs-pr.yml           # PR check workflow
-│   └── README.md             # Workflows documentation
-│
-└── site/                      # Built documentation (gitignored)
+ docs/                       # Documentation source
+    index.md               # Home page
+    getting-started.md     # Getting started guide
+    api-reference.md       # API documentation
+    examples.md            # Code examples
+    advanced.md            # Advanced topics
+    requirements.txt       # Python deps for building
+    README.md              # Docs development guide
+
+ mkdocs.yml                 # MkDocs configuration
+
+ .github/workflows/
+    docs.yml              # Build & deploy workflow
+    docs-pr.yml           # PR check workflow
+    README.md             # Workflows documentation
+
+ site/                      # Built documentation (gitignored)
 ```
 
-## 🔧 Configuration
+##  Configuration
 
 ### `mkdocs.yml`
 
@@ -176,7 +176,7 @@ Required packages:
 - `mkdocstrings[python]` - API documentation from docstrings
 - `pymdown-extensions` - Additional markdown features
 
-## 🌐 Deployment
+##  Deployment
 
 ### GitHub Pages Setup
 
@@ -197,7 +197,7 @@ After the first successful workflow run:
 3. Click on the latest run
 4. Find the deployment URL in the "deploy" job
 
-## 📝 Writing Documentation
+##  Writing Documentation
 
 ### Adding a New Page
 
@@ -238,7 +238,7 @@ ml = webnn.ML()
 [API Reference - ML Class](api-reference.md#class-ml)
 ```
 
-## ✅ Quality Checks
+## [OK] Quality Checks
 
 ### Local Checks
 
@@ -255,12 +255,12 @@ mkdocs build 2>&1 | grep -i warning
 ### CI Checks
 
 On every PR:
-- ✅ Documentation builds successfully
-- ✅ No broken internal links
-- ✅ No markdown syntax errors
-- ✅ No MkDocs configuration errors
+- [OK] Documentation builds successfully
+- [OK] No broken internal links
+- [OK] No markdown syntax errors
+- [OK] No MkDocs configuration errors
 
-## 🔗 Links
+##  Links
 
 - **Documentation Source**: `docs/`
 - **Built Site**: `site/` (local) or GitHub Pages (deployed)
@@ -268,7 +268,7 @@ On every PR:
 - **Material Theme**: https://squidfunk.github.io/mkdocs-material/
 - **GitHub Actions Workflows**: `.github/workflows/`
 
-## 🎯 Next Steps
+## [TARGET] Next Steps
 
 1. **Customize**: Update `your-org` in URLs to your GitHub organization
 2. **Deploy**: Push to main and enable GitHub Pages
@@ -277,4 +277,4 @@ On every PR:
 
 ---
 
-✅ **Documentation is ready to use and deploy!**
+[OK] **Documentation is ready to use and deploy!**

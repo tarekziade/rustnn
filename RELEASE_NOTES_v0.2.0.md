@@ -6,7 +6,7 @@ This is a major feature release that transforms rustnn from a graph validation a
 
 ---
 
-## 🎉 Highlights
+## [SUCCESS] Highlights
 
 ### 85 WebNN Operations Fully Implemented (89% Spec Coverage)
 Complete implementation of 85 WebNN operations across all backends:
@@ -33,7 +33,7 @@ Complete implementation of 85 WebNN operations across all backends:
 
 ---
 
-## ✨ New Features
+##  New Features
 
 ### Operations (85 Total)
 
@@ -139,7 +139,7 @@ Complete implementation of 85 WebNN operations across all backends:
 
 ---
 
-## 🔧 Major Changes
+##  Major Changes
 
 ### CoreML Backend Migration
 - **Complete migration from NeuralNetwork to MLProgram format**
@@ -166,7 +166,7 @@ Complete implementation of 85 WebNN operations across all backends:
 
 ---
 
-## 🐛 Bug Fixes
+##  Bug Fixes
 
 - Fixed ONNX model format compatibility with older ONNX Runtime versions
 - Fixed logic operations Cast node type conversion for onnxruntime-rs v0.0.14
@@ -179,7 +179,7 @@ Complete implementation of 85 WebNN operations across all backends:
 
 ---
 
-## 📊 Statistics
+## [STATS] Statistics
 
 - **97 commits** since v0.1.0
 - **85 operations** implemented (89% of WebNN spec)
@@ -189,7 +189,7 @@ Complete implementation of 85 WebNN operations across all backends:
 
 ---
 
-## 🔄 Breaking Changes
+##  Breaking Changes
 
 ### API Changes
 - `device_type` parameter replaced with `accelerated` (bool) and `power_preference` (str)
@@ -213,7 +213,7 @@ Complete implementation of 85 WebNN operations across all backends:
 
 ---
 
-## 📦 Installation
+## [PACKAGE] Installation
 
 ### From PyPI
 ```bash
@@ -229,7 +229,7 @@ make python-dev
 
 ---
 
-## 🎯 What's Next (v0.3.0)
+## [TARGET] What's Next (v0.3.0)
 
 - Additional specialized activations (~6 operations)
 - Graph optimization passes
@@ -239,7 +239,7 @@ make python-dev
 
 ---
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - W3C WebNN Community Group for the specification
 - Chromium WebNN implementation for reference

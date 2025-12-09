@@ -1221,17 +1221,17 @@
 - <strong>Data types</strong>: float32, float16, int8, int32, int64, uint8, uint32, uint64, int4, uint4</p>
 <h2 id="current-state-analysis">Current State Analysis<a class="headerlink" href="#current-state-analysis" title="Permanent link">&para;</a></h2>
 <h3 id="what-we-have">What We Have<a class="headerlink" href="#what-we-have" title="Permanent link">&para;</a></h3>
-<p>✅ <strong>Python API</strong>: Full WebNN-compliant API with all reduction operations
-✅ <strong>Graph Builder</strong>: Backend-agnostic graph construction
-✅ <strong>ONNX Backend</strong>: Cross-platform execution via ONNX Runtime
-✅ <strong>CoreML Backend</strong>: macOS-optimized execution
-✅ <strong>Basic Tests</strong>: 109 Python tests (18 for reduction operations)</p>
+<p>[OK] <strong>Python API</strong>: Full WebNN-compliant API with all reduction operations
+[OK] <strong>Graph Builder</strong>: Backend-agnostic graph construction
+[OK] <strong>ONNX Backend</strong>: Cross-platform execution via ONNX Runtime
+[OK] <strong>CoreML Backend</strong>: macOS-optimized execution
+[OK] <strong>Basic Tests</strong>: 109 Python tests (18 for reduction operations)</p>
 <h3 id="what-were-missing">What We're Missing<a class="headerlink" href="#what-were-missing" title="Permanent link">&para;</a></h3>
-<p>❌ <strong>Comprehensive test coverage</strong>: Only ~10% of WPT test cases covered
-❌ <strong>Precision validation</strong>: No ULP-based tolerance checking
-❌ <strong>Data type coverage</strong>: Missing float16, int64, int4/uint4 support
-❌ <strong>Validation tests</strong>: No systematic parameter validation testing
-❌ <strong>Test automation</strong>: Manual test writing vs. data-driven approach</p>
+<p><strong>Comprehensive test coverage</strong>: Only ~10% of WPT test cases covered
+ <strong>Precision validation</strong>: No ULP-based tolerance checking
+ <strong>Data type coverage</strong>: Missing float16, int64, int4/uint4 support
+ <strong>Validation tests</strong>: No systematic parameter validation testing
+ <strong>Test automation</strong>: Manual test writing vs. data-driven approach</p>
 <h2 id="integration-strategy">Integration Strategy<a class="headerlink" href="#integration-strategy" title="Permanent link">&para;</a></h2>
 <h3 id="approach-python-test-adapter">Approach: Python Test Adapter<a class="headerlink" href="#approach-python-test-adapter" title="Permanent link">&para;</a></h3>
 <p>We propose creating a <strong>Python-based test adapter</strong> that:
@@ -1241,14 +1241,14 @@
 4. Reports results in pytest format</p>
 <h3 id="why-python-not-javascript">Why Python (not JavaScript)?<a class="headerlink" href="#why-python-not-javascript" title="Permanent link">&para;</a></h3>
 <p><strong>Advantages:</strong>
-- ✅ Our Python API already implements WebNN spec
-- ✅ Can reuse existing pytest infrastructure
-- ✅ Direct access to NumPy for numerical validation
-- ✅ Easier to integrate with CI/CD
-- ✅ No need for JavaScript runtime</p>
+- [OK] Our Python API already implements WebNN spec
+- [OK] Can reuse existing pytest infrastructure
+- [OK] Direct access to NumPy for numerical validation
+- [OK] Easier to integrate with CI/CD
+- [OK] No need for JavaScript runtime</p>
 <p><strong>Trade-offs:</strong>
-- ⚠️ Need to convert JS test data to Python/JSON format
-- ⚠️ Some WPT utilities need reimplementation (tolerance checking, type conversion)</p>
+- [WARNING] Need to convert JS test data to Python/JSON format
+- [WARNING] Some WPT utilities need reimplementation (tolerance checking, type conversion)</p>
 <h2 id="implementation-plan">Implementation Plan<a class="headerlink" href="#implementation-plan" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-test-infrastructure-week-1">Phase 1: Test Infrastructure (Week 1)<a class="headerlink" href="#phase-1-test-infrastructure-week-1" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Build the foundation for running WPT-style tests in Python</p>
@@ -1287,13 +1287,13 @@
 <p><strong>Goal:</strong> Run all WPT conformance tests for implemented operations</p>
 <p><strong>Priority Operations (in order):</strong></p>
 <p><strong>Tier 1 - Already Implemented:</strong>
-1. ✅ Binary ops: add, sub, mul, div, matmul (5 ops)
-2. ✅ Activations: relu, sigmoid, tanh, softmax (4 ops)
-3. ✅ Reductions: reduceSum, reduceMean, reduceMax, reduceMin, reduceProduct, reduceL1, reduceL2, reduceLogSum, reduceLogSumExp, reduceSumSquare (10 ops)
-4. ✅ Pooling: averagePool2d, maxPool2d, globalAveragePool, globalMaxPool (4 ops)
-5. ✅ Convolution: conv2d, convTranspose2d (2 ops)
-6. ✅ Normalization: batchNormalization, instanceNormalization, layerNormalization (3 ops)
-7. ✅ Shape: reshape (1 op)</p>
+1. [OK] Binary ops: add, sub, mul, div, matmul (5 ops)
+2. [OK] Activations: relu, sigmoid, tanh, softmax (4 ops)
+3. [OK] Reductions: reduceSum, reduceMean, reduceMax, reduceMin, reduceProduct, reduceL1, reduceL2, reduceLogSum, reduceLogSumExp, reduceSumSquare (10 ops)
+4. [OK] Pooling: averagePool2d, maxPool2d, globalAveragePool, globalMaxPool (4 ops)
+5. [OK] Convolution: conv2d, convTranspose2d (2 ops)
+6. [OK] Normalization: batchNormalization, instanceNormalization, layerNormalization (3 ops)
+7. [OK] Shape: reshape (1 op)</p>
 <p><strong>Total Tier 1:</strong> 29 operations (estimated ~35-40 WPT test files)</p>
 <p><strong>Tier 2 - High Priority Missing Ops:</strong>
 1. Element-wise: abs, ceil, floor, exp, log, sqrt, neg, reciprocal (8 ops)
@@ -1425,25 +1425,25 @@
 <h2 id="technical-design">Technical Design<a class="headerlink" href="#technical-design" title="Permanent link">&para;</a></h2>
 <h3 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>rustnn/
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── tests/
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>│   ├── wpt_data/                    # WPT test data (converted)
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>│   │   ├── conformance/
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>│   │   │   ├── relu.json
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>│   │   │   ├── reduce_sum.json
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>│   │   │   └── ...
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>│   │   └── validation/
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>│   │       ├── relu.json
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>│   │       └── ...
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>│   ├── wpt_utils.py                 # WPT-compatible utilities
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>│   ├── test_wpt_conformance.py      # Conformance test runner
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>│   ├── test_wpt_validation.py       # Validation test runner
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>│   └── conftest.py                  # Pytest fixtures
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>├── scripts/
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>│   ├── convert_wpt_tests.py         # WPT test converter
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>│   └── update_wpt_tests.sh          # Auto-update script
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>└── docs/
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    ├── wpt-integration-plan.md      # This document
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    └── wpt-test-guide.md            # User guide (TBD)
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a> tests/
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    wpt_data/                    # WPT test data (converted)
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>       conformance/
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>          relu.json
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>          reduce_sum.json
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>          ...
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>       validation/
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>           relu.json
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>           ...
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    wpt_utils.py                 # WPT-compatible utilities
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    test_wpt_conformance.py      # Conformance test runner
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    test_wpt_validation.py       # Validation test runner
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    conftest.py                  # Pytest fixtures
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a> scripts/
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    convert_wpt_tests.py         # WPT test converter
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    update_wpt_tests.sh          # Auto-update script
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a> docs/
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>     wpt-integration-plan.md      # This document
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>     wpt-test-guide.md            # User guide (TBD)
 </span></code></pre></div>
 <h3 id="test-data-format">Test Data Format<a class="headerlink" href="#test-data-format" title="Permanent link">&para;</a></h3>
 <p><strong>JSON Test Case Structure:</strong>
@@ -1655,224 +1655,224 @@
 <tbody>
 <tr>
 <td>relu</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>sigmoid</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>tanh</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>softmax</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>add</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>sub</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>mul</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>div</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>matmul</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceSum</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceMean</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceMax</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceMin</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceProduct</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceL1</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceL2</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceLogSum</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceLogSumExp</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reduceSumSquare</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>averagePool2d</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>maxPool2d</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>globalAveragePool</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>globalMaxPool</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>conv2d</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>convTranspose2d</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>batchNormalization</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>instanceNormalization</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>layerNormalization</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>reshape</td>
-<td>✅</td>
-<td>✅</td>
+<td>[OK]</td>
+<td>[OK]</td>
 <td>Tier 1</td>
 </tr>
 <tr>
 <td>abs</td>
-<td>✅</td>
-<td>❌</td>
+<td>[OK]</td>
+<td></td>
 <td>Tier 2</td>
 </tr>
 <tr>
 <td>exp</td>
-<td>✅</td>
-<td>❌</td>
+<td>[OK]</td>
+<td></td>
 <td>Tier 2</td>
 </tr>
 <tr>
 <td>log</td>
-<td>✅</td>
-<td>❌</td>
+<td>[OK]</td>
+<td></td>
 <td>Tier 2</td>
 </tr>
 <tr>
 <td>sqrt</td>
-<td>✅</td>
-<td>❌</td>
+<td>[OK]</td>
+<td></td>
 <td>Tier 2</td>
 </tr>
 <tr>
 <td>transpose</td>
-<td>✅</td>
-<td>❌</td>
+<td>[OK]</td>
+<td></td>
 <td>Tier 2</td>
 </tr>
 <tr>
 <td>concat</td>
-<td>✅</td>
-<td>❌</td>
+<td>[OK]</td>
+<td></td>
 <td>Tier 2</td>
 </tr>
 <tr>
 <td>split</td>
-<td>✅</td>
-<td>❌</td>
+<td>[OK]</td>
+<td></td>
 <td>Tier 2</td>
 </tr>
 <tr>
 <td>slice</td>
-<td>✅</td>
-<td>❌</td>
+<td>[OK]</td>
+<td></td>
 <td>Tier 2</td>
 </tr>
 <tr>

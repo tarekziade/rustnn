@@ -8,7 +8,7 @@
 
 ---
 
-## ⚠️ **EXPERIMENTAL - DO NOT USE IN PRODUCTION**
+## [WARNING] **EXPERIMENTAL - DO NOT USE IN PRODUCTION**
 
 **This project is a proof-of-concept and experimental implementation. It is NOT ready for production use.**
 
@@ -17,20 +17,20 @@ This is an early-stage experiment to explore WebNN graph handling and format con
 ---
 
 **Features:**
-- 🦀 **Rust Library**: Validates WebNN graphs and converts to ONNX/CoreML formats
-- 🐍 **Python API**: Complete W3C WebNN API implementation via PyO3 bindings
-- 🎯 **Runtime Backend Selection**: Choose CPU, GPU, or NPU execution at context creation
-- 📊 **Format Conversion**: Export graphs to ONNX (cross-platform) and CoreML (macOS)
-- 🚀 **Model Execution**: Run converted models on CPU, GPU, and Neural Engine (macOS)
-- ⚡ **Async Support**: Non-blocking execution with Python asyncio integration
-- 🔍 **Graph Visualization**: Generate Graphviz diagrams of your neural networks
-- ✅ **Validation**: Comprehensive graph validation matching Chromium's WebNN implementation
-- 📐 **Shape Inference**: Automatic shape computation with NumPy-style broadcasting
-- 🎨 **Real Examples**: Complete 106-layer MobileNetV2 achieving 99.60% accuracy + Transformer text generation with attention
+- Rust **Rust Library**: Validates WebNN graphs and converts to ONNX/CoreML formats
+- Python **Python API**: Complete W3C WebNN API implementation via PyO3 bindings
+- [TARGET] **Runtime Backend Selection**: Choose CPU, GPU, or NPU execution at context creation
+- [STATS] **Format Conversion**: Export graphs to ONNX (cross-platform) and CoreML (macOS)
+- [DEPLOY] **Model Execution**: Run converted models on CPU, GPU, and Neural Engine (macOS)
+- [FAST] **Async Support**: Non-blocking execution with Python asyncio integration
+- [SEARCH] **Graph Visualization**: Generate Graphviz diagrams of your neural networks
+- [OK] **Validation**: Comprehensive graph validation matching Chromium's WebNN implementation
+- [MATH] **Shape Inference**: Automatic shape computation with NumPy-style broadcasting
+- [STYLE] **Real Examples**: Complete 106-layer MobileNetV2 achieving 99.60% accuracy + Transformer text generation with attention
 
 ---
 
-## 📦 Installation
+## [PACKAGE] Installation
 
 ### Python Package (PyWebNN)
 
@@ -94,7 +94,7 @@ Or use directly from this repository.
 
 ---
 
-## 🚀 Quick Start
+## [DEPLOY] Quick Start
 
 ### Python API
 
@@ -247,7 +247,7 @@ std::fs::write("model.onnx", &converted.data)?;
 
 ---
 
-## 🎨 Examples
+## [STYLE] Examples
 
 ### Real Image Classification with Complete Pretrained MobileNetV2
 
@@ -277,7 +277,7 @@ Image: examples/images/test.jpg
 Backend: ONNX CPU
 
 Loading all pretrained MobileNetV2 weights...
-   ✓ Loaded 106 weight tensors
+   [OK] Loaded 106 weight tensors
    Weight load time: 22.79ms
 
 Building complete MobileNetV2 graph...
@@ -287,7 +287,7 @@ Building complete MobileNetV2 graph...
    ...
    Block 16: 160->320 (stride=1, expansion=6)
    Layer final: Conv 320->1280
-   ✓ Complete MobileNetV2 graph built!
+   [OK] Complete MobileNetV2 graph built!
    Graph build time: 913.78ms
 
 Top 5 Predictions (Real ImageNet Labels):
@@ -357,8 +357,8 @@ Next-Token Generation with Attention (WebNN)
 Backend: ONNX CPU
 Model: vocab=256 (byte-level), d_model=64, max_seq=32
 
-✓ Context created (accelerated=False)
-✓ Model initialized
+[OK] Context created (accelerated=False)
+[OK] Model initialized
 
 Prompt: 'Hello world'
 Prompt tokens (11): [72, 101, 108, 108, 111, 32, 119, 111, 114, 108]...
@@ -372,12 +372,12 @@ Generating 30 tokens autoregressively...
 ======================================================================
 
 WebNN Operations Demonstrated:
-  ✓ matmul - Matrix multiplication for projections
-  ✓ layer_normalization - Normalizing activations
-  ✓ relu - Activation function
-  ✓ softmax - Output probability distribution
-  ✓ reduce_mean - Simplified attention pooling
-  ✓ gemm - General matrix multiply with transpose
+  [OK] matmul - Matrix multiplication for projections
+  [OK] layer_normalization - Normalizing activations
+  [OK] relu - Activation function
+  [OK] softmax - Output probability distribution
+  [OK] reduce_mean - Simplified attention pooling
+  [OK] gemm - General matrix multiply with transpose
 ======================================================================
 ```
 
@@ -414,7 +414,7 @@ See the [examples/](examples/) directory for more code samples.
 
 ---
 
-## 📚 Documentation
+##  Documentation
 
 The Python API implements the [W3C WebNN specification](https://www.w3.org/TR/webnn/).
 
@@ -426,7 +426,7 @@ The Python API implements the [W3C WebNN specification](https://www.w3.org/TR/we
 
 ---
 
-## 🦀 Rust CLI Usage
+## Rust Rust CLI Usage
 
 The Rust library includes a powerful CLI tool for working with WebNN graphs.
 
@@ -500,7 +500,7 @@ make validate-all-env  # Run full test pipeline
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 **Design Principles:**
 - **Backend-Agnostic Graphs** - Platform-independent representation, runtime backend selection
@@ -512,7 +512,7 @@ See **[Architecture Guide](docs/architecture.md)** for details.
 
 ---
 
-## 🔧 Development
+##  Development
 
 ```bash
 # Clone and build
@@ -563,18 +563,18 @@ cargo test --features onnx-runtime,coreml-runtime
 
 ---
 
-## 📋 Project Status
+##  Project Status
 
-**🎉 85 WebNN operations fully implemented across all backends!**
+**[SUCCESS] 85 WebNN operations fully implemented across all backends!**
 
-- ✅ W3C WebNN API implementation in Python
-- ✅ Runtime backend selection (CPU, GPU, Neural Engine)
-- ✅ 85/95 WebNN operations (89% spec coverage)
-- ✅ ONNX Runtime execution (cross-platform)
-- ✅ CoreML execution (macOS GPU/Neural Engine)
-- ✅ Async execution with MLTensor management
-- ✅ Shape inference with NumPy-style broadcasting
-- ✅ Complete MobileNetV2 + Transformer examples
+- [OK] W3C WebNN API implementation in Python
+- [OK] Runtime backend selection (CPU, GPU, Neural Engine)
+- [OK] 85/95 WebNN operations (89% spec coverage)
+- [OK] ONNX Runtime execution (cross-platform)
+- [OK] CoreML execution (macOS GPU/Neural Engine)
+- [OK] Async execution with MLTensor management
+- [OK] Shape inference with NumPy-style broadcasting
+- [OK] Complete MobileNetV2 + Transformer examples
 
 See [docs/operator-status.md](docs/operator-status.md) for complete implementation details.
 
@@ -606,13 +606,13 @@ Contributions are welcome! Please see:
 
 ---
 
-## 📄 License
+##  License
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🔗 Links
+##  Links
 
 - **GitHub**: [https://github.com/tarekziade/rustnn](https://github.com/tarekziade/rustnn)
 - **PyPI**: [https://pypi.org/project/pywebnn/](https://pypi.org/project/pywebnn/)
@@ -622,7 +622,7 @@ Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for detai
 
 ---
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - W3C WebNN Community Group for the specification
 - Chromium WebNN implementation for reference
@@ -631,4 +631,4 @@ Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for detai
 
 ---
 
-**Made with ❤️ by [Tarek Ziade](https://github.com/tarekziade)**
+**Made with  by [Tarek Ziade](https://github.com/tarekziade)**

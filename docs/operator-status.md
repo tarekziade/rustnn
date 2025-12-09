@@ -3,9 +3,9 @@
 This document tracks the implementation status of all WebNN operators across different backends.
 
 **Legend:**
-- ✅ = Fully implemented
-- ⏸️ = Partially implemented (shape inference only, or missing parameters)
-- ❌ = Not implemented
+- [OK] = Fully implemented
+- [PAUSE] = Partially implemented (shape inference only, or missing parameters)
+-  = Not implemented
 
 **Last Updated:** 2025-12-08
 
@@ -15,175 +15,175 @@ This document tracks the implementation status of all WebNN operators across dif
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `add` | ✅ | ✅ | ✅ | ✅ |
-| `sub` | ✅ | ✅ | ✅ | ✅ |
-| `mul` | ✅ | ✅ | ✅ | ✅ |
-| `div` | ✅ | ✅ | ✅ | ✅ |
-| `matmul` | ✅ | ✅ | ✅ | ✅ |
-| `pow` | ✅ | ✅ | ✅ | ✅ |
+| `add` | [OK] | [OK] | [OK] | [OK] |
+| `sub` | [OK] | [OK] | [OK] | [OK] |
+| `mul` | [OK] | [OK] | [OK] | [OK] |
+| `div` | [OK] | [OK] | [OK] | [OK] |
+| `matmul` | [OK] | [OK] | [OK] | [OK] |
+| `pow` | [OK] | [OK] | [OK] | [OK] |
 
 ## Activation Functions
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `relu` | ✅ | ✅ | ✅ | ✅ |
-| `sigmoid` | ✅ | ✅ | ✅ | ✅ |
-| `tanh` | ✅ | ✅ | ✅ | ✅ |
-| `softmax` | ✅ | ✅ | ✅ | ✅ |
+| `relu` | [OK] | [OK] | [OK] | [OK] |
+| `sigmoid` | [OK] | [OK] | [OK] | [OK] |
+| `tanh` | [OK] | [OK] | [OK] | [OK] |
+| `softmax` | [OK] | [OK] | [OK] | [OK] |
 
 ## Specialized Activations
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `prelu` | ✅ | ✅ | ✅ | ✅ |
-| `elu` | ✅ | ✅ | ✅ | ✅ |
-| `leakyRelu` | ✅ | ✅ | ✅ | ✅ |
-| `hardSigmoid` | ✅ | ✅ | ✅ | ✅ |
-| `hardSwish` | ✅ | ✅ | ✅ | ✅ |
-| `softplus` | ✅ | ✅ | ✅ | ✅ |
-| `softsign` | ✅ | ✅ | ✅ | ✅ |
+| `prelu` | [OK] | [OK] | [OK] | [OK] |
+| `elu` | [OK] | [OK] | [OK] | [OK] |
+| `leakyRelu` | [OK] | [OK] | [OK] | [OK] |
+| `hardSigmoid` | [OK] | [OK] | [OK] | [OK] |
+| `hardSwish` | [OK] | [OK] | [OK] | [OK] |
+| `softplus` | [OK] | [OK] | [OK] | [OK] |
+| `softsign` | [OK] | [OK] | [OK] | [OK] |
 
 ## Element-wise Math
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `abs` | ✅ | ✅ | ✅ | ✅ |
-| `ceil` | ✅ | ✅ | ✅ | ✅ |
-| `floor` | ✅ | ✅ | ✅ | ✅ |
-| `round` | ✅ | ✅ | ✅ | ✅ |
-| `neg` | ✅ | ✅ | ✅ | ✅ |
-| `sign` | ✅ | ✅ | ✅ | ✅ |
-| `exp` | ✅ | ✅ | ✅ | ✅ |
-| `log` | ✅ | ✅ | ✅ | ✅ |
-| `sqrt` | ✅ | ✅ | ✅ | ✅ |
-| `reciprocal` | ✅ | ✅ | ✅ | ✅ |
-| `identity` | ✅ | ✅ | ✅ | ✅ |
+| `abs` | [OK] | [OK] | [OK] | [OK] |
+| `ceil` | [OK] | [OK] | [OK] | [OK] |
+| `floor` | [OK] | [OK] | [OK] | [OK] |
+| `round` | [OK] | [OK] | [OK] | [OK] |
+| `neg` | [OK] | [OK] | [OK] | [OK] |
+| `sign` | [OK] | [OK] | [OK] | [OK] |
+| `exp` | [OK] | [OK] | [OK] | [OK] |
+| `log` | [OK] | [OK] | [OK] | [OK] |
+| `sqrt` | [OK] | [OK] | [OK] | [OK] |
+| `reciprocal` | [OK] | [OK] | [OK] | [OK] |
+| `identity` | [OK] | [OK] | [OK] | [OK] |
 
 ## Trigonometric
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `sin` | ✅ | ✅ | ✅ | ✅ |
-| `cos` | ✅ | ✅ | ✅ | ✅ |
-| `tan` | ✅ | ✅ | ✅ | ✅ |
-| `asin` | ✅ | ✅ | ✅ | ✅ |
-| `acos` | ✅ | ✅ | ✅ | ✅ |
-| `atan` | ✅ | ✅ | ✅ | ✅ |
+| `sin` | [OK] | [OK] | [OK] | [OK] |
+| `cos` | [OK] | [OK] | [OK] | [OK] |
+| `tan` | [OK] | [OK] | [OK] | [OK] |
+| `asin` | [OK] | [OK] | [OK] | [OK] |
+| `acos` | [OK] | [OK] | [OK] | [OK] |
+| `atan` | [OK] | [OK] | [OK] | [OK] |
 
 ## Hyperbolic
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `sinh` | ✅ | ✅ | ✅ | ✅ |
-| `cosh` | ✅ | ✅ | ✅ | ✅ |
-| `asinh` | ✅ | ✅ | ✅ | ✅ |
-| `acosh` | ✅ | ✅ | ✅ | ✅ |
-| `atanh` | ✅ | ✅ | ✅ | ✅ |
+| `sinh` | [OK] | [OK] | [OK] | [OK] |
+| `cosh` | [OK] | [OK] | [OK] | [OK] |
+| `asinh` | [OK] | [OK] | [OK] | [OK] |
+| `acosh` | [OK] | [OK] | [OK] | [OK] |
+| `atanh` | [OK] | [OK] | [OK] | [OK] |
 
 ## Special Functions
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `erf` | ✅ | ✅ | ✅ | ✅ |
+| `erf` | [OK] | [OK] | [OK] | [OK] |
 
 ## Logic Operations
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `equal` | ✅ | ✅ | ✅ | ✅ |
-| `greater` | ✅ | ✅ | ✅ | ✅ |
-| `greater_or_equal` | ✅ | ✅ | ✅ | ✅ |
-| `lesser` | ✅ | ✅ | ✅ | ✅ |
-| `lesser_or_equal` | ✅ | ✅ | ✅ | ✅ |
-| `logical_not` | ✅ | ✅ | ✅ | ✅ |
-| `logical_and` | ✅ | ✅ | ✅ | ✅ |
-| `logical_or` | ✅ | ✅ | ✅ | ✅ |
-| `logical_xor` | ✅ | ✅ | ✅ | ✅ |
+| `equal` | [OK] | [OK] | [OK] | [OK] |
+| `greater` | [OK] | [OK] | [OK] | [OK] |
+| `greater_or_equal` | [OK] | [OK] | [OK] | [OK] |
+| `lesser` | [OK] | [OK] | [OK] | [OK] |
+| `lesser_or_equal` | [OK] | [OK] | [OK] | [OK] |
+| `logical_not` | [OK] | [OK] | [OK] | [OK] |
+| `logical_and` | [OK] | [OK] | [OK] | [OK] |
+| `logical_or` | [OK] | [OK] | [OK] | [OK] |
+| `logical_xor` | [OK] | [OK] | [OK] | [OK] |
 
 ## Convolution
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `conv2d` | ✅ | ✅ | ✅ | ✅ |
-| `conv_transpose2d` | ✅ | ✅ | ✅ | ✅ |
+| `conv2d` | [OK] | [OK] | [OK] | [OK] |
+| `conv_transpose2d` | [OK] | [OK] | [OK] | [OK] |
 
 ## Pooling
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `average_pool2d` | ✅ | ✅ | ✅ | ✅ |
-| `max_pool2d` | ✅ | ✅ | ✅ | ✅ |
-| `global_average_pool` | ✅ | ✅ | ✅ | ✅ |
-| `global_max_pool` | ✅ | ✅ | ✅ | ✅ |
+| `average_pool2d` | [OK] | [OK] | [OK] | [OK] |
+| `max_pool2d` | [OK] | [OK] | [OK] | [OK] |
+| `global_average_pool` | [OK] | [OK] | [OK] | [OK] |
+| `global_max_pool` | [OK] | [OK] | [OK] | [OK] |
 
 ## Normalization
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `batch_normalization` | ✅ | ✅ | ✅ | ✅ |
-| `instance_normalization` | ✅ | ✅ | ✅ | ✅ |
-| `layer_normalization` | ✅ | ✅ | ✅ | ✅ |
+| `batch_normalization` | [OK] | [OK] | [OK] | [OK] |
+| `instance_normalization` | [OK] | [OK] | [OK] | [OK] |
+| `layer_normalization` | [OK] | [OK] | [OK] | [OK] |
 
 ## Reduction
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `reduce_sum` | ✅ | ✅ | ✅ | ✅ |
-| `reduce_mean` | ✅ | ✅ | ✅ | ✅ |
-| `reduce_max` | ✅ | ✅ | ✅ | ✅ |
-| `reduce_min` | ✅ | ✅ | ✅ | ✅ |
-| `reduce_product` | ✅ | ✅ | ✅ | ✅ |
-| `reduce_l1` | ✅ | ✅ | ✅ | ✅ |
-| `reduce_l2` | ✅ | ✅ | ✅ | ✅ |
-| `reduce_log_sum` | ✅ | ✅ | ✅ | ✅ |
-| `reduce_log_sum_exp` | ✅ | ✅ | ✅ | ✅ |
-| `reduce_sum_square` | ✅ | ✅ | ✅ | ✅ |
+| `reduce_sum` | [OK] | [OK] | [OK] | [OK] |
+| `reduce_mean` | [OK] | [OK] | [OK] | [OK] |
+| `reduce_max` | [OK] | [OK] | [OK] | [OK] |
+| `reduce_min` | [OK] | [OK] | [OK] | [OK] |
+| `reduce_product` | [OK] | [OK] | [OK] | [OK] |
+| `reduce_l1` | [OK] | [OK] | [OK] | [OK] |
+| `reduce_l2` | [OK] | [OK] | [OK] | [OK] |
+| `reduce_log_sum` | [OK] | [OK] | [OK] | [OK] |
+| `reduce_log_sum_exp` | [OK] | [OK] | [OK] | [OK] |
+| `reduce_sum_square` | [OK] | [OK] | [OK] | [OK] |
 
 ## Quantization
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `dequantize_linear` | ✅ | ✅ | ✅ | ✅ |
-| `quantize_linear` | ✅ | ✅ | ✅ | ✅ |
+| `dequantize_linear` | [OK] | [OK] | [OK] | [OK] |
+| `quantize_linear` | [OK] | [OK] | [OK] | [OK] |
 
 ## Shape Operations
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `reshape` | ✅ | ✅ | ✅ | ✅ |
+| `reshape` | [OK] | [OK] | [OK] | [OK] |
 
 ## Tensor Manipulation
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `transpose` | ✅ | ✅ | ✅ | ✅ |
-| `concat` | ✅ | ✅ | ✅ | ✅ |
-| `slice` | ✅ | ✅ | ✅ | ✅ |
-| `expand` | ✅ | ✅ | ✅ | ✅ |
-| `gather` | ✅ | ✅ | ✅ | ✅ |
-| `split` | ✅ | ✅ | ✅ | ✅ |
-| `where` | ✅ | ✅ | ✅ | ✅ |
-| `pad` | ✅ | ✅ | ✅ | ✅ |
+| `transpose` | [OK] | [OK] | [OK] | [OK] |
+| `concat` | [OK] | [OK] | [OK] | [OK] |
+| `slice` | [OK] | [OK] | [OK] | [OK] |
+| `expand` | [OK] | [OK] | [OK] | [OK] |
+| `gather` | [OK] | [OK] | [OK] | [OK] |
+| `split` | [OK] | [OK] | [OK] | [OK] |
+| `where` | [OK] | [OK] | [OK] | [OK] |
+| `pad` | [OK] | [OK] | [OK] | [OK] |
 
 ## Advanced Architecture Operations
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `gelu` | ✅ | ✅ | ✅ | ✅ |
-| `squeeze` | ✅ | ✅ | ✅ | ✅ |
-| `unsqueeze` | ✅ | ✅ | ✅ | ✅ |
-| `argMax` | ✅ | ✅ | ✅ | ✅ |
-| `argMin` | ✅ | ✅ | ✅ | ✅ |
-| `cast` | ✅ | ✅ | ✅ | ✅ |
+| `gelu` | [OK] | [OK] | [OK] | [OK] |
+| `squeeze` | [OK] | [OK] | [OK] | [OK] |
+| `unsqueeze` | [OK] | [OK] | [OK] | [OK] |
+| `argMax` | [OK] | [OK] | [OK] | [OK] |
+| `argMin` | [OK] | [OK] | [OK] | [OK] |
+| `cast` | [OK] | [OK] | [OK] | [OK] |
 
 ## Additional Features
 
 | Operation | Shape Inference | Python API | ONNX | CoreML MLProgram |
 |-----------|----------------|------------|------|------------------|
-| `scatterElements` | ✅ | ✅ | ✅ | ✅ |
-| `scatterND` | ✅ | ✅ | ✅ | ✅ |
-| `tile` | ✅ | ✅ | ✅ | ✅ |
-| `triangular` | ✅ | ✅ | ✅ | ✅ |
+| `scatterElements` | [OK] | [OK] | [OK] | [OK] |
+| `scatterND` | [OK] | [OK] | [OK] | [OK] |
+| `tile` | [OK] | [OK] | [OK] | [OK] |
+| `triangular` | [OK] | [OK] | [OK] | [OK] |
 
 ---
 
@@ -191,10 +191,10 @@ This document tracks the implementation status of all WebNN operators across dif
 
 ```
 WebNN Spec (CR Draft Dec 2025): ~95 total operations
-Core Operations Implemented:     68/68 (100%) ✅
-Specialized Activations:          7/7  (100%) ✅
-Advanced Architecture Ops:        6/6  (100%) ✅
-Additional Features:              4/4  (100%) ✅
+Core Operations Implemented:     68/68 (100%) [OK]
+Specialized Activations:          7/7  (100%) [OK]
+Advanced Architecture Ops:        6/6  (100%) [OK]
+Additional Features:              4/4  (100%) [OK]
 Total Implemented:               85/95 (89%)
 Deferred Operations:              4 (RNN: lstm, lstmCell, gru, gruCell)
 Remaining Operations:            ~6 (specialized activations)
@@ -203,18 +203,18 @@ Implementation Status:
 Shape Inference:                 85/85 (100%)
 Python API:                      85/85 (100%)
 ONNX Backend:                    85/85 (100%)
-CoreML MLProgram:                85/85 (100%) ✅
+CoreML MLProgram:                85/85 (100%) [OK]
 ```
 
-**🎉 85 WEBNN OPERATIONS FULLY IMPLEMENTED! 🎉**
+**[SUCCESS] 85 WEBNN OPERATIONS FULLY IMPLEMENTED! [SUCCESS]**
 
 ### Implementation Status
 
 All 85 implemented WebNN operations are now fully functional across all backends:
-- ✅ **Shape Inference**: Complete type and shape validation for all operations
-- ✅ **Python API**: W3C WebNN spec-compliant Python bindings
-- ✅ **ONNX Backend**: Cross-platform execution with full parameter support
-- ✅ **CoreML MLProgram**: macOS GPU/Neural Engine execution with full parameter support
+- [OK] **Shape Inference**: Complete type and shape validation for all operations
+- [OK] **Python API**: W3C WebNN spec-compliant Python bindings
+- [OK] **ONNX Backend**: Cross-platform execution with full parameter support
+- [OK] **CoreML MLProgram**: macOS GPU/Neural Engine execution with full parameter support
 
 **Recent Additions:**
 - **CoreML End-to-End Execution (2025-12-08):**
@@ -264,10 +264,10 @@ The following operations are defined in the WebNN specification but are **intent
 
 | Operation | Status | Rationale |
 |-----------|--------|-----------|
-| `lstm` | ⏭️ Deferred | Complex composite operation; spec under review; Transformers more common |
-| `lstmCell` | ⏭️ Deferred | Complex composite operation; lower priority than simpler ops |
-| `gru` | ⏭️ Deferred | Complex composite operation; spec under review; Transformers more common |
-| `gruCell` | ⏭️ Deferred | Complex composite operation; lower priority than simpler ops |
+| `lstm` | ⏭ Deferred | Complex composite operation; spec under review; Transformers more common |
+| `lstmCell` | ⏭ Deferred | Complex composite operation; lower priority than simpler ops |
+| `gru` | ⏭ Deferred | Complex composite operation; spec under review; Transformers more common |
+| `gruCell` | ⏭ Deferred | Complex composite operation; lower priority than simpler ops |
 
 **Deferral Rationale:**
 - **Complexity**: Each operation requires 10-15 parameters with complex shape inference (~2000-3000 LOC total)

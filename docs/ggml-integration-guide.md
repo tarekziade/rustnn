@@ -5,7 +5,7 @@
 
 ---
 
-## 🎯 Overview
+## [TARGET] Overview
 
 This document outlines the integration of [GGML (GPT-Generated Model Language)](https://github.com/ggml-org/ggml) as a third execution backend for rustnn, alongside ONNX Runtime and CoreML.
 
@@ -18,7 +18,7 @@ This document outlines the integration of [GGML (GPT-Generated Model Language)](
 
 ---
 
-## 📚 GGML Background
+##  GGML Background
 
 ### What is GGML?
 
@@ -71,7 +71,7 @@ ggml_backend_graph_compute(backend, gf);
 
 ---
 
-## 🏗️ Integration Architecture
+##  Integration Architecture
 
 ### Following rustnn Patterns
 
@@ -92,23 +92,23 @@ WebNN GraphInfo → Converter → Backend Format → Executor → Results
 
 ```
 src/
-├── converters/
-│   ├── mod.rs              # Add GgmlConverter registration
-│   ├── onnx.rs
-│   ├── coreml_mlprogram.rs
-│   └── ggml.rs             # NEW: GGML converter
-├── executors/
-│   ├── mod.rs              # Add #[cfg(feature = "ggml-runtime")]
-│   ├── onnx.rs
-│   ├── coreml.rs
-│   └── ggml.rs             # NEW: GGML executor
-└── python/
-    └── context.rs          # Add Backend::Ggml variant
+ converters/
+    mod.rs              # Add GgmlConverter registration
+    onnx.rs
+    coreml_mlprogram.rs
+    ggml.rs             # NEW: GGML converter
+ executors/
+    mod.rs              # Add #[cfg(feature = "ggml-runtime")]
+    onnx.rs
+    coreml.rs
+    ggml.rs             # NEW: GGML executor
+ python/
+     context.rs          # Add Backend::Ggml variant
 ```
 
 ---
 
-## 🔧 Implementation Plan
+##  Implementation Plan
 
 ### Phase 1: Converter (GraphInfo → GGML)
 
@@ -320,7 +320,7 @@ impl PyMLContext {
 
 ---
 
-## 📊 WebNN to GGML Operation Mapping
+## [STATS] WebNN to GGML Operation Mapping
 
 ### Supported Operations
 
@@ -370,7 +370,7 @@ GGML has limited support for some operations:
 
 ---
 
-## 🚧 Challenges & Solutions
+##  Challenges & Solutions
 
 ### Challenge 1: In-Memory Graph Construction
 
@@ -422,7 +422,7 @@ GGML has limited support for some operations:
 
 ---
 
-## 🎯 Implementation Roadmap
+## [TARGET] Implementation Roadmap
 
 ### Phase 1: Proof of Concept (1-2 days)
 - [ ] Add `ggml` dependency with feature flag
@@ -458,7 +458,7 @@ GGML has limited support for some operations:
 
 ---
 
-## 📝 Testing Strategy
+##  Testing Strategy
 
 ### Unit Tests (Rust)
 
@@ -537,7 +537,7 @@ test-ggml:
 
 ---
 
-## 🔗 References
+##  References
 
 ### GGML Resources
 - [GGML GitHub Repository](https://github.com/ggml-org/ggml)
@@ -561,14 +561,14 @@ test-ggml:
 
 ---
 
-## 📌 Summary
+##  Summary
 
 **GGML Integration Value:**
-- ✅ **CPU-optimized inference** for environments without GPU
-- ✅ **Quantization support** for memory-constrained devices
-- ✅ **Cross-platform** (Linux, macOS, Windows)
-- ✅ **LLM-focused** operations and optimizations
-- ✅ **Lightweight** with minimal dependencies
+- [OK] **CPU-optimized inference** for environments without GPU
+- [OK] **Quantization support** for memory-constrained devices
+- [OK] **Cross-platform** (Linux, macOS, Windows)
+- [OK] **LLM-focused** operations and optimizations
+- [OK] **Lightweight** with minimal dependencies
 
 **Key Design Decisions:**
 1. Pass GraphInfo directly to executor (no serialization)

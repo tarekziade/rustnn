@@ -33,10 +33,10 @@ pytest -m wpt -v
 
 The WPT test infrastructure is fully implemented and ready to use. Currently:
 
-✅ Test infrastructure complete
-✅ Tolerance checking (ULP and ATOL)
-✅ Test data loader and runner
-✅ Sample test data for reduce_sum
+[OK] Test infrastructure complete
+[OK] Tolerance checking (ULP and ATOL)
+[OK] Test data loader and runner
+[OK] Sample test data for reduce_sum
 ⏳ Full test data population (requires manual conversion or WPT sync)
 ⏳ Graph execution (compute) implementation
 
@@ -48,21 +48,21 @@ Tests currently skip with message: "Graph execution (compute) not yet implemente
 
 ```
 rustnn/
-├── tests/
-│   ├── wpt_data/              # WPT test data (JSON format)
-│   │   ├── conformance/       # Correctness tests
-│   │   │   └── reduce_sum.json  # Sample test data
-│   │   └── validation/        # Parameter validation tests
-│   ├── wpt_utils.py           # WPT utilities (tolerance checking)
-│   ├── test_wpt_conformance.py  # Conformance test runner
-│   ├── conftest.py            # Shared pytest fixtures
-│   └── test_python_api.py     # Regular API tests
-├── scripts/
-│   ├── convert_wpt_tests.py   # Convert JS tests to JSON
-│   └── update_wpt_tests.sh    # Auto-update script
-└── docs/
-    ├── wpt-integration-plan.md  # Implementation plan
-    └── wpt-test-guide.md        # This guide
+ tests/
+    wpt_data/              # WPT test data (JSON format)
+       conformance/       # Correctness tests
+          reduce_sum.json  # Sample test data
+       validation/        # Parameter validation tests
+    wpt_utils.py           # WPT utilities (tolerance checking)
+    test_wpt_conformance.py  # Conformance test runner
+    conftest.py            # Shared pytest fixtures
+    test_python_api.py     # Regular API tests
+ scripts/
+    convert_wpt_tests.py   # Convert JS tests to JSON
+    update_wpt_tests.sh    # Auto-update script
+ docs/
+     wpt-integration-plan.md  # Implementation plan
+     wpt-test-guide.md        # This guide
 ```
 
 ### Components

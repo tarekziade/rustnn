@@ -312,7 +312,7 @@ git commit -m "Add feature X
 - Detail 1
 - Detail 2
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+[BOT] Generated with [Claude Code](https://claude.com/claude-code)"
 
 # Push
 git push origin main

@@ -661,10 +661,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#target-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🎯 Overview
+        [TARGET] Overview
       
     </span>
   </a>
@@ -675,12 +675,12 @@
   <a href="#ggml-background" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📚 GGML Background
+        GGML Background
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="📚 GGML Background">
+    <nav class="md-nav" aria-label="GGML Background">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -725,12 +725,12 @@
   <a href="#integration-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🏗️ Integration Architecture
+        Integration Architecture
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🏗️ Integration Architecture">
+    <nav class="md-nav" aria-label="Integration Architecture">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -764,12 +764,12 @@
   <a href="#implementation-plan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🔧 Implementation Plan
+        Implementation Plan
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🔧 Implementation Plan">
+    <nav class="md-nav" aria-label="Implementation Plan">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -833,15 +833,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#webnn-to-ggml-operation-mapping" class="md-nav__link">
+  <a href="#stats-webnn-to-ggml-operation-mapping" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📊 WebNN to GGML Operation Mapping
+        [STATS] WebNN to GGML Operation Mapping
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="📊 WebNN to GGML Operation Mapping">
+    <nav class="md-nav" aria-label="[STATS] WebNN to GGML Operation Mapping">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -886,12 +886,12 @@
   <a href="#challenges-solutions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🚧 Challenges &amp; Solutions
+        Challenges &amp; Solutions
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🚧 Challenges &amp; Solutions">
+    <nav class="md-nav" aria-label="Challenges &amp; Solutions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -955,15 +955,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation-roadmap" class="md-nav__link">
+  <a href="#target-implementation-roadmap" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🎯 Implementation Roadmap
+        [TARGET] Implementation Roadmap
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🎯 Implementation Roadmap">
+    <nav class="md-nav" aria-label="[TARGET] Implementation Roadmap">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1030,12 +1030,12 @@
   <a href="#testing-strategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📝 Testing Strategy
+        Testing Strategy
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="📝 Testing Strategy">
+    <nav class="md-nav" aria-label="Testing Strategy">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1080,12 +1080,12 @@
   <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🔗 References
+        References
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="🔗 References">
+    <nav class="md-nav" aria-label="References">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1141,7 +1141,7 @@
   <a href="#summary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📌 Summary
+        Summary
       
     </span>
   </a>
@@ -1172,7 +1172,7 @@
 <p><strong>Date:</strong> December 8, 2024
 <strong>Purpose:</strong> Guide for adding GGML converter and executor to rustnn</p>
 <hr />
-<h2 id="overview">🎯 Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<h2 id="target-overview">[TARGET] Overview<a class="headerlink" href="#target-overview" title="Permanent link">&para;</a></h2>
 <p>This document outlines the integration of <a href="https://github.com/ggml-org/ggml">GGML (GPT-Generated Model Language)</a> as a third execution backend for rustnn, alongside ONNX Runtime and CoreML.</p>
 <p><strong>Why GGML?</strong>
 - <strong>CPU-optimized inference</strong>: Excellent performance on CPUs without GPU
@@ -1181,7 +1181,7 @@
 - <strong>Cross-platform</strong>: Linux, macOS, Windows with various backends (CPU, CUDA, Metal, Vulkan)
 - <strong>Lightweight</strong>: Minimal dependencies, no runtime memory allocation</p>
 <hr />
-<h2 id="ggml-background">📚 GGML Background<a class="headerlink" href="#ggml-background" title="Permanent link">&para;</a></h2>
+<h2 id="ggml-background">GGML Background<a class="headerlink" href="#ggml-background" title="Permanent link">&para;</a></h2>
 <h3 id="what-is-ggml">What is GGML?<a class="headerlink" href="#what-is-ggml" title="Permanent link">&para;</a></h3>
 <p>GGML is a C tensor library for machine learning created by Georgi Gerganov. It's designed for:
 - Fast and portable tensor operations
@@ -1222,7 +1222,7 @@
 - <strong><a href="https://crates.io/crates/ggml-sys">ggml-sys</a></strong>: Raw C bindings</p>
 <p><strong>Recommendation:</strong> Use <code>ggml</code> crate (most stable, used by llm library)</p>
 <hr />
-<h2 id="integration-architecture">🏗️ Integration Architecture<a class="headerlink" href="#integration-architecture" title="Permanent link">&para;</a></h2>
+<h2 id="integration-architecture">Integration Architecture<a class="headerlink" href="#integration-architecture" title="Permanent link">&para;</a></h2>
 <h3 id="following-rustnn-patterns">Following rustnn Patterns<a class="headerlink" href="#following-rustnn-patterns" title="Permanent link">&para;</a></h3>
 <p>rustnn uses a <strong>converter + executor</strong> pattern:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>WebNN GraphInfo → Converter → Backend Format → Executor → Results
@@ -1234,21 +1234,21 @@
 3. <strong>GGML</strong>: Cross-platform, computation graph → GGML execution</p>
 <h3 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>src/
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── converters/
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│   ├── mod.rs              # Add GgmlConverter registration
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>│   ├── onnx.rs
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>│   ├── coreml_mlprogram.rs
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>│   └── ggml.rs             # NEW: GGML converter
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>├── executors/
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│   ├── mod.rs              # Add #[cfg(feature = &quot;ggml-runtime&quot;)]
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>│   ├── onnx.rs
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>│   ├── coreml.rs
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>│   └── ggml.rs             # NEW: GGML executor
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>└── python/
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    └── context.rs          # Add Backend::Ggml variant
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a> converters/
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    mod.rs              # Add GgmlConverter registration
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    onnx.rs
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    coreml_mlprogram.rs
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    ggml.rs             # NEW: GGML converter
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a> executors/
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    mod.rs              # Add #[cfg(feature = &quot;ggml-runtime&quot;)]
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    onnx.rs
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    coreml.rs
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    ggml.rs             # NEW: GGML executor
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a> python/
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>     context.rs          # Add Backend::Ggml variant
 </span></code></pre></div>
 <hr />
-<h2 id="implementation-plan">🔧 Implementation Plan<a class="headerlink" href="#implementation-plan" title="Permanent link">&para;</a></h2>
+<h2 id="implementation-plan">Implementation Plan<a class="headerlink" href="#implementation-plan" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-converter-graphinfo-ggml">Phase 1: Converter (GraphInfo → GGML)<a class="headerlink" href="#phase-1-converter-graphinfo-ggml" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>src/converters/ggml.rs</code></p>
 <p><strong>Implementation:</strong>
@@ -1431,7 +1431,7 @@
 </span><span id="__span-8-45"><a id="__codelineno-8-45" name="__codelineno-8-45" href="#__codelineno-8-45"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <hr />
-<h2 id="webnn-to-ggml-operation-mapping">📊 WebNN to GGML Operation Mapping<a class="headerlink" href="#webnn-to-ggml-operation-mapping" title="Permanent link">&para;</a></h2>
+<h2 id="stats-webnn-to-ggml-operation-mapping">[STATS] WebNN to GGML Operation Mapping<a class="headerlink" href="#stats-webnn-to-ggml-operation-mapping" title="Permanent link">&para;</a></h2>
 <h3 id="supported-operations">Supported Operations<a class="headerlink" href="#supported-operations" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1534,7 +1534,7 @@
 - <strong>Advanced activations</strong>: prelu, elu, leakyRelu require composition
 - <strong>Quantization ops</strong>: Limited to GGML's internal quantization</p>
 <hr />
-<h2 id="challenges-solutions">🚧 Challenges &amp; Solutions<a class="headerlink" href="#challenges-solutions" title="Permanent link">&para;</a></h2>
+<h2 id="challenges-solutions">Challenges &amp; Solutions<a class="headerlink" href="#challenges-solutions" title="Permanent link">&para;</a></h2>
 <h3 id="challenge-1-in-memory-graph-construction">Challenge 1: In-Memory Graph Construction<a class="headerlink" href="#challenge-1-in-memory-graph-construction" title="Permanent link">&para;</a></h3>
 <p><strong>Problem:</strong> GGML graphs must be built in-memory with a context. Cannot serialize to bytes like ONNX/CoreML.</p>
 <p><strong>Solution:</strong>
@@ -1569,7 +1569,7 @@
 - Contribute improvements back to ggml-rs if needed
 - Fallback: Use <code>ggml-sys</code> (raw bindings) if safe wrapper insufficient</p>
 <hr />
-<h2 id="implementation-roadmap">🎯 Implementation Roadmap<a class="headerlink" href="#implementation-roadmap" title="Permanent link">&para;</a></h2>
+<h2 id="target-implementation-roadmap">[TARGET] Implementation Roadmap<a class="headerlink" href="#target-implementation-roadmap" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-proof-of-concept-1-2-days">Phase 1: Proof of Concept (1-2 days)<a class="headerlink" href="#phase-1-proof-of-concept-1-2-days" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Add <code>ggml</code> dependency with feature flag</li>
@@ -1607,7 +1607,7 @@
 </ul>
 <p><strong>Total Estimated Time:</strong> 7-12 days for phases 1-4</p>
 <hr />
-<h2 id="testing-strategy">📝 Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h2>
+<h2 id="testing-strategy">Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h2>
 <h3 id="unit-tests-rust">Unit Tests (Rust)<a class="headerlink" href="#unit-tests-rust" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>src/converters/ggml.rs</code>
 <div class="language-rust highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="cp">#[cfg(test)]</span>
@@ -1673,7 +1673,7 @@
 </span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span>pytest<span class="w"> </span>tests/test_ggml_backend.py<span class="w"> </span>-v
 </span></code></pre></div>
 <hr />
-<h2 id="references">🔗 References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <h3 id="ggml-resources">GGML Resources<a class="headerlink" href="#ggml-resources" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="https://github.com/ggml-org/ggml">GGML GitHub Repository</a></li>
@@ -1699,13 +1699,13 @@
 <li><a href="https://github.com/ggml-org/whisper.cpp">whisper.cpp (uses GGML)</a></li>
 </ul>
 <hr />
-<h2 id="summary">📌 Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
 <p><strong>GGML Integration Value:</strong>
-- ✅ <strong>CPU-optimized inference</strong> for environments without GPU
-- ✅ <strong>Quantization support</strong> for memory-constrained devices
-- ✅ <strong>Cross-platform</strong> (Linux, macOS, Windows)
-- ✅ <strong>LLM-focused</strong> operations and optimizations
-- ✅ <strong>Lightweight</strong> with minimal dependencies</p>
+- [OK] <strong>CPU-optimized inference</strong> for environments without GPU
+- [OK] <strong>Quantization support</strong> for memory-constrained devices
+- [OK] <strong>Cross-platform</strong> (Linux, macOS, Windows)
+- [OK] <strong>LLM-focused</strong> operations and optimizations
+- [OK] <strong>Lightweight</strong> with minimal dependencies</p>
 <p><strong>Key Design Decisions:</strong>
 1. Pass GraphInfo directly to executor (no serialization)
 2. Focus on LLM-relevant operations initially

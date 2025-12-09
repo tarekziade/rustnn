@@ -17,29 +17,29 @@
 ### Core Components
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ CLI (main.rs) / Library API (lib.rs) / Python API (PyO3)    │
-└──────────────┬──────────────────────────────────────────────┘
-               │
-    ┌──────────┴──────────┬──────────────┬─────────────────┐
-    ▼                     ▼              ▼                 ▼
-┌────────┐     ┌──────────────┐   ┌──────────┐    ┌──────────────┐
-│Loader  │────▶│  Validator   │──▶│ Context  │───▶│  Backend     │
-│(JSON)  │     │(graph.rs)    │   │(selects) │    │  Selection   │
-└────────┘     └──────────────┘   └────┬─────┘    └──────┬───────┘
-                                        │                 │
-                                        ▼                 ▼
-                                  ┌──────────┐    ┌──────────────┐
-                                  │ Builder  │    │  Converter   │
-                                  │(backend- │    │  (Runtime)   │
-                                  │agnostic) │    │              │
-                                  └────┬─────┘    └──────┬───────┘
-                                       │                 │
-                                       ▼                 ▼
-                              ┌─────────────┐   ┌────────────────┐
-                              │  MLGraph    │   │ ONNX / CoreML  │
-                              │(immutable)  │   │   Execution    │
-                              └─────────────┘   └────────────────┘
+
+ CLI (main.rs) / Library API (lib.rs) / Python API (PyO3)    
+
+               
+    
+                                                        
+            
+Loader    Validator    Context    Backend     
+(JSON)       (graph.rs)       (selects)       Selection   
+            
+                                                         
+                                                         
+                                      
+                                   Builder        Converter   
+                                  (backend-       (Runtime)   
+                                  agnostic)                   
+                                      
+                                                        
+                                                        
+                                 
+                                MLGraph        ONNX / CoreML  
+                              (immutable)        Execution    
+                                 
 ```
 
 ### Key Architectural Principles
@@ -185,6 +185,12 @@
    - Use realistic data structures matching actual usage
    - Test examples exist in `graphviz.rs` and `converters/mod.rs`
 
+5. **Formatting:**
+   - No emojis in code, documentation, commit messages, or any project files
+   - Use plain text markers: [OK], [WARNING], [INFO], [TODO], etc.
+   - Keep all text professional and readable in all terminals and editors
+   - Prioritize clarity and accessibility over visual decoration
+
 ### Architecture Patterns
 
 1. **Registry Pattern** (converters):
@@ -215,39 +221,39 @@
 
 ```
 src/
-├── lib.rs              # Public API exports
-├── main.rs             # CLI entry point
-├── graph.rs            # Core data structures
-├── error.rs            # Error types
-├── validator.rs        # Graph validation
-├── loader.rs           # JSON loading
-├── graphviz.rs         # DOT export
-├── protos.rs           # Protobuf module setup
-├── converters/
-│   ├── mod.rs              # Registry and trait
-│   ├── onnx.rs             # ONNX converter
-│   └── coreml_mlprogram.rs # CoreML MLProgram (MIL) converter
-├── executors/
-│   ├── mod.rs          # Conditional compilation
-│   ├── onnx.rs         # ONNX runtime
-│   └── coreml.rs       # CoreML runtime
-└── python/             # Python bindings (PyO3)
-    ├── mod.rs          # Python module definition
-    ├── context.rs      # ML and MLContext classes
-    ├── graph_builder.rs # MLGraphBuilder class
-    ├── graph.rs        # MLGraph class
-    └── operand.rs      # MLOperand class
+ lib.rs              # Public API exports
+ main.rs             # CLI entry point
+ graph.rs            # Core data structures
+ error.rs            # Error types
+ validator.rs        # Graph validation
+ loader.rs           # JSON loading
+ graphviz.rs         # DOT export
+ protos.rs           # Protobuf module setup
+ converters/
+    mod.rs              # Registry and trait
+    onnx.rs             # ONNX converter
+    coreml_mlprogram.rs # CoreML MLProgram (MIL) converter
+ executors/
+    mod.rs          # Conditional compilation
+    onnx.rs         # ONNX runtime
+    coreml.rs       # CoreML runtime
+ python/             # Python bindings (PyO3)
+     mod.rs          # Python module definition
+     context.rs      # ML and MLContext classes
+     graph_builder.rs # MLGraphBuilder class
+     graph.rs        # MLGraph class
+     operand.rs      # MLOperand class
 
 python/webnn/           # Python package
-├── __init__.py         # Package exports
-└── __init__.pyi        # Type stubs
+ __init__.py         # Package exports
+ __init__.pyi        # Type stubs
 
 tests/
-└── test_python_api.py  # Python API tests
+ test_python_api.py  # Python API tests
 
 examples/
-├── python_simple.py    # Basic Python example
-└── python_matmul.py    # Matrix multiplication example
+ python_simple.py    # Basic Python example
+ python_matmul.py    # Matrix multiplication example
 ```
 
 ## Adding New Features
@@ -610,7 +616,7 @@ git commit -m "Update context implementation"
 
 ## Implemented Operations (as of 2025-12-07)
 
-### ✅ Fully Implemented Operations
+### [OK] Fully Implemented Operations
 
 **Binary Operations:**
 - `add`, `sub`, `mul`, `div`, `matmul`
@@ -642,7 +648,7 @@ git commit -m "Update context implementation"
 
 **Total Tests:** 91 tests (79 passing, 12 skipped without ONNX runtime)
 
-### 🚧 Not Yet Implemented
+###  Not Yet Implemented
 
 High priority: Reduction operations (reduceSum, reduceMean, etc.), element-wise ops (abs, exp, log, etc.)
 See TODO.txt for complete list.
