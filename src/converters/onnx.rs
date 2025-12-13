@@ -1539,6 +1539,131 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     attribute: attributes,
                     ..Default::default()
                 });
+            } else if matches!(
+                op.op_type.as_str(),
+                "layerNormalization" | "batchNormalization" | "instanceNormalization"
+            ) {
+                // Normalization operations - ONNX requires scale/bias as inputs, not attributes
+                // Following Chromium's approach: create default initializers when not provided
+
+                let input_id = op.input_operands[0];
+                let input_operand = graph
+                    .operand(input_id)
+                    .ok_or_else(|| GraphError::InvalidConversionOperand { operand: input_id })?;
+                let input_data_type = Self::data_type_code(input_operand.descriptor.data_type);
+
+                let mut inputs: Vec<String> = vec![Self::operand_name(graph, input_id)];
+
+                // Check if scale and bias are provided via attributes
+                let has_scale = op
+                    .attributes
+                    .get("has_scale")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let has_bias = op
+                    .attributes
+                    .get("has_bias")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+
+                // Determine scale/bias shape based on normalization type
+                let scale_bias_shape = if op.op_type == "layerNormalization" {
+                    // For layer norm, scale/bias shape depends on normalized axes
+                    let axes = op
+                        .attributes
+                        .get("axes")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect::<Vec<i64>>())
+                        .unwrap_or_else(|| vec![-1]);
+
+                    // Calculate size of normalized dimensions
+                    let mut size = 1i64;
+                    for &axis in &axes {
+                        let actual_axis = if axis < 0 {
+                            (input_operand.descriptor.shape.len() as i64 + axis) as usize
+                        } else {
+                            axis as usize
+                        };
+                        if actual_axis < input_operand.descriptor.shape.len() {
+                            size *= input_operand.descriptor.shape[actual_axis] as i64;
+                        }
+                    }
+                    vec![size]
+                } else if op.op_type == "batchNormalization"
+                    || op.op_type == "instanceNormalization"
+                {
+                    // For batch/instance norm, scale/bias shape is [channels]
+                    // Channels is typically dimension 1 for NCHW layout
+                    let channels = if input_operand.descriptor.shape.len() > 1 {
+                        input_operand.descriptor.shape[1] as i64
+                    } else {
+                        1
+                    };
+                    vec![channels]
+                } else {
+                    vec![1]
+                };
+
+                // Add scale input (from operand or create default with 1.0)
+                if has_scale && op.input_operands.len() > 1 {
+                    inputs.push(Self::operand_name(graph, op.input_operands[1]));
+                } else {
+                    // Create default scale initializer (all 1.0)
+                    let scale_name = format!("{}_scale_default", op_name);
+                    let scale_data: Vec<f32> =
+                        vec![1.0; scale_bias_shape.iter().product::<i64>() as usize];
+
+                    initializers.push(TensorProto {
+                        name: Some(scale_name.clone()),
+                        data_type: Some(input_data_type as i32),
+                        dims: scale_bias_shape.clone(),
+                        float_data: scale_data,
+                        ..Default::default()
+                    });
+                    inputs.push(scale_name);
+                }
+
+                // Add bias input (from operand or create default with 0.0) - optional for layer norm
+                if has_bias && op.input_operands.len() > 2 {
+                    inputs.push(Self::operand_name(graph, op.input_operands[2]));
+                } else if op.op_type != "layerNormalization" || has_bias {
+                    // Batch/instance norm always need bias; layer norm only if explicitly requested
+                    let bias_name = format!("{}_bias_default", op_name);
+                    let bias_data: Vec<f32> =
+                        vec![0.0; scale_bias_shape.iter().product::<i64>() as usize];
+
+                    initializers.push(TensorProto {
+                        name: Some(bias_name.clone()),
+                        data_type: Some(input_data_type as i32),
+                        dims: scale_bias_shape.clone(),
+                        float_data: bias_data,
+                        ..Default::default()
+                    });
+                    inputs.push(bias_name);
+                }
+
+                // For batch normalization, add mean and variance (required inputs 4 and 5)
+                if op.op_type == "batchNormalization" {
+                    if op.input_operands.len() > 3 {
+                        inputs.push(Self::operand_name(graph, op.input_operands[3])); // mean
+                    }
+                    if op.input_operands.len() > 4 {
+                        inputs.push(Self::operand_name(graph, op.input_operands[4])); // variance
+                    }
+                }
+
+                let attributes = Self::create_operation_attributes(op);
+                nodes.push(NodeProto {
+                    input: inputs,
+                    output: vec![Self::operand_name(
+                        graph,
+                        op.output_operand.expect("Single-output operation expected"),
+                    )],
+                    name: Some(op_name),
+                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    attribute: attributes,
+                    ..Default::default()
+                });
             } else {
                 // Check if operation requires float types (ONNX limitation)
                 let requires_float = matches!(
