@@ -1639,6 +1639,58 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
 
+                // For layer normalization, check if axes are empty or if input is 0D
+                // When axes are empty, no normalization occurs (output = bias or 0)
+                if op.op_type == "layerNormalization" {
+                    let axes = op
+                        .attributes
+                        .get("axes")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect::<Vec<i64>>())
+                        .unwrap_or_else(|| vec![]);
+
+                    // Handle empty axes or 0D tensor with axes=[-1] case
+                    // When axes are empty or when input is 0D scalar, no normalization occurs
+                    // This matches Chromium's implementation
+                    let is_0d_with_default_axes =
+                        input_operand.descriptor.shape.is_empty() && axes == vec![-1];
+                    if axes.is_empty() || is_0d_with_default_axes {
+                        let output_name = Self::operand_name(
+                            graph,
+                            op.output_operand.expect("Single-output operation expected"),
+                        );
+
+                        if has_bias && op.input_operands.len() > 2 {
+                            // output = bias + 0
+                            let bias_name = Self::operand_name(graph, op.input_operands[2]);
+                            let zero_name = format!("{}_zero", op_name);
+                            initializers.push(Self::create_scalar_initializer(
+                                zero_name.clone(),
+                                input_data_type,
+                                0.0,
+                            ));
+                            nodes.push(NodeProto {
+                                input: vec![bias_name, zero_name],
+                                output: vec![output_name],
+                                name: Some(op_name),
+                                op_type: Some("Add".to_string()),
+                                ..Default::default()
+                            });
+                        } else {
+                            // output = input - input = 0
+                            let input_name = Self::operand_name(graph, input_id);
+                            nodes.push(NodeProto {
+                                input: vec![input_name.clone(), input_name],
+                                output: vec![output_name],
+                                name: Some(op_name),
+                                op_type: Some("Sub".to_string()),
+                                ..Default::default()
+                            });
+                        }
+                        continue;
+                    }
+                }
+
                 // Determine scale/bias shape based on normalization type
                 let scale_bias_shape = if op.op_type == "layerNormalization" {
                     // For layer norm, scale/bias shape depends on normalized axes
