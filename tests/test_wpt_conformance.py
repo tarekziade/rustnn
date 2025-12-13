@@ -174,7 +174,7 @@ def call_builder_method(builder, op_name: str, args: Dict[str, Any]) -> Any:
     # Map WPT parameter names to Python API parameter names (camelCase to snake_case)
     param_name_map = {
         # General
-        "newShape": "shape",
+        "newShape": "new_shape",  # expand operation
         "type": "data_type",  # cast operation
         "keepDimensions": "keep_dimensions",  # reduction operations
         # Conv2d/ConvTranspose2d

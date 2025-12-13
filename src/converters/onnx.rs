@@ -980,6 +980,52 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     attribute: vec![], // No attributes for Reshape
                     ..Default::default()
                 });
+            } else if op.op_type == "expand" {
+                // Expand requires shape as a second input tensor in ONNX (not as an attribute)
+                let mut inputs: Vec<String> = op
+                    .input_operands
+                    .iter()
+                    .map(|id| Self::operand_name(graph, *id))
+                    .collect();
+
+                // Extract the new shape from attributes (required)
+                let new_shape = op
+                    .attributes
+                    .get("newShape")
+                    .and_then(|v| v.as_array())
+                    .ok_or_else(|| GraphError::ConversionFailed {
+                        format: "onnx".to_string(),
+                        reason: format!(
+                            "Expand operation missing 'newShape' attribute in operation {}",
+                            op_name
+                        ),
+                    })?;
+
+                let shape_values: Vec<i64> = new_shape
+                    .iter()
+                    .filter_map(|v| v.as_u64().map(|u| u as i64))
+                    .collect();
+
+                let shape_name = format!("{}_shape", op_name);
+                inputs.push(shape_name.clone());
+
+                // Add shape as an initializer (constant tensor)
+                initializers.push(TensorProto {
+                    name: Some(shape_name),
+                    data_type: Some(ProtoDataType::Int64 as i32),
+                    dims: vec![shape_values.len() as i64], // 1D tensor
+                    int64_data: shape_values,
+                    ..Default::default()
+                });
+
+                nodes.push(NodeProto {
+                    input: inputs,
+                    output: vec![Self::operand_name(graph, op.output_operand)],
+                    name: Some(op_name),
+                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    attribute: vec![], // No attributes for Expand
+                    ..Default::default()
+                });
             } else {
                 // Regular operation - no Cast nodes needed
                 let attributes = Self::create_operation_attributes(op);
