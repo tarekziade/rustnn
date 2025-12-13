@@ -109,6 +109,15 @@ def execute_wpt_test_case(context, test_case: Dict[str, Any]) -> Dict[str, np.nd
             if isinstance(arg_value, str) and arg_value in operands:
                 # This is a reference to another operand
                 resolved_args[arg_name] = operands[arg_value]
+            elif isinstance(arg_value, list):
+                # This is a list of operand references (e.g., concat inputs)
+                resolved_list = []
+                for item in arg_value:
+                    if isinstance(item, str) and item in operands:
+                        resolved_list.append(operands[item])
+                    else:
+                        resolved_list.append(item)
+                resolved_args[arg_name] = resolved_list
             else:
                 # This is a literal value
                 resolved_args[arg_name] = arg_value

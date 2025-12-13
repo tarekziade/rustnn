@@ -500,6 +500,23 @@ impl OnnxConverter {
         attributes
     }
 
+    /// Create ONNX attributes for concat operation
+    fn create_concat_attributes(op: &Operation) -> Vec<AttributeProto> {
+        let mut attributes = Vec::new();
+
+        // Concat requires an axis attribute in ONNX
+        if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
+            attributes.push(AttributeProto {
+                name: Some("axis".to_string()),
+                r#type: Some(AttributeType::Int as i32),
+                i: Some(axis as i64),
+                ..Default::default()
+            });
+        }
+
+        attributes
+    }
+
     /// Create ONNX attributes for cast operation
     fn create_cast_attributes(op: &Operation) -> Vec<AttributeProto> {
         let mut attributes = Vec::new();
@@ -717,6 +734,8 @@ impl OnnxConverter {
             Self::create_squeeze_unsqueeze_attributes(op)
         } else if op.op_type == "argMax" || op.op_type == "argMin" {
             Self::create_arg_reduce_attributes(op)
+        } else if op.op_type == "concat" {
+            Self::create_concat_attributes(op)
         } else if op.op_type == "cast" {
             Self::create_cast_attributes(op)
         } else if op.op_type == "scatterElements" {
