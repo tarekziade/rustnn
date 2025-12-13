@@ -211,7 +211,7 @@ def call_builder_method(builder, op_name: str, args: Dict[str, Any]) -> Any:
     if op_name == "reshape":
         # reshape(input, new_shape)
         input_op = args.get("input", args.get("a"))
-        new_shape = args.get("shape")
+        new_shape = args.get("new_shape")
         method = getattr(builder, "reshape")
         return method(input_op, new_shape)
 

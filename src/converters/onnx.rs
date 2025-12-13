@@ -1130,13 +1130,16 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     .map(|(start, size)| start + size)
                     .collect();
 
+                // Capture length before moving starts
+                let starts_len = starts.len();
+
                 // Add starts as initializer
                 let starts_name = format!("{}_starts", op_name);
                 inputs.push(starts_name.clone());
                 initializers.push(TensorProto {
                     name: Some(starts_name),
                     data_type: Some(ProtoDataType::Int64 as i32),
-                    dims: vec![starts.len() as i64],
+                    dims: vec![starts_len as i64],
                     int64_data: starts,
                     ..Default::default()
                 });
@@ -1154,7 +1157,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 // Add axes as initializer
                 // If axes not provided, default to [0, 1, ..., len(starts)-1]
-                let axes_data = axes.unwrap_or_else(|| (0..starts.len() as i64).collect());
+                let axes_data = axes.unwrap_or_else(|| (0..starts_len as i64).collect());
 
                 let axes_name = format!("{}_axes", op_name);
                 inputs.push(axes_name.clone());
@@ -1251,6 +1254,54 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     output: outputs,
                     name: Some(op_name),
                     op_type: Some("Split".to_string()),
+                    attribute: attributes,
+                    ..Default::default()
+                });
+            } else if op.op_type == "gather" {
+                // Gather operation - ONNX only supports int32/int64 indices, need to cast uint32/uint8
+                let mut inputs: Vec<String> = Vec::new();
+
+                // First input: data tensor
+                inputs.push(Self::operand_name(graph, op.input_operands[0]));
+
+                // Second input: indices tensor - may need casting
+                let indices_id = op.input_operands[1];
+                let indices_name = Self::operand_name(graph, indices_id);
+                let indices_operand = graph.operand(indices_id).ok_or_else(|| {
+                    GraphError::InvalidConversionOperand {
+                        operand: indices_id,
+                    }
+                })?;
+
+                let indices_input = if matches!(
+                    indices_operand.descriptor.data_type,
+                    DataType::Uint32 | DataType::Uint8
+                ) {
+                    // Cast uint32/uint8 to int64 for ONNX compatibility
+                    let cast_output_name = format!("{}_indices_int64", op_name);
+                    nodes.push(Self::create_cast_node(
+                        &format!("{}_cast_indices", op_name),
+                        indices_name,
+                        cast_output_name.clone(),
+                        ProtoDataType::Int64,
+                    ));
+                    cast_output_name
+                } else {
+                    indices_name
+                };
+
+                inputs.push(indices_input);
+
+                // Create Gather node
+                let attributes = Self::create_operation_attributes(op);
+                nodes.push(NodeProto {
+                    input: inputs,
+                    output: vec![Self::operand_name(
+                        graph,
+                        op.output_operand.expect("Single-output operation expected"),
+                    )],
+                    name: Some(op_name),
+                    op_type: Some("Gather".to_string()),
                     attribute: attributes,
                     ..Default::default()
                 });

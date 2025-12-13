@@ -43,7 +43,7 @@ rustnn implements 85 of ~95 WebNN operations (89% coverage) with full backend su
 | `ceil` | ✓ | ✓ | ✓ | ✓ | ⚠ |
 | `clamp` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `concat` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `conv2d` | ✓ | ✓ | ✓ | ✓ | ⚠ |
+| `conv2d` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `conv_transpose2d` | ✓ | ✓ | ✓ | ✓ | ⚠ |
 | `cos` | ✓ | ✓ | ✓ | ✓ | - |
 | `cosh` | ✓ | ✓ | ✓ | ✓ | - |
