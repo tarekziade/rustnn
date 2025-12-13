@@ -372,7 +372,7 @@ Once TensorRT is working:
 
 1. Explore examples in `examples/` directory
 2. Read the [API Reference](api-reference.md) for detailed usage
-3. Check [Operator Status](operator-status.md) for supported operations
+3. Check [Implementation Status](implementation-status.md) for supported operations
 4. See [Development Guide](development.md) for contributing
 
 ## Additional Resources

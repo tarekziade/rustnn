@@ -663,7 +663,7 @@ See TODO.txt for complete list.
 
 - **README.md**: Complete documentation including Python API, Rust CLI, and architecture
 - **docs/api-reference.md**: Complete Python API reference with examples
-- **docs/operator-status.md**: **Comprehensive operator implementation status** across all backends (Shape Inference, Python API, ONNX, CoreML MLProgram) - use this to check which operations are supported
+- **docs/implementation-status.md**: **Comprehensive implementation status and testing strategy** covering operator status across all backends (Shape Inference, Python API, ONNX, CoreML MLProgram), WPT test integration status, and prioritized next steps
 - **docs/webnn-spec-reference.md**: Local copy of W3C WebNN spec reference for offline use and easy parsing
 - **examples/**: Sample WebNN graph JSON files and Python examples
 - **tests/test_python_api.py**: Python API test suite (146 tests passing)

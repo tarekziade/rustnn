@@ -591,7 +591,7 @@ pub fn run_tensorrt_with_caching(
 - [ ] Test with Python API examples
 
 ### Phase 5: Documentation & Testing (2-3 days)
-- [ ] Update docs/operator-status.md with TensorRT coverage
+- [ ] Update docs/implementation-status.md with TensorRT coverage
 - [ ] Update docs/architecture.md with TensorRT backend
 - [ ] Create example: `examples/tensorrt_inference.py`
 - [ ] Add comprehensive unit tests (Rust + Python)

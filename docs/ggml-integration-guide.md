@@ -388,7 +388,7 @@ GGML has limited support for some operations:
 **Solution:**
 - Implement missing operations via composition (e.g., sigmoid from exp/div)
 - Return clear error for unsupported operations
-- Document operation coverage in operator-status.md
+- Document operation coverage in implementation-status.md
 - Focus on LLM-relevant operations initially
 
 ### Challenge 3: Quantization Integration
@@ -443,7 +443,7 @@ GGML has limited support for some operations:
 - [ ] Test with Python API examples
 
 ### Phase 4: Documentation & Examples (1-2 days)
-- [ ] Update docs/operator-status.md with GGML coverage
+- [ ] Update docs/implementation-status.md with GGML coverage
 - [ ] Update docs/architecture.md with GGML backend
 - [ ] Create example: `examples/ggml_inference.py`
 - [ ] Update README.md with GGML backend section

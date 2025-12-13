@@ -13,7 +13,7 @@ docs/
 ├── advanced.md           # Advanced usage patterns
 ├── architecture.md       # System architecture and design
 ├── development.md        # Development guide
-├── operator-status.md    # WebNN operator implementation status
+├── implementation-status.md # Complete implementation status & testing strategy
 └── requirements.txt      # Python dependencies for building docs
 ```
 

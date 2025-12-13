@@ -162,4 +162,4 @@ examples/
 - ONNX Backend: 85/85 (100%)
 - CoreML MLProgram: 85/85 (100%)
 
-See [operator-status.md](operator-status.md) for complete details.
+See [implementation-status.md](implementation-status.md) for complete details.

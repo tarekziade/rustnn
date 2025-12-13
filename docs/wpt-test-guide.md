@@ -61,7 +61,7 @@ rustnn/
     convert_wpt_tests.py   # Convert JS tests to JSON
     update_wpt_tests.sh    # Auto-update script
  docs/
-     wpt-integration-plan.md  # Implementation plan
+     implementation-status.md # Implementation status & testing strategy
      wpt-test-guide.md        # This guide
 ```
 
@@ -416,7 +416,7 @@ Add to `.github/workflows/tests.yml`:
 
 - **WPT WebNN Tests**: https://github.com/web-platform-tests/wpt/tree/master/webnn
 - **WebNN Spec**: https://www.w3.org/TR/webnn/
-- **Integration Plan**: `docs/wpt-integration-plan.md`
+- **Implementation Status & Testing Strategy**: `docs/implementation-status.md`
 - **Local Spec Reference**: `docs/webnn-spec-reference.md`
 - **Test Data README**: `tests/wpt_data/README.md`
 
