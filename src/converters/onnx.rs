@@ -1729,6 +1729,88 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     attribute: attributes,
                     ..Default::default()
                 });
+            } else if op.op_type == "hardSwish" {
+                // HardSwish decomposition: x * clip(x + 3, 0, 6) / 6
+                // ONNX opset 13 doesn't have HardSwish, so we decompose it
+                let input_name = Self::operand_name(graph, op.input_operands[0]);
+                let output_name = Self::operand_name(
+                    graph,
+                    op.output_operand.expect("Single-output operation expected"),
+                );
+
+                // Get input data type for scalar initializers
+                let input_operand = graph.operand(op.input_operands[0]).ok_or_else(|| {
+                    GraphError::InvalidConversionOperand {
+                        operand: op.input_operands[0],
+                    }
+                })?;
+                let dtype = Self::data_type_code(input_operand.descriptor.data_type);
+
+                // Step 1: Add 3 to x
+                let three_name = format!("{}_const_3", op_name);
+                initializers.push(Self::create_scalar_initializer(
+                    three_name.clone(),
+                    dtype,
+                    3.0,
+                ));
+
+                let add_output = format!("{}_add_3", op_name);
+                nodes.push(NodeProto {
+                    input: vec![input_name.clone(), three_name],
+                    output: vec![add_output.clone()],
+                    name: Some(format!("{}_add", op_name)),
+                    op_type: Some("Add".to_string()),
+                    ..Default::default()
+                });
+
+                // Step 2: Clip to [0, 6]
+                let zero_name = format!("{}_const_0", op_name);
+                let six_name = format!("{}_const_6", op_name);
+                initializers.push(Self::create_scalar_initializer(
+                    zero_name.clone(),
+                    dtype,
+                    0.0,
+                ));
+                initializers.push(Self::create_scalar_initializer(
+                    six_name.clone(),
+                    dtype,
+                    6.0,
+                ));
+
+                let clip_output = format!("{}_clip", op_name);
+                nodes.push(NodeProto {
+                    input: vec![add_output, zero_name, six_name],
+                    output: vec![clip_output.clone()],
+                    name: Some(format!("{}_clip", op_name)),
+                    op_type: Some("Clip".to_string()),
+                    ..Default::default()
+                });
+
+                // Step 3: Divide by 6
+                let six_div_name = format!("{}_const_6_div", op_name);
+                initializers.push(Self::create_scalar_initializer(
+                    six_div_name.clone(),
+                    dtype,
+                    6.0,
+                ));
+
+                let div_output = format!("{}_div", op_name);
+                nodes.push(NodeProto {
+                    input: vec![clip_output, six_div_name],
+                    output: vec![div_output.clone()],
+                    name: Some(format!("{}_div", op_name)),
+                    op_type: Some("Div".to_string()),
+                    ..Default::default()
+                });
+
+                // Step 4: Multiply by x
+                nodes.push(NodeProto {
+                    input: vec![input_name, div_output],
+                    output: vec![output_name],
+                    name: Some(format!("{}_mul", op_name)),
+                    op_type: Some("Mul".to_string()),
+                    ..Default::default()
+                });
             } else {
                 // Check if operation requires float types (ONNX limitation)
                 let requires_float = matches!(
