@@ -553,28 +553,100 @@ impl PyMLContext {
         &self,
         py: Python,
         graph: &PyMLGraph,
-        _inputs: &Bound<'_, PyDict>,
+        inputs: &Bound<'_, PyDict>,
     ) -> PyResult<Py<PyDict>> {
-        // Convert graph to CoreML to validate it can be converted
+        use crate::executors::coreml::{CoremlInput, run_coreml_with_inputs};
+
+        // Convert graph to CoreML
         let converter = crate::converters::CoremlMlProgramConverter::default();
-        let _converted = converter.convert(&graph.graph_info).map_err(|e| {
+        let converted = converter.convert(&graph.graph_info).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("CoreML conversion failed: {}", e))
         })?;
 
-        // NOTE: CoreML execution is currently disabled because:
-        // 1. The executor tries 4 different compute units, which is very slow for large models (26+ seconds)
-        // 2. The executor doesn't return actual inference results, only metadata
-        // 3. We end up returning zeros anyway via compute_fallback
-        //
-        // To enable full CoreML support, the executor needs to:
-        // - Return actual MLMultiArray data, not just metadata
-        // - Try only one compute unit (preferably Neural Engine)
-        // - Cache compiled models to avoid recompilation
-        //
-        // For now, return fallback results (zeros) immediately without expensive execution.
+        // Convert Python inputs to CoremlInput structs
+        let numpy = py.import_bound("numpy")?;
+        let mut coreml_inputs = Vec::new();
 
-        // Return zeros for now (CoreML integration needs full implementation)
-        self.compute_fallback(py, graph)
+        for input_id in &graph.graph_info.input_operands {
+            let input_op = graph
+                .graph_info
+                .operands
+                .get(*input_id as usize)
+                .ok_or_else(|| {
+                    pyo3::exceptions::PyValueError::new_err(format!(
+                        "Input operand {} not found in graph",
+                        input_id
+                    ))
+                })?;
+
+            let default_name = format!("input_{}", input_id);
+            let input_name = input_op.name.as_deref().unwrap_or(&default_name);
+
+            // Get the numpy array from inputs dict
+            let array = inputs.get_item(input_name)?.ok_or_else(|| {
+                pyo3::exceptions::PyValueError::new_err(format!("Missing input: {}", input_name))
+            })?;
+
+            // Convert to float32 array (CoreML uses float32)
+            let array_f32 = array.call_method1("astype", ("float32",))?;
+
+            // Get shape
+            let shape_obj = array_f32.getattr("shape")?;
+            let shape: Vec<usize> = shape_obj.extract()?;
+
+            // Get flattened data
+            let flat = array_f32.call_method0("flatten")?;
+            let data: Vec<f32> = flat.call_method0("tolist")?.extract()?;
+
+            coreml_inputs.push(CoremlInput {
+                name: input_name.to_string(),
+                shape,
+                data,
+            });
+        }
+
+        // Execute with CoreML runtime
+        let attempts = run_coreml_with_inputs(&converted.data, coreml_inputs).map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("CoreML execution failed: {}", e))
+        })?;
+
+        // Find first successful attempt
+        let outputs = attempts
+            .iter()
+            .find_map(|attempt| attempt.result.as_ref().ok().cloned())
+            .ok_or_else(|| {
+                // Collect all error messages for debugging
+                let error_messages: Vec<String> = attempts
+                    .iter()
+                    .map(|attempt| {
+                        format!(
+                            "{}: {}",
+                            attempt.compute_unit,
+                            attempt
+                                .result
+                                .as_ref()
+                                .err()
+                                .unwrap_or(&"unknown error".to_string())
+                        )
+                    })
+                    .collect();
+                pyo3::exceptions::PyRuntimeError::new_err(format!(
+                    "CoreML execution failed on all compute units:\n{}",
+                    error_messages.join("\n")
+                ))
+            })?;
+
+        // Convert outputs back to numpy arrays
+        let result = PyDict::new_bound(py);
+        for output in outputs {
+            let shape_tuple =
+                pyo3::types::PyTuple::new_bound(py, output.shape.iter().map(|&d| d as i64));
+            let array = numpy.call_method1("array", (output.data,))?;
+            let reshaped = array.call_method1("reshape", (shape_tuple,))?;
+            result.set_item(output.name, reshaped)?;
+        }
+
+        Ok(result.into())
     }
 
     /// Stub for when CoreML is not available but backend was selected as CoreML

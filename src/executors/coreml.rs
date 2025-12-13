@@ -26,10 +26,18 @@ unsafe extern "C" {}
 unsafe extern "C" {}
 
 #[derive(Debug, Clone)]
+pub struct CoremlInput {
+    pub name: String,
+    pub shape: Vec<usize>,
+    pub data: Vec<f32>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CoremlOutput {
     pub name: String,
     pub shape: Vec<i64>,
     pub data_type_code: i64,
+    pub data: Vec<f32>, // Output data converted to f32 for consistency
 }
 
 #[derive(Debug, Clone)]
@@ -50,10 +58,18 @@ pub fn run_coreml_zeroed_cached(
     inputs: &HashMap<String, OperandDescriptor>,
     compiled_path: Option<&Path>,
 ) -> Result<Vec<CoremlRunAttempt>, GraphError> {
-    autoreleasepool(|| run_impl(model_bytes, inputs, compiled_path))
+    autoreleasepool(|| run_impl_zeroed(model_bytes, inputs, compiled_path))
 }
 
-fn run_impl(
+/// Run CoreML inference with actual input data
+pub fn run_coreml_with_inputs(
+    model_bytes: &[u8],
+    inputs: Vec<CoremlInput>,
+) -> Result<Vec<CoremlRunAttempt>, GraphError> {
+    autoreleasepool(|| run_impl_with_inputs(model_bytes, inputs))
+}
+
+fn run_impl_zeroed(
     model_bytes: &[u8],
     inputs: &HashMap<String, OperandDescriptor>,
     compiled_path: Option<&Path>,
@@ -62,11 +78,11 @@ fn run_impl(
         let (compiled_url, compiled_path_buf, temp_mlmodel) =
             prepare_compiled_model(model_bytes, compiled_path)?;
 
+        // Try only Neural Engine + GPU (best performance on Apple Silicon)
+        // Fallback to ALL if that fails
         let targets = [
-            (0i64, "ALL"),
-            (2i64, "CPU_AND_GPU"),
-            (3i64, "CPU_AND_NE"),
-            (1i64, "CPU_ONLY"),
+            (3i64, "CPU_AND_NE"), // Neural Engine + GPU (best for Apple Silicon)
+            (0i64, "ALL"),        // Fallback to all available compute units
         ];
         let mut attempts = Vec::new();
 
@@ -183,6 +199,118 @@ fn run_impl(
     }
 }
 
+fn run_impl_with_inputs(
+    model_bytes: &[u8],
+    inputs: Vec<CoremlInput>,
+) -> Result<Vec<CoremlRunAttempt>, GraphError> {
+    unsafe {
+        let (compiled_url, compiled_path_buf, temp_mlmodel) =
+            prepare_compiled_model(model_bytes, None)?;
+
+        // Try only Neural Engine + GPU (best performance on Apple Silicon)
+        // Fallback to ALL if that fails
+        let targets = [
+            (3i64, "CPU_AND_NE"), // Neural Engine + GPU (best for Apple Silicon)
+            (0i64, "ALL"),        // Fallback to all available compute units
+        ];
+        let mut attempts = Vec::new();
+
+        for (code, name) in targets {
+            let config: *mut Object = msg_send![class!(MLModelConfiguration), new];
+            let () = msg_send![config, setComputeUnits: code];
+            let mut error: *mut Object = ptr::null_mut();
+            let model: *mut Object = msg_send![class!(MLModel), modelWithContentsOfURL: compiled_url configuration: config error: &mut error];
+            if model.is_null() {
+                attempts.push(CoremlRunAttempt {
+                    compute_unit: name,
+                    result: Err(ns_error_to_string(error, "MLModel load failed")),
+                });
+                continue;
+            }
+
+            let dict: *mut Object = msg_send![class!(NSMutableDictionary), dictionary];
+            let mut feature_err: Option<String> = None;
+
+            // Create input features with actual data
+            for input in &inputs {
+                let key = nsstring_from_str(&input.name)?;
+                let shape_i64: Vec<i64> = input.shape.iter().map(|&s| s as i64).collect();
+
+                // Create MLMultiArray with Float32 type (code 32)
+                let array = match create_multi_array(&shape_i64, 32) {
+                    Ok(arr) => arr,
+                    Err(err) => {
+                        feature_err = Some(err.to_string());
+                        break;
+                    }
+                };
+
+                // Fill with actual data
+                if let Err(err) = fill_data(array, &input.data, &shape_i64) {
+                    feature_err = Some(err.to_string());
+                    break;
+                }
+
+                let feature_value: *mut Object =
+                    msg_send![class!(MLFeatureValue), featureValueWithMultiArray: array];
+                let () = msg_send![dict, setObject: feature_value forKey: key];
+            }
+
+            if let Some(reason) = feature_err {
+                attempts.push(CoremlRunAttempt {
+                    compute_unit: name,
+                    result: Err(reason),
+                });
+                continue;
+            }
+
+            let mut create_error: *mut Object = ptr::null_mut();
+            let provider_alloc: *mut Object = msg_send![class!(MLDictionaryFeatureProvider), alloc];
+            let provider: *mut Object =
+                msg_send![provider_alloc, initWithDictionary: dict error: &mut create_error];
+            if provider.is_null() {
+                attempts.push(CoremlRunAttempt {
+                    compute_unit: name,
+                    result: Err(ns_error_to_string(
+                        create_error,
+                        "MLDictionaryFeatureProvider init failed",
+                    )),
+                });
+                continue;
+            }
+
+            let mut predict_error: *mut Object = ptr::null_mut();
+            let output_provider: *mut Object =
+                msg_send![model, predictionFromFeatures: provider error: &mut predict_error];
+            if output_provider.is_null() {
+                attempts.push(CoremlRunAttempt {
+                    compute_unit: name,
+                    result: Err(ns_error_to_string(predict_error, "prediction failed")),
+                });
+                continue;
+            }
+
+            match collect_outputs(output_provider) {
+                Ok(outputs) => attempts.push(CoremlRunAttempt {
+                    compute_unit: name,
+                    result: Ok(outputs),
+                }),
+                Err(err) => attempts.push(CoremlRunAttempt {
+                    compute_unit: name,
+                    result: Err(err.to_string()),
+                }),
+            }
+        }
+
+        if let Some(tmp) = temp_mlmodel {
+            let _ = std::fs::remove_file(&tmp);
+        }
+        let _ = std::fs::remove_dir_all(&compiled_path_buf);
+
+        Ok(attempts)
+    }
+}
+
 unsafe fn collect_outputs(provider: *mut Object) -> Result<Vec<CoremlOutput>, GraphError> {
     let feature_names: *mut Object = msg_send![provider, featureNames];
     let names_array: *mut Object = msg_send![feature_names, allObjects];
@@ -202,13 +330,67 @@ unsafe fn collect_outputs(provider: *mut Object) -> Result<Vec<CoremlOutput>, Gr
         let data_type: i64 = msg_send![array, dataType];
         let shape_nsarray: *mut Object = msg_send![array, shape];
         let shape = unsafe { nsarray_to_i64_vec(shape_nsarray)? };
+
+        // Extract actual data from MLMultiArray
+        let data = unsafe { extract_mlmultiarray_data(array, data_type, &shape)? };
+
         outputs.push(CoremlOutput {
             name: rust_name,
             shape,
             data_type_code: data_type,
+            data,
         });
     }
     Ok(outputs)
+}
+
+unsafe fn extract_mlmultiarray_data(
+    array: *mut Object,
+    data_type: i64,
+    _shape: &[i64],
+) -> Result<Vec<f32>, GraphError> {
+    let count_obj: isize = msg_send![array, count];
+    let count = usize::try_from(count_obj).map_err(|_| GraphError::CoremlRuntimeFailed {
+        reason: format!("invalid element count: {}", count_obj),
+    })?;
+
+    let ptr: *mut std::os::raw::c_void = msg_send![array, dataPointer];
+
+    // Convert to f32 regardless of source type
+    let data = match data_type as i32 {
+        32 | 65568 | 65552 => {
+            // Float32 - codes: 32 (standard), 65568 (0x10020), 65552 (0x10010)
+            // CoreML sometimes returns non-standard type codes for Float32
+            let slice = unsafe { std::slice::from_raw_parts(ptr as *const f32, count) };
+            slice.to_vec()
+        }
+        16 => {
+            // Float16
+            let slice = unsafe { std::slice::from_raw_parts(ptr as *const u16, count) };
+            slice
+                .iter()
+                .map(|&bits| half::f16::from_bits(bits).to_f32())
+                .collect()
+        }
+        3 => {
+            // Int32
+            let slice = unsafe { std::slice::from_raw_parts(ptr as *const i32, count) };
+            slice.iter().map(|&x| x as f32).collect()
+        }
+        1 => {
+            // Int8
+            let slice = unsafe { std::slice::from_raw_parts(ptr as *const i8, count) };
+            slice.iter().map(|&x| x as f32).collect()
+        }
+        _ => {
+            // Try treating unknown types as Float32 (most common output type)
+            // This is a fallback for non-standard CoreML type codes
+            let slice = unsafe { std::slice::from_raw_parts(ptr as *const f32, count) };
+            slice.to_vec()
+        }
+    };
+
+    Ok(data)
 }
 
 unsafe fn prepare_compiled_model(
@@ -393,6 +575,29 @@ unsafe fn fill_zero(
             }
         }
     }
+    Ok(())
+}
+
+unsafe fn fill_data(array: *mut Object, data: &[f32], _shape: &[i64]) -> Result<(), GraphError> {
+    let count_obj: isize = msg_send![array, count];
+    let count = usize::try_from(count_obj).map_err(|_| GraphError::CoremlRuntimeFailed {
+        reason: format!("invalid element count: {}", count_obj),
+    })?;
+
+    if data.len() != count {
+        return Err(GraphError::CoremlRuntimeFailed {
+            reason: format!(
+                "data size mismatch: expected {} elements but got {}",
+                count,
+                data.len()
+            ),
+        });
+    }
+
+    let ptr: *mut c_void = msg_send![array, dataPointer];
+    let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, count) };
+    slice.copy_from_slice(data);
+
     Ok(())
 }
 
