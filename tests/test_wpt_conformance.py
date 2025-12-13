@@ -177,6 +177,9 @@ def call_builder_method(builder, op_name: str, args: Dict[str, Any]) -> Any:
         "newShape": "new_shape",  # expand operation
         "type": "data_type",  # cast operation
         "keepDimensions": "keep_dimensions",  # reduction operations
+        # Clamp operation
+        "minValue": "min_value",
+        "maxValue": "max_value",
         # Conv2d/ConvTranspose2d
         "padding": "pads",
         "inputLayout": "input_layout",
@@ -246,10 +249,11 @@ def call_builder_method(builder, op_name: str, args: Dict[str, Any]) -> Any:
     if "input" in args and len(args) == 1:
         return method(args["input"])
 
-    # For operations with options (like reduction ops)
+    # For operations with options (like reduction ops, clamp)
     if "input" in args:
         input_operand = args["input"]
-        options = {k: v for k, v in args.items() if k != "input"}
+        # Filter out None values (they mean "use default")
+        options = {k: v for k, v in args.items() if k != "input" and v is not None}
 
         # Handle special option name mappings
         if "keepDimensions" in options:
