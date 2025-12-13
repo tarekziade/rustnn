@@ -427,7 +427,7 @@ impl PyMLGraphBuilder {
     }
 
     /// 2D Transposed Convolution operation (deconvolution)
-    #[pyo3(signature = (input, filter, strides=None, dilations=None, pads=None, output_padding=None, output_sizes=None, groups=None, input_layout=None, filter_layout=None))]
+    #[pyo3(signature = (input, filter, strides=None, dilations=None, pads=None, output_padding=None, output_sizes=None, groups=None, input_layout=None, filter_layout=None, bias=None))]
     fn conv_transpose2d(
         &mut self,
         input: &PyMLOperand,
@@ -440,6 +440,7 @@ impl PyMLGraphBuilder {
         groups: Option<u32>,
         input_layout: Option<&str>,
         filter_layout: Option<&str>,
+        bias: Option<&PyMLOperand>,
     ) -> PyResult<PyMLOperand> {
         use crate::shape_inference::{
             Conv2dFilterLayout, Conv2dInputLayout, ConvTranspose2dOptions,
@@ -507,6 +508,12 @@ impl PyMLGraphBuilder {
         let output_id = self.next_operand_id;
         self.next_operand_id += 1;
 
+        // Build input_operands list: [input, filter, bias?]
+        let mut input_operands = vec![input.id, filter.id];
+        if let Some(bias_op) = bias {
+            input_operands.push(bias_op.id);
+        }
+
         // Store parameters as JSON attributes
         let mut attributes = serde_json::json!({
             "strides": strides,
@@ -515,7 +522,7 @@ impl PyMLGraphBuilder {
             "outputPadding": output_padding,
             "groups": groups,
             "inputLayout": input_layout.unwrap_or("nchw"),
-            "filterLayout": filter_layout.unwrap_or("oihw"),
+            "filterLayout": filter_layout.unwrap_or("iohw"),
         });
 
         // Add output_sizes if specified
@@ -523,9 +530,14 @@ impl PyMLGraphBuilder {
             attributes["outputSizes"] = serde_json::json!(sizes);
         }
 
+        // Add bias flag if present
+        if bias.is_some() {
+            attributes["hasBias"] = serde_json::json!(true);
+        }
+
         let operation = Operation {
             op_type: "convTranspose2d".to_string(),
-            input_operands: vec![input.id, filter.id],
+            input_operands,
             output_operand: Some(output_id),
             output_operands: Vec::new(),
             attributes,
