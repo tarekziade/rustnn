@@ -400,13 +400,28 @@ examples/
 
 ## Development
 
+**IMPORTANT: Always use Make commands instead of direct cargo/maturin/pytest commands.**
+
+The Makefile provides consistent build targets with proper feature flags, environment setup, and dependency management. Using Make ensures builds are reproducible and properly configured.
+
 For detailed development instructions, build commands, and troubleshooting, see **[docs/development.md](docs/development.md)**.
 
-Quick reference:
+Common Make targets:
 ```bash
-cargo build --release                      # Build Rust library
-maturin develop --features python          # Build Python package
-cargo test && python -m pytest tests/      # Run all tests
+make build              # Build Rust library with proper features
+make python-dev         # Install Python package in development mode
+make test               # Run Rust tests
+make python-test        # Run all Python tests (API + WPT conformance)
+make python-test-wpt    # Run WPT conformance tests only
+make fmt                # Format Rust code
+make help               # Show all available targets
+```
+
+Direct cargo commands (AVOID - use Make instead):
+```bash
+cargo build --release                      # DON'T USE - use `make build` instead
+maturin develop --features python          # DON'T USE - use `make python-dev` instead
+cargo test && python -m pytest tests/      # DON'T USE - use `make test && make python-test` instead
 ```
 
 ## Dependencies

@@ -5,6 +5,7 @@ use std::sync::Once;
 
 use ort::session::SessionInputValue;
 
+use half;
 use ndarray::ArrayD;
 use ort::session::Session;
 use ort::session::builder::GraphOptimizationLevel;
@@ -40,11 +41,22 @@ pub struct OnnxOutput {
     pub data_type: String,
 }
 
+/// Tensor data for different types
+pub enum TensorData {
+    Float32(Vec<f32>),
+    Float16(Vec<u16>), // f16 stored as u16 bits
+    Int8(Vec<i8>),
+    Uint8(Vec<u8>),
+    Int32(Vec<i32>),
+    Uint32(Vec<u32>),
+    Int64(Vec<i64>),
+}
+
 /// Input tensor data for ONNX execution
 pub struct OnnxInput {
     pub name: String,
     pub shape: Vec<usize>,
-    pub data: Vec<f32>,
+    pub data: TensorData,
 }
 
 /// Output tensor with actual data
@@ -163,26 +175,146 @@ pub fn run_onnx_with_inputs(
     let output_names: Vec<String> = session.outputs.iter().map(|o| o.name.clone()).collect();
 
     // Build input tensors from provided inputs
-    let mut input_values = Vec::new();
+    let mut input_session_values: Vec<SessionInputValue> = Vec::new();
     for input in inputs {
-        let array = ArrayD::from_shape_vec(input.shape.clone(), input.data).map_err(|e| {
-            GraphError::OnnxRuntimeFailed {
-                reason: format!("failed to create input array for {}: {e}", input.name),
+        let session_value = match input.data {
+            TensorData::Float32(data) => {
+                let array = ArrayD::from_shape_vec(input.shape.clone(), data).map_err(|e| {
+                    GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create float32 input array for {}: {e}",
+                            input.name
+                        ),
+                    }
+                })?;
+                let value =
+                    Value::from_array(array).map_err(|e| GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create float32 input tensor for {}: {e}",
+                            input.name
+                        ),
+                    })?;
+                SessionInputValue::from(value)
             }
-        })?;
+            TensorData::Float16(data) => {
+                // Convert u16 bits to half::f16
+                let f16_data: Vec<half::f16> = data
+                    .iter()
+                    .map(|&bits| half::f16::from_bits(bits))
+                    .collect();
+                let array = ArrayD::from_shape_vec(input.shape.clone(), f16_data).map_err(|e| {
+                    GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create float16 input array for {}: {e}",
+                            input.name
+                        ),
+                    }
+                })?;
+                let value =
+                    Value::from_array(array).map_err(|e| GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create float16 input tensor for {}: {e}",
+                            input.name
+                        ),
+                    })?;
+                SessionInputValue::from(value)
+            }
+            TensorData::Int8(data) => {
+                let array = ArrayD::from_shape_vec(input.shape.clone(), data).map_err(|e| {
+                    GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create int8 input array for {}: {e}",
+                            input.name
+                        ),
+                    }
+                })?;
+                let value =
+                    Value::from_array(array).map_err(|e| GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create int8 input tensor for {}: {e}",
+                            input.name
+                        ),
+                    })?;
+                SessionInputValue::from(value)
+            }
+            TensorData::Uint8(data) => {
+                let array = ArrayD::from_shape_vec(input.shape.clone(), data).map_err(|e| {
+                    GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create uint8 input array for {}: {e}",
+                            input.name
+                        ),
+                    }
+                })?;
+                let value =
+                    Value::from_array(array).map_err(|e| GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create uint8 input tensor for {}: {e}",
+                            input.name
+                        ),
+                    })?;
+                SessionInputValue::from(value)
+            }
+            TensorData::Int32(data) => {
+                let array = ArrayD::from_shape_vec(input.shape.clone(), data).map_err(|e| {
+                    GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create int32 input array for {}: {e}",
+                            input.name
+                        ),
+                    }
+                })?;
+                let value =
+                    Value::from_array(array).map_err(|e| GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create int32 input tensor for {}: {e}",
+                            input.name
+                        ),
+                    })?;
+                SessionInputValue::from(value)
+            }
+            TensorData::Uint32(data) => {
+                let array = ArrayD::from_shape_vec(input.shape.clone(), data).map_err(|e| {
+                    GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create uint32 input array for {}: {e}",
+                            input.name
+                        ),
+                    }
+                })?;
+                let value =
+                    Value::from_array(array).map_err(|e| GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create uint32 input tensor for {}: {e}",
+                            input.name
+                        ),
+                    })?;
+                SessionInputValue::from(value)
+            }
+            TensorData::Int64(data) => {
+                let array = ArrayD::from_shape_vec(input.shape.clone(), data).map_err(|e| {
+                    GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create int64 input array for {}: {e}",
+                            input.name
+                        ),
+                    }
+                })?;
+                let value =
+                    Value::from_array(array).map_err(|e| GraphError::OnnxRuntimeFailed {
+                        reason: format!(
+                            "failed to create int64 input tensor for {}: {e}",
+                            input.name
+                        ),
+                    })?;
+                SessionInputValue::from(value)
+            }
+        };
 
-        input_values.push(
-            Value::from_array(array).map_err(|e| GraphError::OnnxRuntimeFailed {
-                reason: format!("failed to create input tensor for {}: {e}", input.name),
-            })?,
-        );
+        input_session_values.push(session_value);
     }
 
-    // Run inference - convert to Vec of SessionInputValue
-    let input_session_values: Vec<SessionInputValue> = input_values
-        .into_iter()
-        .map(SessionInputValue::from)
-        .collect();
+    // Run inference
     let outputs = session.run(input_session_values.as_slice()).map_err(|e| {
         GraphError::OnnxRuntimeFailed {
             reason: format!("run failed: {e}"),
@@ -197,26 +329,39 @@ pub fn run_onnx_with_inputs(
             .cloned()
             .unwrap_or_else(|| format!("output_{}", idx));
 
-        // Try to extract as f32 first, then uint8 if that fails
-        // (for logical operation outputs that are uint8 in ONNX)
-        let (shape_vec, data_vec) = match value.try_extract_tensor::<f32>() {
-            Ok((shape, data)) => {
-                let shape_vec: Vec<usize> = shape.iter().map(|d| *d as usize).collect();
-                let data_vec: Vec<f32> = data.to_vec();
-                (shape_vec, data_vec)
-            }
-            Err(_) => {
-                // Try uint8 extraction (for logical operations)
-                let (shape, data) = value.try_extract_tensor::<u8>().map_err(|e| {
-                    GraphError::OnnxRuntimeFailed {
-                        reason: format!("failed to extract output tensor as f32 or u8: {e}"),
-                    }
-                })?;
-                let shape_vec: Vec<usize> = shape.iter().map(|d| *d as usize).collect();
-                // Convert u8 to f32 for Python compatibility
-                let data_vec: Vec<f32> = data.iter().map(|&x| x as f32).collect();
-                (shape_vec, data_vec)
-            }
+        // Try to extract tensor with different types
+        // The order matches most common types first for performance
+        let (shape_vec, data_vec) = if let Ok((shape, data)) = value.try_extract_tensor::<f32>() {
+            let shape_vec: Vec<usize> = shape.iter().map(|d| *d as usize).collect();
+            (shape_vec, data.to_vec())
+        } else if let Ok((shape, data)) = value.try_extract_tensor::<half::f16>() {
+            let shape_vec: Vec<usize> = shape.iter().map(|d| *d as usize).collect();
+            let data_vec: Vec<f32> = data.iter().map(|&x| x.to_f32()).collect();
+            (shape_vec, data_vec)
+        } else if let Ok((shape, data)) = value.try_extract_tensor::<i32>() {
+            let shape_vec: Vec<usize> = shape.iter().map(|d| *d as usize).collect();
+            let data_vec: Vec<f32> = data.iter().map(|&x| x as f32).collect();
+            (shape_vec, data_vec)
+        } else if let Ok((shape, data)) = value.try_extract_tensor::<u32>() {
+            let shape_vec: Vec<usize> = shape.iter().map(|d| *d as usize).collect();
+            let data_vec: Vec<f32> = data.iter().map(|&x| x as f32).collect();
+            (shape_vec, data_vec)
+        } else if let Ok((shape, data)) = value.try_extract_tensor::<i8>() {
+            let shape_vec: Vec<usize> = shape.iter().map(|d| *d as usize).collect();
+            let data_vec: Vec<f32> = data.iter().map(|&x| x as f32).collect();
+            (shape_vec, data_vec)
+        } else if let Ok((shape, data)) = value.try_extract_tensor::<u8>() {
+            let shape_vec: Vec<usize> = shape.iter().map(|d| *d as usize).collect();
+            let data_vec: Vec<f32> = data.iter().map(|&x| x as f32).collect();
+            (shape_vec, data_vec)
+        } else if let Ok((shape, data)) = value.try_extract_tensor::<i64>() {
+            let shape_vec: Vec<usize> = shape.iter().map(|d| *d as usize).collect();
+            let data_vec: Vec<f32> = data.iter().map(|&x| x as f32).collect();
+            (shape_vec, data_vec)
+        } else {
+            return Err(GraphError::OnnxRuntimeFailed {
+                reason: "failed to extract output tensor: unsupported data type".to_string(),
+            });
         };
 
         results.push(OnnxOutputWithData {

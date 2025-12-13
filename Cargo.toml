@@ -6,7 +6,7 @@ edition = "2024"
 [features]
 default = []
 coreml-runtime = ["objc"]
-onnx-runtime = ["ort", "ndarray"]
+onnx-runtime = ["ort", "ndarray", "half"]
 trtx-runtime = ["trtx"]
 trtx-runtime-mock = ["trtx/mock"]
 python = ["pyo3"]
@@ -25,6 +25,7 @@ bytemuck = { version = "1.15", features = ["extern_crate_std"] }
 ndarray = { version = "0.16", optional = true }
 objc = { version = "0.2", optional = true }
 ort = { version = "2.0.0-rc.10", optional = true, features = ["ndarray", "half"] }
+half = { version = "2.4", optional = true }
 trtx = { version = "0.2.0", optional = true }
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 

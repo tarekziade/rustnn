@@ -450,21 +450,69 @@ impl PyMLContext {
                 pyo3::exceptions::PyValueError::new_err(format!("Missing input: {}", input_name))
             })?;
 
-            // Convert to float32 array
-            let array_f32 = array.call_method1("astype", ("float32",))?;
+            // Get the data type from the operand descriptor
+            let data_type = &input_op.descriptor.data_type;
+
+            // Convert array to the correct type based on descriptor
+            let dtype_str = match data_type {
+                crate::graph::DataType::Float32 => "float32",
+                crate::graph::DataType::Float16 => "float16",
+                crate::graph::DataType::Int8 => "int8",
+                crate::graph::DataType::Uint8 => "uint8",
+                crate::graph::DataType::Int32 => "int32",
+                crate::graph::DataType::Uint32 => "uint32",
+                crate::graph::DataType::Int64 => "int64",
+            };
+
+            let array_typed = array.call_method1("astype", (dtype_str,))?;
 
             // Get shape
-            let shape_obj = array_f32.getattr("shape")?;
+            let shape_obj = array_typed.getattr("shape")?;
             let shape: Vec<usize> = shape_obj.extract()?;
 
-            // Get flattened data
-            let flat = array_f32.call_method0("flatten")?;
-            let data: Vec<f32> = flat.call_method0("tolist")?.extract()?;
+            // Get flattened data and convert to appropriate TensorData
+            let flat = array_typed.call_method0("flatten")?;
+
+            let tensor_data = match data_type {
+                crate::graph::DataType::Float32 => {
+                    let data: Vec<f32> = flat.call_method0("tolist")?.extract()?;
+                    crate::executors::onnx::TensorData::Float32(data)
+                }
+                crate::graph::DataType::Float16 => {
+                    // Get as float32 list then convert to f16 bits
+                    let data_f32: Vec<f32> = flat.call_method0("tolist")?.extract()?;
+                    let data_u16: Vec<u16> = data_f32
+                        .iter()
+                        .map(|&f| half::f16::from_f32(f).to_bits())
+                        .collect();
+                    crate::executors::onnx::TensorData::Float16(data_u16)
+                }
+                crate::graph::DataType::Int8 => {
+                    let data: Vec<i8> = flat.call_method0("tolist")?.extract()?;
+                    crate::executors::onnx::TensorData::Int8(data)
+                }
+                crate::graph::DataType::Uint8 => {
+                    let data: Vec<u8> = flat.call_method0("tolist")?.extract()?;
+                    crate::executors::onnx::TensorData::Uint8(data)
+                }
+                crate::graph::DataType::Int32 => {
+                    let data: Vec<i32> = flat.call_method0("tolist")?.extract()?;
+                    crate::executors::onnx::TensorData::Int32(data)
+                }
+                crate::graph::DataType::Uint32 => {
+                    let data: Vec<u32> = flat.call_method0("tolist")?.extract()?;
+                    crate::executors::onnx::TensorData::Uint32(data)
+                }
+                crate::graph::DataType::Int64 => {
+                    let data: Vec<i64> = flat.call_method0("tolist")?.extract()?;
+                    crate::executors::onnx::TensorData::Int64(data)
+                }
+            };
 
             onnx_inputs.push(OnnxInput {
                 name: input_name.to_string(),
                 shape,
-                data,
+                data: tensor_data,
             });
         }
 

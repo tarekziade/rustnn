@@ -166,6 +166,8 @@ def call_builder_method(builder, op_name: str, args: Dict[str, Any]) -> Any:
     param_name_map = {
         # General
         "newShape": "shape",
+        "type": "data_type",  # cast operation
+        "keepDimensions": "keep_dimensions",  # reduction operations
         # Conv2d/ConvTranspose2d
         "padding": "pads",
         "inputLayout": "input_layout",

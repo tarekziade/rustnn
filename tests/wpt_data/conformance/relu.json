@@ -1,7 +1,7 @@
 {
   "operation": "relu",
   "wpt_version": "2025-12-13",
-  "wpt_commit": "da0b6dcd390773f22d619378624b5bb078d2eacf",
+  "wpt_commit": "555200215767c4460e2e11f663a45f9f11641216",
   "source_file": "webnn/conformance_tests/relu.https.any.js",
   "conversion_note": "This file was auto-generated from WPT JavaScript tests. Manual verification recommended. Some test cases may require manual conversion from JavaScript syntax.",
   "tests": [
