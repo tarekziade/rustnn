@@ -10,9 +10,9 @@ rustnn implements 85 of ~95 WebNN operations (89% coverage) with full backend su
 - ✓ 85 operations fully implemented (Shape Inference + Python API + ONNX + CoreML)
 - ✓ WPT test infrastructure in place
 - ✓ WPT test data converter working (44 operations with test data)
-- ✓ 2668 WPT conformance tests passing (90.2% pass rate)
-- ✓ Major test fixes completed (batch_normalization input ordering, layer_normalization axes)
-- ⚠ 64 remaining failures (primarily custom parameter combinations and layout transformations)
+- ✓ 2700 WPT conformance tests passing (91.3% pass rate)
+- ✓ Major test fixes completed (conv_transpose2d bias+filter_layout, batch_normalization input ordering)
+- ⚠ 32 remaining failures (primarily architectural limitations and edge cases)
 
 ---
 
@@ -153,11 +153,12 @@ Test Coverage:
   WPT Test Infrastructure:        ✓ Complete (converter + runner)
   WPT Conformance Files:          44 operations with test data
   WPT Tests Collected:            2958 total tests
-  WPT Tests Passing:              2668 tests (90.2% pass rate) ✓
-  WPT Tests Failing:              64 tests (2.2% failure rate) ⚠
+  WPT Tests Passing:              2700 tests (91.3% pass rate) ✓
+  WPT Tests Failing:              32 tests (1.1% failure rate) ⚠
   WPT Tests Skipped:              226 tests (unsupported data types)
 
 Recent Test Fixes (2025-12-13):
+  - conv_transpose2d: 28/28 tests fixed (+32 overall) ✓ - Added missing bias parameter and fixed default filter_layout (oihw→iohw)
   - batch_normalization: 84/96 tests fixed ✓ - Fixed input ordering (mean/variance positions) and axis-based shape calculation
   - layer_normalization: +8 tests ✓ - Fixed epsilon/axis attributes and scale/bias shape calculation (X.shape[axis:])
   - reduce_l1: +2 tests ✓ - Added automatic float32 casting for uint32/uint8 types
@@ -170,11 +171,10 @@ Recent Test Fixes (2025-12-13):
   - conv2d: 80/80 passing (100%) ✓ - Fixed layout transformations
   - split: 40/40 passing (100%) ✓ - Fixed array splits
 
-Remaining Failures (64 tests):
-  - batch_normalization: 12 failures (custom scale/bias shapes with all_options)
-  - layer_normalization: 12 failures (non-consecutive axes requiring emulation)
-  - instance_normalization: 8 failures (NHWC layout requires transpose nodes)
-  - Other operations: 32 failures (various edge cases and data type combinations)
+Remaining Failures (32 tests):
+  - batch_normalization: 12 failures (1D tensors and custom scale/bias shapes - edge cases)
+  - layer_normalization: 12 failures (non-consecutive axes requiring operation emulation)
+  - instance_normalization: 8 failures (NHWC layout requires transpose node insertion)
 ```
 
 ---
@@ -410,6 +410,13 @@ make python-test
 
 ## Revision History
 
+- **2025-12-13 (Final Session):**
+  - Achieved 91.3% WPT conformance (2700 passing, 32 failing, 226 skipped)
+  - Major fix:
+    - **conv_transpose2d**: Added missing bias parameter to Python API and fixed default filter_layout from 'oihw' to 'iohw' (28/28 tests fixed, +32 tests overall due to side effects)
+  - Total session improvement: +32 tests (+1.1%)
+  - Commits: 1 (conv_transpose2d bias+filter_layout fix)
+  - Remaining 32 failures are architectural limitations and edge cases that require significant refactoring
 - **2025-12-13 (Continued Session):**
   - Achieved 90.2% WPT conformance (2668 passing, 64 failing, 226 skipped)
   - Major fixes:
