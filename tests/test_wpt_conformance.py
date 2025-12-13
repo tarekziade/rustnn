@@ -342,6 +342,10 @@ def call_builder_method(builder, op_name: str, args: Dict[str, Any]) -> Any:
     if "input" in args and len(args) == 1:
         return method(args["input"])
 
+    # For unary operations with 'a' parameter (like logical_not)
+    if "a" in args and len(args) == 1:
+        return method(args["a"])
+
     # For operations with options (like reduction ops, clamp)
     if "input" in args:
         input_operand = args["input"]
