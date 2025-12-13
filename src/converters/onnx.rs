@@ -1844,10 +1844,30 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         size *= input_operand.descriptor.shape[i] as i64;
                     }
                     vec![size]
-                } else if op.op_type == "batchNormalization"
-                    || op.op_type == "instanceNormalization"
-                {
-                    // For batch/instance norm, scale/bias shape is [channels]
+                } else if op.op_type == "batchNormalization" {
+                    // For batch norm, scale/bias/mean/variance shape is [channels]
+                    // Channel dimension is specified by the axis parameter
+                    let axis = op
+                        .attributes
+                        .get("axis")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(1);
+
+                    let channel_dim = if axis < 0 {
+                        ((input_operand.descriptor.shape.len() as i64 + axis) as usize)
+                            .min(input_operand.descriptor.shape.len().saturating_sub(1))
+                    } else {
+                        (axis as usize).min(input_operand.descriptor.shape.len().saturating_sub(1))
+                    };
+
+                    let channels = if input_operand.descriptor.shape.len() > channel_dim {
+                        input_operand.descriptor.shape[channel_dim] as i64
+                    } else {
+                        1
+                    };
+                    vec![channels]
+                } else if op.op_type == "instanceNormalization" {
+                    // For instance norm, scale/bias shape is [channels]
                     // Channel dimension depends on layout: NCHW=1, NHWC=last
                     let layout = op
                         .attributes
@@ -1881,43 +1901,80 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     vec![1]
                 };
 
-                // Add scale input (from operand or create default with 1.0)
-                if has_scale && op.input_operands.len() > 1 {
-                    inputs.push(Self::operand_name(graph, op.input_operands[1]));
-                } else {
-                    // Create default scale initializer (all 1.0) with proper dtype
-                    let scale_name = format!("{}_scale_default", op_name);
-                    initializers.push(Self::create_vector_initializer(
-                        scale_name.clone(),
-                        input_data_type,
-                        scale_bias_shape.clone(),
-                        1.0,
-                    ));
-                    inputs.push(scale_name);
-                }
-
-                // Add bias input (from operand or create default with 0.0) - optional for layer norm
-                if has_bias && op.input_operands.len() > 2 {
-                    inputs.push(Self::operand_name(graph, op.input_operands[2]));
-                } else if op.op_type != "layerNormalization" || has_bias {
-                    // Batch/instance norm always need bias; layer norm only if explicitly requested
-                    let bias_name = format!("{}_bias_default", op_name);
-                    initializers.push(Self::create_vector_initializer(
-                        bias_name.clone(),
-                        input_data_type,
-                        scale_bias_shape.clone(),
-                        0.0,
-                    ));
-                    inputs.push(bias_name);
-                }
-
-                // For batch normalization, add mean and variance (required inputs 4 and 5)
+                // Batch normalization has different input order than layer/instance normalization
+                // Python API order: [input, mean, variance, scale?, bias?]
+                // ONNX order: [input, scale, bias, mean, variance]
                 if op.op_type == "batchNormalization" {
-                    if op.input_operands.len() > 3 {
-                        inputs.push(Self::operand_name(graph, op.input_operands[3])); // mean
+                    // Add scale (index 3 in Python API if provided, else default)
+                    if has_scale && op.input_operands.len() > 3 {
+                        inputs.push(Self::operand_name(graph, op.input_operands[3]));
+                    } else {
+                        let scale_name = format!("{}_scale_default", op_name);
+                        initializers.push(Self::create_vector_initializer(
+                            scale_name.clone(),
+                            input_data_type,
+                            scale_bias_shape.clone(),
+                            1.0,
+                        ));
+                        inputs.push(scale_name);
                     }
-                    if op.input_operands.len() > 4 {
-                        inputs.push(Self::operand_name(graph, op.input_operands[4])); // variance
+
+                    // Add bias (index 4 in Python API if provided, else default)
+                    if has_bias && op.input_operands.len() > 4 {
+                        inputs.push(Self::operand_name(graph, op.input_operands[4]));
+                    } else {
+                        let bias_name = format!("{}_bias_default", op_name);
+                        initializers.push(Self::create_vector_initializer(
+                            bias_name.clone(),
+                            input_data_type,
+                            scale_bias_shape.clone(),
+                            0.0,
+                        ));
+                        inputs.push(bias_name);
+                    }
+
+                    // Add mean (index 1 - required)
+                    if op.input_operands.len() > 1 {
+                        inputs.push(Self::operand_name(graph, op.input_operands[1]));
+                    }
+
+                    // Add variance (index 2 - required)
+                    if op.input_operands.len() > 2 {
+                        inputs.push(Self::operand_name(graph, op.input_operands[2]));
+                    }
+                } else {
+                    // Layer normalization and instance normalization
+                    // Python API order: [input, scale?, bias?]
+                    // ONNX order: [input, scale, bias]
+
+                    // Add scale input (from operand or create default with 1.0)
+                    if has_scale && op.input_operands.len() > 1 {
+                        inputs.push(Self::operand_name(graph, op.input_operands[1]));
+                    } else {
+                        // Create default scale initializer (all 1.0) with proper dtype
+                        let scale_name = format!("{}_scale_default", op_name);
+                        initializers.push(Self::create_vector_initializer(
+                            scale_name.clone(),
+                            input_data_type,
+                            scale_bias_shape.clone(),
+                            1.0,
+                        ));
+                        inputs.push(scale_name);
+                    }
+
+                    // Add bias input (from operand or create default with 0.0) - optional for layer norm
+                    if has_bias && op.input_operands.len() > 2 {
+                        inputs.push(Self::operand_name(graph, op.input_operands[2]));
+                    } else if op.op_type != "layerNormalization" || has_bias {
+                        // Batch/instance norm always need bias; layer norm only if explicitly requested
+                        let bias_name = format!("{}_bias_default", op_name);
+                        initializers.push(Self::create_vector_initializer(
+                            bias_name.clone(),
+                            input_data_type,
+                            scale_bias_shape.clone(),
+                            0.0,
+                        ));
+                        inputs.push(bias_name);
                     }
                 }
 
