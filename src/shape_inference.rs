@@ -359,12 +359,12 @@ pub fn infer_conv_transpose2d_shape(
         ),
     };
 
-    // For transposed convolution, filter layout interpretation is different
-    // Filter is [in_channels, out_channels/groups, height, width] for OIHW-like layout
+    // For transposed convolution, filter layout interpretation is different from conv2d
+    // The enum values are reused but reinterpreted to match convTranspose2d semantics
     let (filter_in_channels, out_channels_per_group, kernel_h, kernel_w) =
         match options.filter_layout {
             Conv2dFilterLayout::Oihw => {
-                // For transpose: [in_channels, out_channels/groups, h, w]
+                // WebNN "iohw" layout: [in_channels, out_channels/groups, h, w]
                 (
                     filter_shape[0],
                     filter_shape[1],
@@ -373,30 +373,30 @@ pub fn infer_conv_transpose2d_shape(
                 )
             }
             Conv2dFilterLayout::Hwio => {
-                // [h, w, in_channels, out_channels/groups]
+                // WebNN "oihw" layout: [out_channels/groups, in_channels, h, w]
                 (
+                    filter_shape[1],
+                    filter_shape[0],
                     filter_shape[2],
                     filter_shape[3],
-                    filter_shape[0],
-                    filter_shape[1],
                 )
             }
             Conv2dFilterLayout::Ohwi => {
-                // [in_channels, h, w, out_channels/groups]
+                // WebNN "ohwi" layout: [out_channels/groups, h, w, in_channels]
                 (
-                    filter_shape[0],
                     filter_shape[3],
+                    filter_shape[0],
                     filter_shape[1],
                     filter_shape[2],
                 )
             }
             Conv2dFilterLayout::Ihwo => {
-                // [in_channels, h, w, out_channels/groups]
+                // WebNN "hwoi" layout: [h, w, out_channels/groups, in_channels]
                 (
-                    filter_shape[0],
                     filter_shape[3],
-                    filter_shape[1],
                     filter_shape[2],
+                    filter_shape[0],
+                    filter_shape[1],
                 )
             }
         };

@@ -465,14 +465,14 @@ impl PyMLGraphBuilder {
             }
         };
 
-        let filter_layout_enum = match filter_layout.unwrap_or("oihw") {
-            "oihw" => Conv2dFilterLayout::Oihw,
-            "hwio" => Conv2dFilterLayout::Hwio,
-            "ohwi" => Conv2dFilterLayout::Ohwi,
-            "ihwo" => Conv2dFilterLayout::Ihwo,
+        let filter_layout_enum = match filter_layout.unwrap_or("iohw") {
+            "iohw" => Conv2dFilterLayout::Oihw, // Input-Output-Height-Width (reinterpreted for transpose)
+            "hwoi" => Conv2dFilterLayout::Ihwo, // Height-Width-Output-Input (reinterpreted for transpose)
+            "ohwi" => Conv2dFilterLayout::Ohwi, // Output-Height-Width-Input
+            "oihw" => Conv2dFilterLayout::Hwio, // Output-Input-Height-Width (reinterpreted for transpose)
             other => {
                 return Err(pyo3::exceptions::PyValueError::new_err(format!(
-                    "Invalid filter_layout '{}', must be 'oihw', 'hwio', 'ohwi', or 'ihwo'",
+                    "Invalid filter_layout '{}', must be 'iohw', 'hwoi', 'ohwi', or 'oihw'",
                     other
                 )));
             }
