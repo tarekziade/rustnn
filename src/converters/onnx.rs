@@ -1090,6 +1090,17 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 });
             } else if op.op_type == "slice" {
                 // Slice operation - ONNX requires starts, ends, axes, steps as input tensors
+                // Special case: ONNX Runtime doesn't support slicing 0D tensors
+
+                // Check if input is 0D (scalar)
+                let input_operand_id = op.input_operands[0];
+                let input_operand = graph.operand(input_operand_id).ok_or_else(|| {
+                    GraphError::InvalidConversionOperand {
+                        operand: input_operand_id,
+                    }
+                })?;
+                let is_0d = input_operand.descriptor.shape.is_empty();
+
                 let mut inputs: Vec<String> = op
                     .input_operands
                     .iter()
@@ -1110,6 +1121,22 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     .and_then(|v| v.as_array())
                     .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect::<Vec<i64>>())
                     .unwrap_or_default();
+
+                // Special case: 0D tensor with empty starts/sizes is a no-op
+                // Use Identity node instead of Slice (ONNX Runtime doesn't support slicing scalars)
+                if is_0d && starts.is_empty() && sizes.is_empty() {
+                    nodes.push(NodeProto {
+                        input: vec![inputs[0].clone()],
+                        output: vec![Self::operand_name(
+                            graph,
+                            op.output_operand.expect("Single-output operation expected"),
+                        )],
+                        name: Some(op_name),
+                        op_type: Some("Identity".to_string()),
+                        ..Default::default()
+                    });
+                    continue; // Skip the rest of the slice handling
+                }
 
                 let axes = op
                     .attributes
@@ -1259,12 +1286,29 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 });
             } else if op.op_type == "gather" {
                 // Gather operation - ONNX only supports int32/int64 indices, need to cast uint32/uint8
+                // Also need to clamp indices to prevent out-of-bounds errors (following Chromium's approach)
                 let mut inputs: Vec<String> = Vec::new();
 
                 // First input: data tensor
-                inputs.push(Self::operand_name(graph, op.input_operands[0]));
+                let data_operand_id = op.input_operands[0];
+                inputs.push(Self::operand_name(graph, data_operand_id));
 
-                // Second input: indices tensor - may need casting
+                // Get axis parameter (default is 0)
+                let axis = op
+                    .attributes
+                    .get("axis")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0) as usize;
+
+                // Get input shape and dimension size at axis
+                let data_operand = graph.operand(data_operand_id).ok_or_else(|| {
+                    GraphError::InvalidConversionOperand {
+                        operand: data_operand_id,
+                    }
+                })?;
+                let dim_size = data_operand.descriptor.shape[axis] as i64;
+
+                // Second input: indices tensor - may need casting and clamping
                 let indices_id = op.input_operands[1];
                 let indices_name = Self::operand_name(graph, indices_id);
                 let indices_operand = graph.operand(indices_id).ok_or_else(|| {
@@ -1273,24 +1317,55 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     }
                 })?;
 
-                let indices_input = if matches!(
-                    indices_operand.descriptor.data_type,
-                    DataType::Uint32 | DataType::Uint8
-                ) {
-                    // Cast uint32/uint8 to int64 for ONNX compatibility
-                    let cast_output_name = format!("{}_indices_int64", op_name);
-                    nodes.push(Self::create_cast_node(
-                        &format!("{}_cast_indices", op_name),
-                        indices_name,
-                        cast_output_name.clone(),
-                        ProtoDataType::Int64,
-                    ));
-                    cast_output_name
-                } else {
-                    indices_name
-                };
+                // Step 1: Cast indices to int64 if needed (required for Clamp operation)
+                let indices_after_cast =
+                    if !matches!(indices_operand.descriptor.data_type, DataType::Int64) {
+                        // Cast to int64 for ONNX compatibility (Clamp requires all inputs to be same type)
+                        let cast_output_name = format!("{}_indices_int64", op_name);
+                        nodes.push(Self::create_cast_node(
+                            &format!("{}_cast_indices", op_name),
+                            indices_name,
+                            cast_output_name.clone(),
+                            ProtoDataType::Int64,
+                        ));
+                        cast_output_name
+                    } else {
+                        indices_name
+                    };
 
-                inputs.push(indices_input);
+                // Step 2: Clamp indices to valid range [-dim_size, dim_size - 1]
+                // This prevents out-of-bounds errors from ONNX Runtime
+                let clamp_min_name = format!("{}_clamp_min", op_name);
+                let clamp_max_name = format!("{}_clamp_max", op_name);
+                let clamped_indices_name = format!("{}_indices_clamped", op_name);
+
+                // Create scalar initializers for min and max
+                initializers.push(TensorProto {
+                    name: Some(clamp_min_name.clone()),
+                    data_type: Some(ProtoDataType::Int64 as i32),
+                    dims: vec![],
+                    int64_data: vec![-dim_size],
+                    ..Default::default()
+                });
+
+                initializers.push(TensorProto {
+                    name: Some(clamp_max_name.clone()),
+                    data_type: Some(ProtoDataType::Int64 as i32),
+                    dims: vec![],
+                    int64_data: vec![dim_size - 1],
+                    ..Default::default()
+                });
+
+                // Insert Clip node (Clamp was deprecated in favor of Clip in opset 11+)
+                nodes.push(NodeProto {
+                    input: vec![indices_after_cast, clamp_min_name, clamp_max_name],
+                    output: vec![clamped_indices_name.clone()],
+                    name: Some(format!("{}_clip_indices", op_name)),
+                    op_type: Some("Clip".to_string()),
+                    ..Default::default()
+                });
+
+                inputs.push(clamped_indices_name);
 
                 // Create Gather node
                 let attributes = Self::create_operation_attributes(op);
