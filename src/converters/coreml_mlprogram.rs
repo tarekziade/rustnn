@@ -2179,9 +2179,9 @@ impl super::GraphConverter for CoremlMlProgramConverter {
                                 ("conv2d", "ihwo") => vec![3, 0, 1, 2], // [I, H, W, O] -> [O, I, H, W]
 
                                 // Conv_transpose2d conversions to iohw [I, O, H, W]
-                                ("convtranspose2d", "hwoi") => vec![2, 3, 0, 1], // [H, W, O, I] -> [I, O, H, W]
+                                ("convtranspose2d", "hwoi") => vec![3, 2, 0, 1], // [H, W, O, I] -> [I, O, H, W]
                                 ("convtranspose2d", "ohwi") => vec![3, 0, 1, 2], // [O, H, W, I] -> [I, O, H, W]
-                                ("convtranspose2d", "hwio") => vec![3, 2, 0, 1], // [H, W, I, O] -> [I, O, H, W]
+                                ("convtranspose2d", "hwio") => vec![2, 3, 0, 1], // [H, W, I, O] -> [I, O, H, W]
 
                                 _ => continue, // Skip unsupported layouts
                             };
