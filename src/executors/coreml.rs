@@ -58,7 +58,19 @@ pub fn run_coreml_zeroed_cached(
     inputs: &HashMap<String, OperandDescriptor>,
     compiled_path: Option<&Path>,
 ) -> Result<Vec<CoremlRunAttempt>, GraphError> {
-    autoreleasepool(|| run_impl_zeroed(model_bytes, inputs, compiled_path))
+    run_coreml_zeroed_cached_with_weights(model_bytes, None, inputs, compiled_path)
+}
+
+/// Run CoreML inference with zeroed inputs and optional weight file
+pub fn run_coreml_zeroed_cached_with_weights(
+    model_bytes: &[u8],
+    weights_data: Option<&[u8]>,
+    inputs: &HashMap<String, OperandDescriptor>,
+    compiled_path: Option<&Path>,
+) -> Result<Vec<CoremlRunAttempt>, GraphError> {
+    autoreleasepool(|| {
+        run_impl_zeroed_with_weights(model_bytes, weights_data, inputs, compiled_path)
+    })
 }
 
 /// Run CoreML inference with actual input data
@@ -66,7 +78,16 @@ pub fn run_coreml_with_inputs(
     model_bytes: &[u8],
     inputs: Vec<CoremlInput>,
 ) -> Result<Vec<CoremlRunAttempt>, GraphError> {
-    autoreleasepool(|| run_impl_with_inputs(model_bytes, inputs, None))
+    run_coreml_with_inputs_with_weights(model_bytes, None, inputs)
+}
+
+/// Run CoreML inference with actual input data and optional weight file
+pub fn run_coreml_with_inputs_with_weights(
+    model_bytes: &[u8],
+    weights_data: Option<&[u8]>,
+    inputs: Vec<CoremlInput>,
+) -> Result<Vec<CoremlRunAttempt>, GraphError> {
+    autoreleasepool(|| run_impl_with_inputs_with_weights(model_bytes, weights_data, inputs, None))
 }
 
 /// Run CoreML inference with actual input data and model caching
@@ -75,7 +96,7 @@ pub fn run_coreml_with_inputs_cached(
     inputs: Vec<CoremlInput>,
     cache_path: Option<&Path>,
 ) -> Result<Vec<CoremlRunAttempt>, GraphError> {
-    autoreleasepool(|| run_impl_with_inputs(model_bytes, inputs, cache_path))
+    autoreleasepool(|| run_impl_with_inputs_with_weights(model_bytes, None, inputs, cache_path))
 }
 
 fn run_impl_zeroed(
@@ -83,9 +104,18 @@ fn run_impl_zeroed(
     inputs: &HashMap<String, OperandDescriptor>,
     compiled_path: Option<&Path>,
 ) -> Result<Vec<CoremlRunAttempt>, GraphError> {
+    run_impl_zeroed_with_weights(model_bytes, None, inputs, compiled_path)
+}
+
+fn run_impl_zeroed_with_weights(
+    model_bytes: &[u8],
+    weights_data: Option<&[u8]>,
+    inputs: &HashMap<String, OperandDescriptor>,
+    compiled_path: Option<&Path>,
+) -> Result<Vec<CoremlRunAttempt>, GraphError> {
     unsafe {
         let (compiled_url, compiled_path_buf, temp_mlmodel) =
-            prepare_compiled_model(model_bytes, compiled_path)?;
+            prepare_compiled_model_with_weights(model_bytes, weights_data, compiled_path)?;
 
         // Try only Neural Engine + GPU (best performance on Apple Silicon)
         // Fallback to ALL if that fails
@@ -213,9 +243,18 @@ fn run_impl_with_inputs(
     inputs: Vec<CoremlInput>,
     cache_path: Option<&Path>,
 ) -> Result<Vec<CoremlRunAttempt>, GraphError> {
+    run_impl_with_inputs_with_weights(model_bytes, None, inputs, cache_path)
+}
+
+fn run_impl_with_inputs_with_weights(
+    model_bytes: &[u8],
+    weights_data: Option<&[u8]>,
+    inputs: Vec<CoremlInput>,
+    cache_path: Option<&Path>,
+) -> Result<Vec<CoremlRunAttempt>, GraphError> {
     unsafe {
         let (compiled_url, compiled_path_buf, temp_mlmodel) =
-            prepare_compiled_model(model_bytes, cache_path)?;
+            prepare_compiled_model_with_weights(model_bytes, weights_data, cache_path)?;
 
         // Try only Neural Engine + GPU (best performance on Apple Silicon)
         // Fallback to ALL if that fails
@@ -433,7 +472,15 @@ unsafe fn prepare_compiled_model(
     model_bytes: &[u8],
     cached_compiled: Option<&Path>,
 ) -> Result<(*mut Object, PathBuf, Option<PathBuf>), GraphError> {
-    let temp_mlmodel = write_temp_model(model_bytes)?;
+    prepare_compiled_model_with_weights(model_bytes, None, cached_compiled)
+}
+
+unsafe fn prepare_compiled_model_with_weights(
+    model_bytes: &[u8],
+    weights_data: Option<&[u8]>,
+    cached_compiled: Option<&Path>,
+) -> Result<(*mut Object, PathBuf, Option<PathBuf>), GraphError> {
+    let temp_mlmodel = write_temp_model_with_weights(model_bytes, weights_data)?;
     let url = unsafe { nsurl_from_path(&temp_mlmodel)? };
     let mut compile_error: *mut Object = ptr::null_mut();
     let compiled_url: *mut Object =
@@ -464,13 +511,46 @@ unsafe fn prepare_compiled_model(
 }
 
 fn write_temp_model(model_bytes: &[u8]) -> Result<PathBuf, GraphError> {
+    write_temp_model_with_weights(model_bytes, None)
+}
+
+/// Write a CoreML model to a temporary file, optionally creating an .mlpackage with weights
+fn write_temp_model_with_weights(
+    model_bytes: &[u8],
+    weights_data: Option<&[u8]>,
+) -> Result<PathBuf, GraphError> {
     let ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
-    let path = std::env::temp_dir().join(format!("rustnn_coreml_{ts}.mlmodel"));
-    std::fs::write(&path, model_bytes).map_err(|err| GraphError::export(&path, err))?;
-    Ok(path)
+
+    if let Some(weights) = weights_data {
+        // Create .mlpackage directory structure with weights
+        let package_path = std::env::temp_dir().join(format!("rustnn_coreml_{ts}.mlpackage"));
+        let data_dir = package_path.join("Data").join("com.apple.CoreML");
+        let weights_dir = data_dir.join("weights");
+
+        // Create directories
+        std::fs::create_dir_all(&weights_dir)
+            .map_err(|err| GraphError::export(&weights_dir, err))?;
+
+        // Write model.mlmodel (protobuf)
+        let model_path = data_dir.join("model.mlmodel");
+        std::fs::write(&model_path, model_bytes)
+            .map_err(|err| GraphError::export(&model_path, err))?;
+
+        // Write weights/weights.bin
+        let weights_path = weights_dir.join("weights.bin");
+        std::fs::write(&weights_path, weights)
+            .map_err(|err| GraphError::export(&weights_path, err))?;
+
+        Ok(package_path)
+    } else {
+        // No weights: write single .mlmodel file as before
+        let path = std::env::temp_dir().join(format!("rustnn_coreml_{ts}.mlmodel"));
+        std::fs::write(&path, model_bytes).map_err(|err| GraphError::export(&path, err))?;
+        Ok(path)
+    }
 }
 
 fn coerce_shape(shape: &[u32]) -> Vec<i64> {

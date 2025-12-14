@@ -17,7 +17,7 @@ use pyo3::types::PyDict;
 use crate::executors::onnx::{OnnxInput, run_onnx_with_inputs};
 
 #[cfg(all(target_os = "macos", feature = "coreml-runtime"))]
-use crate::executors::coreml::run_coreml_zeroed_cached;
+use crate::executors::coreml::run_coreml_zeroed_cached_with_weights;
 
 /// Backend execution engine selected at context creation
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -257,10 +257,12 @@ impl PyMLContext {
             }
         }
 
-        // Execute
-        run_coreml_zeroed_cached(&converted.data, &inputs, None).map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("CoreML execution failed: {}", e))
-        })?;
+        // Execute with optional weight file
+        let weights_ref = converted.weights_data.as_deref();
+        run_coreml_zeroed_cached_with_weights(&converted.data, weights_ref, &inputs, None)
+            .map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!("CoreML execution failed: {}", e))
+            })?;
 
         // Return empty dict for now (actual implementation would return outputs)
         let result = PyDict::new_bound(py);
@@ -603,7 +605,7 @@ impl PyMLContext {
         graph: &PyMLGraph,
         inputs: &Bound<'_, PyDict>,
     ) -> PyResult<Py<PyDict>> {
-        use crate::executors::coreml::{CoremlInput, run_coreml_with_inputs};
+        use crate::executors::coreml::{CoremlInput, run_coreml_with_inputs_with_weights};
 
         // Convert graph to CoreML
         let converter = crate::converters::CoremlMlProgramConverter::default();
@@ -659,10 +661,16 @@ impl PyMLContext {
             });
         }
 
-        // Execute with CoreML runtime
-        let attempts = run_coreml_with_inputs(&converted.data, coreml_inputs).map_err(|e| {
-            pyo3::exceptions::PyRuntimeError::new_err(format!("CoreML execution failed: {}", e))
-        })?;
+        // Execute with CoreML runtime (with optional weight file)
+        let weights_ref = converted.weights_data.as_deref();
+        let attempts =
+            run_coreml_with_inputs_with_weights(&converted.data, weights_ref, coreml_inputs)
+                .map_err(|e| {
+                    pyo3::exceptions::PyRuntimeError::new_err(format!(
+                        "CoreML execution failed: {}",
+                        e
+                    ))
+                })?;
 
         // Find first successful attempt
         let outputs = attempts
