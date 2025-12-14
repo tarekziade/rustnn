@@ -539,6 +539,24 @@ def test_wpt_conformance(context, backend_name, wpt_test_case, operation):
         if operation == op_pattern and name_pattern.lower() in test_name.lower():
             pytest.skip(f"{operation} architectural limitation (see docs/implementation-status.md)")
 
+    # Skip CoreML operations that only support fp32/fp16 (not int32)
+    if backend_name == "coreml":
+        int32_unsupported_ops = ["clamp", "relu"]
+        if operation in int32_unsupported_ops:
+            graph_desc = wpt_test_case.get("graph", {})
+            inputs_data = graph_desc.get("inputs", {})
+            for input_name, input_spec in inputs_data.items():
+                descriptor = input_spec.get("descriptor", input_spec)
+                data_type = descriptor.get("dataType", "").lower()
+                if data_type == "int32":
+                    pytest.skip(f"CoreML limitation: {operation} only supports fp32/fp16, not int32")
+
+    # Skip CoreML 0D (scalar) tensor operations that don't support rank-0
+    if backend_name == "coreml":
+        scalar_unsupported_ops = ["transpose", "slice"]
+        if operation in scalar_unsupported_ops and "0D" in test_name:
+            pytest.skip(f"CoreML limitation: {operation} doesn't support 0D (scalar) tensors")
+
     # Execute test case and get results
     try:
         results = execute_wpt_test_case(context, wpt_test_case)
