@@ -440,7 +440,37 @@ unsafe fn extract_mlmultiarray_data(
             slice.to_vec()
         }
         16 => {
-            // Float16
+            // Float16 - Must handle 64-byte aligned non-contiguous data from ANE
+            // Following Chromium's approach: when Float16 executes on Apple Neural Engine,
+            // outputs are 64-byte aligned and may be non-contiguous
+            // Reference: chromium/src/+/5a3727be66 - Handle non-contiguous CoreML predictions
+
+            // Get strides to detect non-contiguous data
+            let strides_nsarray: *mut Object = msg_send![array, strides];
+            let stride_count: usize = msg_send![strides_nsarray, count];
+
+            if stride_count > 0 {
+                // Get first stride value (bytes between elements)
+                let stride_obj: *mut Object = msg_send![strides_nsarray, objectAtIndex: 0];
+                let stride_value: isize = msg_send![stride_obj, integerValue];
+                let stride_bytes = stride_value as usize;
+
+                // If stride != 2 (size of f16), data is non-contiguous
+                if stride_bytes != 2 {
+                    // Non-contiguous: iterate with stride
+                    let base_ptr = ptr as *const u8;
+                    let mut result = Vec::with_capacity(count);
+                    for i in 0..count {
+                        let offset = i * stride_bytes;
+                        let f16_ptr = unsafe { base_ptr.add(offset) as *const u16 };
+                        let bits = unsafe { *f16_ptr };
+                        result.push(half::f16::from_bits(bits).to_f32());
+                    }
+                    return Ok(result);
+                }
+            }
+
+            // Contiguous data: use simple slice
             let slice = unsafe { std::slice::from_raw_parts(ptr as *const u16, count) };
             slice
                 .iter()
