@@ -1572,15 +1572,10 @@ impl CoremlMlProgramConverter {
             }
 
             "expand" => {
-                // tile: x, reps (repetitions)
-                // WebNN expand(input, newShape) broadcasts to newShape
-                // CoreML tile(x, reps) repeats input by reps factors
-                // Conversion: reps[i] = newShape[i] / inputShape[i]
-                if !input_names.is_empty() {
-                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
-                }
+                // CoreML tile operation requires input rank to match reps length
+                // If reshape was added before this operation, use reshaped input name
+                //  Otherwise use original input
 
-                // Calculate reps from newShape and input shape
                 if let Some(new_shape) = op.attributes.get("newShape").and_then(|v| v.as_array()) {
                     let new_shape_u32: Vec<u32> = new_shape
                         .iter()
@@ -1591,37 +1586,49 @@ impl CoremlMlProgramConverter {
                     if !op.input_operands.is_empty() {
                         if let Some(input_operand) = _graph.operand(op.input_operands[0]) {
                             let input_shape = &input_operand.descriptor.shape;
+                            let input_rank = input_shape.len();
+                            let output_rank = new_shape_u32.len();
 
-                            // Calculate repetition factors: reps[i] = newShape[i] / inputShape[i]
-                            let mut reps: Vec<u32> = Vec::new();
-
-                            // Special case: expanding 0D scalar to ND
-                            // For 0D input (shape=[]), reps = newShape directly
-                            if input_shape.is_empty() {
-                                reps = new_shape_u32.clone();
+                            // Determine input name for tile operation
+                            let tile_input_name = if input_rank < output_rank {
+                                // A reshape was added, use the reshaped output name
+                                // The reshape output name is: {input_name}_expand_reshaped
+                                format!("{}_expand_reshaped", input_names[0])
                             } else {
-                                // Normal case: calculate reps for each dimension
-                                for (i, &new_dim) in new_shape_u32.iter().enumerate() {
-                                    if i < input_shape.len() {
-                                        let input_dim = input_shape[i];
-                                        if input_dim > 0 {
-                                            reps.push(new_dim / input_dim);
-                                        } else {
-                                            reps.push(1);
-                                        }
-                                    } else {
-                                        // Broadcasting to higher dimensions
-                                        reps.push(new_dim);
-                                    }
-                                }
+                                // No reshape, use original input
+                                input_names[0].clone()
+                            };
+
+                            inputs.insert(
+                                "x".to_string(),
+                                Self::create_name_argument(tile_input_name),
+                            );
+
+                            // Create reshaped dimensions (right-aligned, padded with 1s on left)
+                            let mut reshaped_dims = vec![1u32; output_rank];
+                            for i in 0..input_rank {
+                                reshaped_dims[output_rank - i - 1] =
+                                    input_shape[input_rank - i - 1];
                             }
 
-                            if !reps.is_empty() {
-                                inputs.insert(
-                                    "reps".to_string(),
-                                    Self::create_immediate_int_array(&reps),
-                                );
-                            }
+                            // Calculate reps: reps[i] = output_shape[i] / reshaped_input_shape[i]
+                            let reps: Vec<i32> = new_shape_u32
+                                .iter()
+                                .zip(reshaped_dims.iter())
+                                .map(|(&output_dim, &reshaped_dim)| {
+                                    if reshaped_dim == output_dim {
+                                        1
+                                    } else if reshaped_dim == 1 {
+                                        output_dim as i32
+                                    } else {
+                                        // Should not happen - dimensions must match or input must be 1
+                                        1
+                                    }
+                                })
+                                .collect();
+
+                            inputs
+                                .insert("reps".to_string(), Self::create_int_array_argument(reps));
                         }
                     }
                 }
@@ -2087,6 +2094,85 @@ impl super::GraphConverter for CoremlMlProgramConverter {
 
         // Convert all operations to MIL operations
         for op in &graph_info.operations {
+            // Special handling for expand operation (may need reshape first)
+            if op.op_type.to_lowercase() == "expand" {
+                // Check if rank-increasing expand (add reshape operation first)
+                if !op.input_operands.is_empty() {
+                    if let Some(input_operand) = graph_info.operand(op.input_operands[0]) {
+                        if let Some(new_shape) =
+                            op.attributes.get("newShape").and_then(|v| v.as_array())
+                        {
+                            let input_rank = input_operand.descriptor.shape.len();
+                            let output_rank = new_shape.len();
+
+                            if input_rank < output_rank {
+                                // Need to add reshape operation first
+                                // Create reshaped dimensions (right-aligned, padded with 1s on left)
+                                let mut reshaped_dims = vec![1u32; output_rank];
+                                for i in 0..input_rank {
+                                    reshaped_dims[output_rank - i - 1] =
+                                        input_operand.descriptor.shape[input_rank - i - 1];
+                                }
+
+                                //Create reshape operation
+                                let input_name =
+                                    Self::operand_name(graph_info, op.input_operands[0]);
+                                // Use input name to create unique intermediate name (don't rely on output_operands)
+                                let reshape_output_name = format!("{}_expand_reshaped", input_name);
+
+                                let mut reshape_inputs: HashMap<String, Argument> = HashMap::new();
+                                reshape_inputs.insert(
+                                    "x".to_string(),
+                                    Self::create_name_argument(input_name),
+                                );
+                                reshape_inputs.insert(
+                                    "shape".to_string(),
+                                    Self::create_int_array_argument(
+                                        reshaped_dims.iter().map(|&v| v as i32).collect(),
+                                    ),
+                                );
+
+                                // Create tensor type for reshape output
+                                let dtype =
+                                    Self::mil_data_type(&input_operand.descriptor.data_type)?;
+                                let dimensions: Vec<Dimension> = reshaped_dims
+                                    .iter()
+                                    .map(|&d| Dimension {
+                                        dimension: Some(dimension::Dimension::Constant(
+                                            dimension::ConstantDimension { size: d as u64 },
+                                        )),
+                                    })
+                                    .collect();
+
+                                let value_type = ValueType {
+                                    r#type: Some(
+                                        crate::protos::coreml::mil_spec::value_type::Type::TensorType(TensorType {
+                                            rank: dimensions.len() as i64,
+                                            data_type: dtype,
+                                            dimensions,
+                                            attributes: HashMap::new(),
+                                        }),
+                                    ),
+                                };
+
+                                let reshape_output_type = NamedValueType {
+                                    name: reshape_output_name.clone(),
+                                    r#type: Some(value_type),
+                                };
+
+                                let reshape_mil_op = Self::create_mil_operation(
+                                    "reshape",
+                                    reshape_inputs,
+                                    vec![reshape_output_type],
+                                );
+
+                                main_block.operations.push(reshape_mil_op);
+                            }
+                        }
+                    }
+                }
+            }
+
             let mil_op = self.convert_operation(graph_info, op)?;
             main_block.operations.push(mil_op);
         }

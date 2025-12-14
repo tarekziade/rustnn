@@ -682,6 +682,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#shape-inference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape Inference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Shape Inference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-shape-inference-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Shape Inference Matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-with-graph-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration with Graph Builder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#file-organization" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -776,7 +837,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation-status" class="md-nav__link">
+  <a href="#implementation-status_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Implementation Status
@@ -985,6 +1046,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#shape-inference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape Inference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Shape Inference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-shape-inference-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Shape Inference Matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-with-graph-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration with Graph Builder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#file-organization" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1079,7 +1201,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#implementation-status" class="md-nav__link">
+  <a href="#implementation-status_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Implementation Status
@@ -1176,47 +1298,118 @@
 <li>Rust library usable independently without Python</li>
 <li>Design principle: "Rust is the implementation, Python is the interface"</li>
 </ul>
+<h2 id="shape-inference">Shape Inference<a class="headerlink" href="#shape-inference" title="Permanent link">&para;</a></h2>
+<p><strong>Shape inference</strong> is the process of automatically computing output tensor shapes of neural network operations based on their input shapes and operation parameters, without executing the operation.</p>
+<h3 id="why-shape-inference-matters">Why Shape Inference Matters<a class="headerlink" href="#why-shape-inference-matters" title="Permanent link">&para;</a></h3>
+<p>Shape inference enables:</p>
+<ol>
+<li><strong>Early validation</strong> - Catch shape mismatches at build time, not runtime</li>
+<li><strong>Memory allocation</strong> - Backend runtimes know output buffer sizes before execution</li>
+<li><strong>Graph optimization</strong> - Enables static analysis and optimization passes</li>
+<li><strong>Self-describing graphs</strong> - Graphs are fully annotated and backend-agnostic</li>
+</ol>
+<h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<p>Each WebNN operation has a shape inference function in <code>src/shape_inference.rs</code> that computes output shapes. Shape inference happens during <strong>graph building</strong>, before any backend selection or execution.</p>
+<p><strong>Binary Operations (add, mul, div, etc.):</strong>
+- Use NumPy-style broadcasting rules
+- Two dimensions are compatible if equal or one is 1
+- Output dimension is the maximum of the two
+<div class="language-rust highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// broadcast_shapes([3, 1, 5], [3, 4, 5]) → [3, 4, 5]</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1">// The dimension 1 broadcasts to 4</span>
+</span></code></pre></div></p>
+<p><strong>Matrix Multiplication:</strong>
+<div class="language-rust highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// Simple 2D: [M, K] @ [K, N] → [M, N]</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">infer_matmul_shape</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">])</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">]</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1">// Batched: [batch, M, K] @ [batch, K, N] → [batch, M, N]</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">infer_matmul_shape</span><span class="p">([</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">])</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">]</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1">// Validates inner dimensions match (K must equal)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">infer_matmul_shape</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">])</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Error</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">4</span>
+</span></code></pre></div></p>
+<p><strong>Convolution (conv2d):</strong>
+- Takes input shape, filter shape, strides, padding, dilations
+- Computes spatial output dimensions:
+  <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>output_h = floor((input_h + pad_top + pad_bottom - dilation_h * (kernel_h - 1) - 1) / stride_h + 1)
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>output_w = floor((input_w + pad_left + pad_right - dilation_w * (kernel_w - 1) - 1) / stride_w + 1)
+</span></code></pre></div>
+- Validates channel compatibility and group constraints
+- Handles multiple layouts: NCHW, NHWC (inputs) and OIHW, HWIO, OHWI, IHWO (filters)</p>
+<p><strong>Reshape:</strong>
+<div class="language-rust highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Validates element count is preserved</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">validate_reshape</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">])</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">OK</span><span class="w"> </span><span class="p">(</span><span class="mi">24</span><span class="w"> </span><span class="n">elements</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">both</span><span class="p">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">validate_reshape</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">])</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="p">(</span><span class="mi">24</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">25</span><span class="w"> </span><span class="n">elements</span><span class="p">)</span>
+</span></code></pre></div></p>
+<p><strong>Pooling Operations:</strong>
+- Similar to convolution but without filters
+- Computes output spatial dimensions based on window size, strides, padding
+- Handles both average and max pooling
+- Global pooling reduces spatial dimensions to 1x1</p>
+<h3 id="integration-with-graph-builder">Integration with Graph Builder<a class="headerlink" href="#integration-with-graph-builder" title="Permanent link">&para;</a></h3>
+<p>Shape inference is called automatically during graph construction:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Python API example</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">x</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">input</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;float32&quot;</span><span class="p">)</span>    <span class="c1"># Shape: [2, 3]</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">y</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">input</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="s2">&quot;float32&quot;</span><span class="p">)</span>    <span class="c1"># Shape: [3, 4]</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">z</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>                     <span class="c1"># Shape: [2, 4] (inferred)</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">output</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>                     <span class="c1"># Shape: [2, 4] (preserved)</span>
+</span></code></pre></div>
+<p>When you call <code>builder.matmul(x, y)</code>, the implementation:
+1. Calls <code>infer_matmul_shape([2, 3], [3, 4])</code> from <code>src/shape_inference.rs</code>
+2. Gets result <code>[2, 4]</code>
+3. Creates operand descriptor with inferred shape
+4. Stores operation in graph with validated inputs/outputs</p>
+<p>This creates a fully-annotated, backend-agnostic graph that can be:
+- Validated for correctness
+- Visualized with Graphviz
+- Converted to ONNX, CoreML, or other formats
+- Executed on different backends without re-inference</p>
+<h3 id="implementation-status">Implementation Status<a class="headerlink" href="#implementation-status" title="Permanent link">&para;</a></h3>
+<p>All 85 WebNN operations have shape inference implemented (100% coverage). Each operation includes:
+- Shape inference function in <code>src/shape_inference.rs</code>
+- Comprehensive validation (dimension compatibility, parameter constraints)
+- Unit tests covering typical cases and edge cases
+- Error messages with context for debugging</p>
 <h2 id="file-organization">File Organization<a class="headerlink" href="#file-organization" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>src/
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── lib.rs              # Public Rust API exports
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── main.rs             # CLI entry point
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── graph.rs            # Core data structures (backend-agnostic)
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>├── error.rs            # Error types
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>├── validator.rs        # Graph validation
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>├── loader.rs           # JSON loading
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>├── graphviz.rs         # DOT export
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>├── protos.rs           # Protobuf module setup
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>├── converters/
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│   ├── mod.rs          # Registry and trait
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│   ├── onnx.rs         # ONNX converter
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│   └── coreml.rs       # CoreML converter
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>├── executors/
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>│   ├── mod.rs          # Conditional compilation
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>│   ├── onnx.rs         # ONNX runtime
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>│   └── coreml.rs       # CoreML runtime
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>└── python/             # Python bindings (PyO3)
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    ├── mod.rs          # Python module definition
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    ├── context.rs      # ML and MLContext classes (backend selection)
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    ├── graph_builder.rs # MLGraphBuilder class
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    ├── graph.rs        # MLGraph class
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    ├── operand.rs      # MLOperand class
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    └── tensor.rs       # MLTensor class
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>python/webnn/           # Python package
-</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>├── __init__.py         # Package exports (AsyncMLContext)
-</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>└── __init__.pyi        # Type stubs
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>tests/
-</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>├── test_python_api.py  # Python API tests (320+ tests)
-</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>├── test_wpt_conformance.py # WPT spec compliance tests
-</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>└── test_integration.py # Integration tests
-</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>
-</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>examples/
-</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>├── python_simple.py          # Basic Python example
-</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>├── python_matmul.py          # Matrix multiplication
-</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>├── mobilenetv2_complete.py   # Complete pretrained MobileNetV2
-</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>├── text_generation_gpt.py    # Transformer with attention
-</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>└── train_text_model.py       # Model training script
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>src/
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── lib.rs              # Public Rust API exports
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├── main.rs             # CLI entry point
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>├── graph.rs            # Core data structures (backend-agnostic)
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>├── error.rs            # Error types
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>├── validator.rs        # Graph validation
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>├── loader.rs           # JSON loading
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>├── graphviz.rs         # DOT export
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>├── protos.rs           # Protobuf module setup
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>├── converters/
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>│   ├── mod.rs          # Registry and trait
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>│   ├── onnx.rs         # ONNX converter
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>│   └── coreml.rs       # CoreML converter
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>├── executors/
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>│   ├── mod.rs          # Conditional compilation
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>│   ├── onnx.rs         # ONNX runtime
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>│   └── coreml.rs       # CoreML runtime
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>└── python/             # Python bindings (PyO3)
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>    ├── mod.rs          # Python module definition
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>    ├── context.rs      # ML and MLContext classes (backend selection)
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>    ├── graph_builder.rs # MLGraphBuilder class
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>    ├── graph.rs        # MLGraph class
+</span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>    ├── operand.rs      # MLOperand class
+</span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>    └── tensor.rs       # MLTensor class
+</span><span id="__span-6-25"><a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>
+</span><span id="__span-6-26"><a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a>python/webnn/           # Python package
+</span><span id="__span-6-27"><a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>├── __init__.py         # Package exports (AsyncMLContext)
+</span><span id="__span-6-28"><a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a>└── __init__.pyi        # Type stubs
+</span><span id="__span-6-29"><a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a>
+</span><span id="__span-6-30"><a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a>tests/
+</span><span id="__span-6-31"><a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a>├── test_python_api.py  # Python API tests (320+ tests)
+</span><span id="__span-6-32"><a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a>├── test_wpt_conformance.py # WPT spec compliance tests
+</span><span id="__span-6-33"><a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a>└── test_integration.py # Integration tests
+</span><span id="__span-6-34"><a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a>
+</span><span id="__span-6-35"><a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a>examples/
+</span><span id="__span-6-36"><a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a>├── python_simple.py          # Basic Python example
+</span><span id="__span-6-37"><a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a>├── python_matmul.py          # Matrix multiplication
+</span><span id="__span-6-38"><a id="__codelineno-6-38" name="__codelineno-6-38" href="#__codelineno-6-38"></a>├── mobilenetv2_complete.py   # Complete pretrained MobileNetV2
+</span><span id="__span-6-39"><a id="__codelineno-6-39" name="__codelineno-6-39" href="#__codelineno-6-39"></a>├── text_generation_gpt.py    # Transformer with attention
+</span><span id="__span-6-40"><a id="__codelineno-6-40" name="__codelineno-6-40" href="#__codelineno-6-40"></a>└── train_text_model.py       # Model training script
 </span></code></pre></div>
 <h2 id="design-patterns">Design Patterns<a class="headerlink" href="#design-patterns" title="Permanent link">&para;</a></h2>
 <h3 id="registry-pattern-converters">Registry Pattern (Converters)<a class="headerlink" href="#registry-pattern-converters" title="Permanent link">&para;</a></h3>
@@ -1261,13 +1454,13 @@
 <li><strong>Neural Engine</strong>: macOS with Apple Silicon (via CoreML)</li>
 <li><strong>Python Bindings</strong>: Cross-platform with <code>python</code> feature (Python 3.11+)</li>
 </ul>
-<h2 id="implementation-status">Implementation Status<a class="headerlink" href="#implementation-status" title="Permanent link">&para;</a></h2>
+<h2 id="implementation-status_1">Implementation Status<a class="headerlink" href="#implementation-status_1" title="Permanent link">&para;</a></h2>
 <p><strong>85 WebNN operations fully implemented</strong> across all backends:
 - Shape Inference: 85/85 (100%)
 - Python API: 85/85 (100%)
 - ONNX Backend: 85/85 (100%)
 - CoreML MLProgram: 85/85 (100%)</p>
-<p>See <a href="../operator-status/">operator-status.md</a> for complete details.</p>
+<p>See <a href="../implementation-status/">implementation-status.md</a> for complete details.</p>
 
 
 
