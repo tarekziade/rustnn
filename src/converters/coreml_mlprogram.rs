@@ -1646,10 +1646,12 @@ impl CoremlMlProgramConverter {
                     .unwrap_or(0) as u32;
                 inputs.insert("axis".to_string(), Self::create_immediate_int(axis));
 
-                // Add validate_indices parameter (required by CoreML, defaults to true)
+                // Add validate_indices parameter (required by CoreML)
+                // Chromium sets this to false to avoid validation issues
+                // TODO: Handle negative and out-of-bounds indices properly
                 inputs.insert(
                     "validate_indices".to_string(),
-                    Self::create_immediate_bool(true),
+                    Self::create_immediate_bool(false),
                 );
             }
 
