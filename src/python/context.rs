@@ -856,7 +856,9 @@ impl PyMLContext {
                     return (Backend::TensorRT, true);
                 }
 
-                // Fallback to ONNX GPU
+                // Prefer ONNX GPU for cross-platform consistency
+                // TODO: Enable CoreML priority once CoreML executor bugs are fixed
+                // (currently panics on multi-output operations and some data type mismatches)
                 #[cfg(all(
                     feature = "onnx-runtime",
                     not(any(feature = "trtx-runtime", feature = "trtx-runtime-mock"))
@@ -865,7 +867,7 @@ impl PyMLContext {
                     return (Backend::OnnxGpu, true);
                 }
 
-                // Fallback to NPU if GPU not available
+                // Fallback to CoreML on macOS if ONNX not available
                 #[cfg(all(
                     target_os = "macos",
                     feature = "coreml-runtime",
