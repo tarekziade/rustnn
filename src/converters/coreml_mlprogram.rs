@@ -718,11 +718,12 @@ impl CoremlMlProgramConverter {
         }
     }
 
-    /// Map WebNN operation to MIL operation
-    fn convert_operation(
+    /// Map WebNN operation to MIL operation (with optional operand name overrides)
+    fn convert_operation_with_overrides(
         &self,
         graph: &GraphInfo,
         op: &Operation,
+        operand_name_overrides: &HashMap<u32, String>,
     ) -> Result<MilOperation, GraphError> {
         // Handle multi-output operations separately
         if op.op_type == "split" {
@@ -731,11 +732,16 @@ impl CoremlMlProgramConverter {
 
         let mil_op_type = self.get_mil_op_type(&op.op_type)?;
 
-        // Get input operand names
+        // Get input operand names, using overrides if available
         let input_names: Vec<String> = op
             .input_operands
             .iter()
-            .map(|&id| Self::operand_name(graph, id))
+            .map(|&id| {
+                operand_name_overrides
+                    .get(&id)
+                    .cloned()
+                    .unwrap_or_else(|| Self::operand_name(graph, id))
+            })
             .collect();
 
         // Get output operand info
@@ -770,6 +776,15 @@ impl CoremlMlProgramConverter {
         let outputs = vec![output_type];
 
         Ok(Self::create_mil_operation(mil_op_type, inputs, outputs))
+    }
+
+    /// Map WebNN operation to MIL operation (convenience wrapper without overrides)
+    fn convert_operation(
+        &self,
+        graph: &GraphInfo,
+        op: &Operation,
+    ) -> Result<MilOperation, GraphError> {
+        self.convert_operation_with_overrides(graph, op, &HashMap::new())
     }
 
     /// Convert split operation (multi-output)
@@ -2132,6 +2147,189 @@ impl super::GraphConverter for CoremlMlProgramConverter {
             main_block.operations.push(const_op);
         }
 
+        // First pass: Handle filter layout transformations for conv operations
+        // Create a map of operand IDs to their transposed filter names
+        let mut operand_name_overrides: HashMap<u32, String> = HashMap::new();
+
+        for op in &graph_info.operations {
+            let op_type_lower = op.op_type.to_lowercase();
+
+            // Check if this is a convolution operation that needs filter transposition
+            if (op_type_lower == "conv2d" || op_type_lower == "convtranspose2d")
+                && op.input_operands.len() >= 2
+            {
+                if let Some(filter_layout) =
+                    op.attributes.get("filterLayout").and_then(|v| v.as_str())
+                {
+                    let expected_layout = if op_type_lower == "conv2d" {
+                        "oihw"
+                    } else {
+                        "iohw"
+                    };
+
+                    if filter_layout != expected_layout {
+                        let filter_operand_id = op.input_operands[1];
+
+                        if let Some(filter_operand) = graph_info.operand(filter_operand_id) {
+                            // Calculate transpose permutation
+                            let perm = match (op_type_lower.as_str(), filter_layout) {
+                                // Conv2d conversions to oihw [O, I, H, W]
+                                ("conv2d", "hwio") => vec![3, 2, 0, 1], // [H, W, I, O] -> [O, I, H, W]
+                                ("conv2d", "ohwi") => vec![0, 3, 1, 2], // [O, H, W, I] -> [O, I, H, W]
+                                ("conv2d", "ihwo") => vec![3, 0, 1, 2], // [I, H, W, O] -> [O, I, H, W]
+
+                                // Conv_transpose2d conversions to iohw [I, O, H, W]
+                                ("convtranspose2d", "hwoi") => vec![2, 3, 0, 1], // [H, W, O, I] -> [I, O, H, W]
+                                ("convtranspose2d", "ohwi") => vec![3, 0, 1, 2], // [O, H, W, I] -> [I, O, H, W]
+                                ("convtranspose2d", "hwio") => vec![3, 2, 0, 1], // [H, W, I, O] -> [I, O, H, W]
+
+                                _ => continue, // Skip unsupported layouts
+                            };
+
+                            // Create transpose operation for filter
+                            let filter_name = Self::operand_name(graph_info, filter_operand_id);
+                            let transposed_filter_name = format!("{}_transposed", filter_name);
+
+                            // Store the override mapping
+                            operand_name_overrides
+                                .insert(filter_operand_id, transposed_filter_name.clone());
+
+                            let mut transpose_inputs: HashMap<String, Argument> = HashMap::new();
+                            transpose_inputs
+                                .insert("x".to_string(), Self::create_name_argument(filter_name));
+                            transpose_inputs.insert(
+                                "perm".to_string(),
+                                Self::create_immediate_int_array(
+                                    &perm.iter().map(|&v| v as u32).collect::<Vec<_>>(),
+                                ),
+                            );
+
+                            // Calculate transposed shape
+                            let original_shape = &filter_operand.descriptor.shape;
+                            let transposed_shape: Vec<u32> =
+                                perm.iter().map(|&i| original_shape[i as usize]).collect();
+
+                            // Create tensor type for transposed filter
+                            let dtype = Self::mil_data_type(&filter_operand.descriptor.data_type)?;
+                            let dimensions: Vec<Dimension> = transposed_shape
+                                .iter()
+                                .map(|&d| Dimension {
+                                    dimension: Some(dimension::Dimension::Constant(
+                                        dimension::ConstantDimension { size: d as u64 },
+                                    )),
+                                })
+                                .collect();
+
+                            let value_type = ValueType {
+                                r#type: Some(
+                                    crate::protos::coreml::mil_spec::value_type::Type::TensorType(
+                                        TensorType {
+                                            rank: dimensions.len() as i64,
+                                            data_type: dtype,
+                                            dimensions,
+                                            attributes: HashMap::new(),
+                                        },
+                                    ),
+                                ),
+                            };
+
+                            let transpose_output_type = NamedValueType {
+                                name: transposed_filter_name.clone(),
+                                r#type: Some(value_type),
+                            };
+
+                            let transpose_op = Self::create_mil_operation(
+                                "transpose",
+                                transpose_inputs,
+                                vec![transpose_output_type],
+                            );
+
+                            main_block.operations.push(transpose_op);
+                        }
+                    }
+                }
+
+                // Also check for nhwc input layout that needs transposition
+                if let Some(input_layout) =
+                    op.attributes.get("inputLayout").and_then(|v| v.as_str())
+                {
+                    if input_layout == "nhwc" && op.input_operands.len() >= 1 {
+                        let input_operand_id = op.input_operands[0];
+
+                        // Only transpose if not already transposed
+                        if !operand_name_overrides.contains_key(&input_operand_id) {
+                            if let Some(input_operand) = graph_info.operand(input_operand_id) {
+                                // NHWC -> NCHW transposition: [0, 3, 1, 2]
+                                let perm = vec![0, 3, 1, 2];
+
+                                // Create transpose operation for input
+                                let input_name = Self::operand_name(graph_info, input_operand_id);
+                                let transposed_input_name = format!("{}_nchw", input_name);
+
+                                // Store the override mapping
+                                operand_name_overrides
+                                    .insert(input_operand_id, transposed_input_name.clone());
+
+                                let mut transpose_inputs: HashMap<String, Argument> =
+                                    HashMap::new();
+                                transpose_inputs.insert(
+                                    "x".to_string(),
+                                    Self::create_name_argument(input_name),
+                                );
+                                transpose_inputs.insert(
+                                    "perm".to_string(),
+                                    Self::create_immediate_int_array(
+                                        &perm.iter().map(|&v| v as u32).collect::<Vec<_>>(),
+                                    ),
+                                );
+
+                                // Calculate transposed shape
+                                let original_shape = &input_operand.descriptor.shape;
+                                let transposed_shape: Vec<u32> =
+                                    perm.iter().map(|&i| original_shape[i as usize]).collect();
+
+                                // Create tensor type for transposed input
+                                let dtype =
+                                    Self::mil_data_type(&input_operand.descriptor.data_type)?;
+                                let dimensions: Vec<Dimension> = transposed_shape
+                                    .iter()
+                                    .map(|&d| Dimension {
+                                        dimension: Some(dimension::Dimension::Constant(
+                                            dimension::ConstantDimension { size: d as u64 },
+                                        )),
+                                    })
+                                    .collect();
+
+                                let value_type = ValueType {
+                                    r#type: Some(
+                                        crate::protos::coreml::mil_spec::value_type::Type::TensorType(TensorType {
+                                            rank: dimensions.len() as i64,
+                                            data_type: dtype,
+                                            dimensions,
+                                            attributes: HashMap::new(),
+                                        }),
+                                    ),
+                                };
+
+                                let transpose_output_type = NamedValueType {
+                                    name: transposed_input_name.clone(),
+                                    r#type: Some(value_type),
+                                };
+
+                                let transpose_op = Self::create_mil_operation(
+                                    "transpose",
+                                    transpose_inputs,
+                                    vec![transpose_output_type],
+                                );
+
+                                main_block.operations.push(transpose_op);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Convert all operations to MIL operations
         for op in &graph_info.operations {
             // Special handling for expand operation (may need reshape first)
@@ -2467,7 +2665,8 @@ impl super::GraphConverter for CoremlMlProgramConverter {
                 continue;
             }
 
-            let mil_op = self.convert_operation(graph_info, op)?;
+            let mil_op =
+                self.convert_operation_with_overrides(graph_info, op, &operand_name_overrides)?;
             main_block.operations.push(mil_op);
         }
 
