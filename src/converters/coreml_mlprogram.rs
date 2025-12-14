@@ -178,9 +178,16 @@ impl CoremlMlProgramConverter {
         let dtype = Self::mil_data_type(&operand.descriptor.data_type)?;
 
         // Convert shape to MIL Dimensions
-        let dimensions: Vec<Dimension> = operand
-            .descriptor
-            .shape
+        // CoreML requires explicit shape constraints - convert scalars (0D) to 1D [1]
+        // Following Chromium's approach: https://chromium.googlesource.com/chromium/src/+/lkgr/services/webnn/coreml/graph_builder_coreml.cc
+        let shape_to_convert = if operand.descriptor.shape.is_empty() {
+            // Scalar (0D) tensor -> reshape to [1] for CoreML compatibility
+            vec![1u32]
+        } else {
+            operand.descriptor.shape.clone()
+        };
+
+        let dimensions: Vec<Dimension> = shape_to_convert
             .iter()
             .map(|&d| Dimension {
                 dimension: Some(dimension::Dimension::Constant(
@@ -1710,7 +1717,15 @@ impl CoremlMlProgramConverter {
         };
 
         // Add shape dimensions
-        for &dim in &descriptor.shape {
+        // CoreML requires explicit shape constraints - convert scalars (0D) to 1D [1]
+        // Following Chromium's approach for scalar handling
+        let shape_to_use = if descriptor.shape.is_empty() {
+            vec![1] // Scalar (0D) tensor -> [1] for CoreML compatibility
+        } else {
+            descriptor.shape.clone()
+        };
+
+        for &dim in &shape_to_use {
             array_feature.shape.push(dim as i64);
         }
 

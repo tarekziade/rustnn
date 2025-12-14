@@ -640,7 +640,13 @@ impl PyMLContext {
 
             // Get shape
             let shape_obj = array_f32.getattr("shape")?;
-            let shape: Vec<usize> = shape_obj.extract()?;
+            let mut shape: Vec<usize> = shape_obj.extract()?;
+
+            // CoreML requires explicit shapes - convert scalars (0D) to 1D [1]
+            // This matches the conversion done in the CoreML model
+            if shape.is_empty() {
+                shape = vec![1];
+            }
 
             // Get flattened data
             let flat = array_f32.call_method0("flatten")?;
@@ -687,8 +693,27 @@ impl PyMLContext {
         // Convert outputs back to numpy arrays
         let result = PyDict::new_bound(py);
         for output in outputs {
+            // Check if original graph output was scalar (0D)
+            // Find the corresponding output operand in the graph
+            let mut original_shape = output.shape.clone();
+            for &output_id in &graph.graph_info.output_operands {
+                if let Some(operand) = graph.graph_info.operand(output_id) {
+                    // Get output name from operand or use default naming
+                    let default_name = format!("output_{}", output_id);
+                    let output_name_in_graph = operand.name.as_deref().unwrap_or(&default_name);
+
+                    if output_name_in_graph == output.name {
+                        // If original was 0D and we got [1], reshape back to []
+                        if operand.descriptor.shape.is_empty() && output.shape == vec![1] {
+                            original_shape = vec![];
+                        }
+                        break;
+                    }
+                }
+            }
+
             let shape_tuple =
-                pyo3::types::PyTuple::new_bound(py, output.shape.iter().map(|&d| d as i64));
+                pyo3::types::PyTuple::new_bound(py, original_shape.iter().map(|&d| d as i64));
             let array = numpy.call_method1("array", (output.data,))?;
             let reshaped = array.call_method1("reshape", (shape_tuple,))?;
             result.set_item(output.name, reshaped)?;

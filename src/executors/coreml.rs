@@ -238,6 +238,10 @@ fn run_impl_with_inputs(
                 continue;
             }
 
+            // Get model input descriptions to query expected data types
+            let model_description: *mut Object = msg_send![model, modelDescription];
+            let input_descs: *mut Object = msg_send![model_description, inputDescriptionsByName];
+
             let dict: *mut Object = msg_send![class!(NSMutableDictionary), dictionary];
             let mut feature_err: Option<String> = None;
 
@@ -246,8 +250,25 @@ fn run_impl_with_inputs(
                 let key = nsstring_from_str(&input.name)?;
                 let shape_i64: Vec<i64> = input.shape.iter().map(|&s| s as i64).collect();
 
-                // Create MLMultiArray with Float32 type (code 32)
-                let array = match create_multi_array(&shape_i64, 32) {
+                // Query model's expected data type for this input
+                // Following Chromium's approach: match the model's expected type to avoid conversion errors
+                let desc_obj: *mut Object = msg_send![input_descs, objectForKey: key];
+                let data_type_code = if desc_obj.is_null() {
+                    // No model info - default to Float32
+                    32
+                } else {
+                    let constraint_obj: *mut Object = msg_send![desc_obj, multiArrayConstraint];
+                    if constraint_obj.is_null() {
+                        // No constraint - default to Float32
+                        32
+                    } else {
+                        let ml_data_type: i64 = msg_send![constraint_obj, dataType];
+                        ml_data_type as i32
+                    }
+                };
+
+                // Create MLMultiArray with the model's expected data type
+                let array = match create_multi_array(&shape_i64, data_type_code) {
                     Ok(arr) => arr,
                     Err(err) => {
                         feature_err = Some(err.to_string());
@@ -255,8 +276,10 @@ fn run_impl_with_inputs(
                     }
                 };
 
-                // Fill with actual data
-                if let Err(err) = fill_data(array, &input.data, &shape_i64) {
+                // Fill with actual data, converting to the target type if needed
+                if let Err(err) =
+                    fill_data_with_type_conversion(array, &input.data, &shape_i64, data_type_code)
+                {
                     feature_err = Some(err.to_string());
                     break;
                 }
@@ -610,6 +633,71 @@ unsafe fn fill_data(array: *mut Object, data: &[f32], _shape: &[i64]) -> Result<
     let ptr: *mut c_void = msg_send![array, dataPointer];
     let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, count) };
     slice.copy_from_slice(data);
+
+    Ok(())
+}
+
+/// Fill MLMultiArray with data, converting f32 input to target type if needed
+/// Following Chromium's approach: match the model's expected data type
+unsafe fn fill_data_with_type_conversion(
+    array: *mut Object,
+    data: &[f32],
+    _shape: &[i64],
+    data_type_code: i32,
+) -> Result<(), GraphError> {
+    let count_obj: isize = msg_send![array, count];
+    let count = usize::try_from(count_obj).map_err(|_| GraphError::CoremlRuntimeFailed {
+        reason: format!("invalid element count: {}", count_obj),
+    })?;
+
+    if data.len() != count {
+        return Err(GraphError::CoremlRuntimeFailed {
+            reason: format!(
+                "data size mismatch: expected {} elements but got {}",
+                count,
+                data.len()
+            ),
+        });
+    }
+
+    let ptr: *mut c_void = msg_send![array, dataPointer];
+
+    // Convert f32 data to target type based on data_type_code
+    match data_type_code {
+        32 | 65568 | 65552 => {
+            // Float32 - codes: 32 (standard), 65568 (0x10020), 65552 (0x10010)
+            // CoreML sometimes returns non-standard type codes for Float32
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, count) };
+            slice.copy_from_slice(data);
+        }
+        16 => {
+            // Float16 - convert f32 to f16
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut u16, count) };
+            for (i, &val) in data.iter().enumerate() {
+                slice[i] = half::f16::from_f32(val).to_bits();
+            }
+        }
+        3 => {
+            // Int32 - convert f32 to i32
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut i32, count) };
+            for (i, &val) in data.iter().enumerate() {
+                slice[i] = val as i32;
+            }
+        }
+        1 => {
+            // Int8 - convert f32 to i8
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut i8, count) };
+            for (i, &val) in data.iter().enumerate() {
+                slice[i] = val as i8;
+            }
+        }
+        _ => {
+            // Fallback: try treating unknown types as Float32 (most common output type)
+            // This is a fallback for non-standard CoreML type codes
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr as *mut f32, count) };
+            slice.copy_from_slice(data);
+        }
+    }
 
     Ok(())
 }
