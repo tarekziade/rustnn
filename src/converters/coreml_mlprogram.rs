@@ -1443,16 +1443,25 @@ impl CoremlMlProgramConverter {
 
                             // Calculate repetition factors: reps[i] = newShape[i] / inputShape[i]
                             let mut reps: Vec<u32> = Vec::new();
-                            for (i, &new_dim) in new_shape_u32.iter().enumerate() {
-                                if i < input_shape.len() {
-                                    let input_dim = input_shape[i];
-                                    if input_dim > 0 {
-                                        reps.push(new_dim / input_dim);
+
+                            // Special case: expanding 0D scalar to ND
+                            // For 0D input (shape=[]), reps = newShape directly
+                            if input_shape.is_empty() {
+                                reps = new_shape_u32.clone();
+                            } else {
+                                // Normal case: calculate reps for each dimension
+                                for (i, &new_dim) in new_shape_u32.iter().enumerate() {
+                                    if i < input_shape.len() {
+                                        let input_dim = input_shape[i];
+                                        if input_dim > 0 {
+                                            reps.push(new_dim / input_dim);
+                                        } else {
+                                            reps.push(1);
+                                        }
                                     } else {
-                                        reps.push(1);
+                                        // Broadcasting to higher dimensions
+                                        reps.push(new_dim);
                                     }
-                                } else {
-                                    reps.push(1);
                                 }
                             }
 
