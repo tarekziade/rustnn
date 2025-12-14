@@ -99,6 +99,7 @@ pub fn run_coreml_with_inputs_cached(
     autoreleasepool(|| run_impl_with_inputs_with_weights(model_bytes, None, inputs, cache_path))
 }
 
+#[allow(dead_code)]
 fn run_impl_zeroed(
     model_bytes: &[u8],
     inputs: &HashMap<String, OperandDescriptor>,
@@ -238,6 +239,7 @@ fn run_impl_zeroed_with_weights(
     }
 }
 
+#[allow(dead_code)]
 fn run_impl_with_inputs(
     model_bytes: &[u8],
     inputs: Vec<CoremlInput>,
@@ -498,11 +500,12 @@ unsafe fn extract_mlmultiarray_data(
     Ok(data)
 }
 
+#[allow(dead_code)]
 unsafe fn prepare_compiled_model(
     model_bytes: &[u8],
     cached_compiled: Option<&Path>,
 ) -> Result<(*mut Object, PathBuf, Option<PathBuf>), GraphError> {
-    prepare_compiled_model_with_weights(model_bytes, None, cached_compiled)
+    unsafe { prepare_compiled_model_with_weights(model_bytes, None, cached_compiled) }
 }
 
 unsafe fn prepare_compiled_model_with_weights(
@@ -540,6 +543,7 @@ unsafe fn prepare_compiled_model_with_weights(
     Ok((compiled_url, compiled_src_path, Some(temp_mlmodel)))
 }
 
+#[allow(dead_code)]
 fn write_temp_model(model_bytes: &[u8]) -> Result<PathBuf, GraphError> {
     write_temp_model_with_weights(model_bytes, None)
 }
@@ -724,6 +728,7 @@ unsafe fn fill_zero(
     Ok(())
 }
 
+#[allow(dead_code)]
 unsafe fn fill_data(array: *mut Object, data: &[f32], _shape: &[i64]) -> Result<(), GraphError> {
     let count_obj: isize = msg_send![array, count];
     let count = usize::try_from(count_obj).map_err(|_| GraphError::CoremlRuntimeFailed {
