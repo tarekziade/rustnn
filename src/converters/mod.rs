@@ -11,6 +11,17 @@ pub use coreml_mlprogram::CoremlMlProgramConverter;
 pub use onnx::OnnxConverter;
 pub(crate) use weight_file_builder::WeightFileBuilder;
 
+/// Get operand name for an operand ID, or generate a default name
+///
+/// This is a shared helper used by all converters to ensure consistent
+/// operand naming across different backend formats.
+pub(crate) fn operand_name(graph: &GraphInfo, id: u32) -> String {
+    graph
+        .operand(id)
+        .and_then(|op| op.name.clone())
+        .unwrap_or_else(|| format!("operand_{}", id))
+}
+
 #[derive(Debug, Clone)]
 pub struct ConvertedGraph {
     pub format: &'static str,

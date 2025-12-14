@@ -1,4 +1,4 @@
-use crate::converters::ConvertedGraph;
+use crate::converters::{ConvertedGraph, operand_name};
 use crate::error::GraphError;
 use crate::graph::{DataType, GraphInfo, Operation};
 use crate::protos::onnx::{
@@ -12,13 +12,6 @@ use prost::Message;
 pub struct OnnxConverter;
 
 impl OnnxConverter {
-    fn operand_name(graph: &GraphInfo, id: u32) -> String {
-        graph
-            .operand(id)
-            .and_then(|op| op.name.clone())
-            .unwrap_or_else(|| format!("operand_{}", id))
-    }
-
     fn data_type_code(data_type: DataType) -> ProtoDataType {
         match data_type {
             DataType::Float32 => ProtoDataType::Float,
@@ -933,10 +926,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
             let operand = graph
                 .operand(id)
                 .ok_or_else(|| GraphError::InvalidConversionOperand { operand: id })?;
-            inputs_val.push(value_info(
-                &Self::operand_name(graph, id),
-                &operand.descriptor,
-            ));
+            inputs_val.push(value_info(&operand_name(graph, id), &operand.descriptor));
         }
 
         for &id in &graph.output_operands {
@@ -947,10 +937,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
             // Logic operations output uint8 in WebNN (matching Chromium)
             // ONNX models will correctly use uint8 for logical operation outputs
             // The executor handles uint8 → f32 conversion for Python compatibility
-            outputs_val.push(value_info(
-                &Self::operand_name(graph, id),
-                &operand.descriptor,
-            ));
+            outputs_val.push(value_info(&operand_name(graph, id), &operand.descriptor));
         }
 
         for (id, data) in &graph.constant_operand_ids_to_handles {
@@ -958,7 +945,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 .operand(*id)
                 .ok_or_else(|| GraphError::InvalidConversionOperand { operand: *id })?;
             initializers.push(TensorProto {
-                name: Some(Self::operand_name(graph, *id)),
+                name: Some(operand_name(graph, *id)),
                 data_type: Some(Self::data_type_code(operand.descriptor.data_type) as i32),
                 dims: operand.descriptor.shape.iter().map(|d| *d as i64).collect(),
                 raw_data: Some(prost::bytes::Bytes::from(data.data.clone())),
@@ -991,7 +978,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut cast_inputs = Vec::new();
 
                 for &input_id in &op.input_operands {
-                    let input_name = Self::operand_name(graph, input_id);
+                    let input_name = operand_name(graph, input_id);
                     let cast_output_name = format!("cast_to_bool_{}_{}", op_name, cast_counter);
                     cast_counter += 1;
 
@@ -1023,7 +1010,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(Self::create_cast_node(
                     &format!("cast_to_uint8_{}", cast_counter),
                     bool_output_name,
-                    Self::operand_name(
+                    operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     ),
@@ -1040,7 +1027,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     input: op
                         .input_operands
                         .iter()
-                        .map(|id| Self::operand_name(graph, *id))
+                        .map(|id| operand_name(graph, *id))
                         .collect(),
                     output: vec![bool_output_name.clone()],
                     name: Some(op_name),
@@ -1053,7 +1040,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(Self::create_cast_node(
                     &format!("cast_to_uint8_{}", cast_counter),
                     bool_output_name,
-                    Self::operand_name(
+                    operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     ),
@@ -1065,7 +1052,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut inputs: Vec<String> = op
                     .input_operands
                     .iter()
-                    .map(|id| Self::operand_name(graph, *id))
+                    .map(|id| operand_name(graph, *id))
                     .collect();
 
                 // Get input operand data type - min/max must match this type
@@ -1105,7 +1092,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 nodes.push(NodeProto {
                     input: inputs,
-                    output: vec![Self::operand_name(
+                    output: vec![operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
@@ -1119,7 +1106,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut inputs: Vec<String> = op
                     .input_operands
                     .iter()
-                    .map(|id| Self::operand_name(graph, *id))
+                    .map(|id| operand_name(graph, *id))
                     .collect();
 
                 // Extract the new shape from attributes
@@ -1144,7 +1131,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 nodes.push(NodeProto {
                     input: inputs,
-                    output: vec![Self::operand_name(
+                    output: vec![operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
@@ -1158,7 +1145,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut inputs: Vec<String> = op
                     .input_operands
                     .iter()
-                    .map(|id| Self::operand_name(graph, *id))
+                    .map(|id| operand_name(graph, *id))
                     .collect();
 
                 // Extract the new shape from attributes (required)
@@ -1193,7 +1180,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 nodes.push(NodeProto {
                     input: inputs,
-                    output: vec![Self::operand_name(
+                    output: vec![operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
@@ -1214,7 +1201,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     .operand(input_id)
                     .ok_or_else(|| GraphError::InvalidConversionOperand { operand: input_id })?;
 
-                let input_name = Self::operand_name(graph, input_id);
+                let input_name = operand_name(graph, input_id);
                 let needs_cast = matches!(
                     input_operand.descriptor.data_type,
                     DataType::Uint32 | DataType::Uint8
@@ -1246,7 +1233,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 inputs.extend(
                     op.input_operands[1..]
                         .iter()
-                        .map(|id| Self::operand_name(graph, *id)),
+                        .map(|id| operand_name(graph, *id)),
                 );
 
                 let mut attributes = Vec::new();
@@ -1297,7 +1284,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     });
                 }
 
-                let final_output_name = Self::operand_name(
+                let final_output_name = operand_name(
                     graph,
                     op.output_operand.expect("Single-output operation expected"),
                 );
@@ -1351,7 +1338,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut inputs: Vec<String> = op
                     .input_operands
                     .iter()
-                    .map(|id| Self::operand_name(graph, *id))
+                    .map(|id| operand_name(graph, *id))
                     .collect();
 
                 // Extract starts, sizes, axes, and steps from attributes
@@ -1374,7 +1361,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 if is_0d && starts.is_empty() && sizes.is_empty() {
                     nodes.push(NodeProto {
                         input: vec![inputs[0].clone()],
-                        output: vec![Self::operand_name(
+                        output: vec![operand_name(
                             graph,
                             op.output_operand.expect("Single-output operation expected"),
                         )],
@@ -1458,7 +1445,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 nodes.push(NodeProto {
                     input: inputs,
-                    output: vec![Self::operand_name(
+                    output: vec![operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
@@ -1472,7 +1459,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let outputs: Vec<String> = op
                     .output_operands
                     .iter()
-                    .map(|id| Self::operand_name(graph, *id))
+                    .map(|id| operand_name(graph, *id))
                     .collect();
 
                 // Get axis attribute
@@ -1490,7 +1477,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut inputs: Vec<String> = op
                     .input_operands
                     .iter()
-                    .map(|id| Self::operand_name(graph, *id))
+                    .map(|id| operand_name(graph, *id))
                     .collect();
 
                 // Handle splits parameter - either count or sizes
@@ -1538,7 +1525,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 // First input: data tensor
                 let data_operand_id = op.input_operands[0];
-                inputs.push(Self::operand_name(graph, data_operand_id));
+                inputs.push(operand_name(graph, data_operand_id));
 
                 // Get axis parameter (default is 0)
                 let axis = op
@@ -1557,7 +1544,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 // Second input: indices tensor - may need casting and clamping
                 let indices_id = op.input_operands[1];
-                let indices_name = Self::operand_name(graph, indices_id);
+                let indices_name = operand_name(graph, indices_id);
                 let indices_operand = graph.operand(indices_id).ok_or_else(|| {
                     GraphError::InvalidConversionOperand {
                         operand: indices_id,
@@ -1618,7 +1605,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let attributes = Self::create_operation_attributes(op);
                 nodes.push(NodeProto {
                     input: inputs,
-                    output: vec![Self::operand_name(
+                    output: vec![operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
@@ -1632,7 +1619,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut conv_inputs: Vec<String> = Vec::new();
 
                 // Handle input layout (NHWC → NCHW if needed)
-                let input_name = Self::operand_name(graph, op.input_operands[0]);
+                let input_name = operand_name(graph, op.input_operands[0]);
                 let input_layout = op
                     .attributes
                     .get("inputLayout")
@@ -1662,7 +1649,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 conv_inputs.push(transposed_input);
 
                 // Handle filter layout transformation
-                let filter_name = Self::operand_name(graph, op.input_operands[1]);
+                let filter_name = operand_name(graph, op.input_operands[1]);
                 let filter_layout = op
                     .attributes
                     .get("filterLayout")
@@ -1723,14 +1710,14 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 // Add bias if present (third input)
                 if op.input_operands.len() > 2 {
-                    conv_inputs.push(Self::operand_name(graph, op.input_operands[2]));
+                    conv_inputs.push(operand_name(graph, op.input_operands[2]));
                 }
 
                 // Create Conv/ConvTranspose node
                 let attributes = Self::create_operation_attributes(op);
                 nodes.push(NodeProto {
                     input: conv_inputs,
-                    output: vec![Self::operand_name(
+                    output: vec![operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
@@ -1752,7 +1739,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     .ok_or_else(|| GraphError::InvalidConversionOperand { operand: input_id })?;
                 let input_data_type = Self::data_type_code(input_operand.descriptor.data_type);
 
-                let mut inputs: Vec<String> = vec![Self::operand_name(graph, input_id)];
+                let mut inputs: Vec<String> = vec![operand_name(graph, input_id)];
 
                 // Check if scale and bias are provided via attributes
                 let has_scale = op
@@ -1782,14 +1769,14 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     let is_0d_with_default_axes =
                         input_operand.descriptor.shape.is_empty() && axes == vec![-1];
                     if axes.is_empty() || is_0d_with_default_axes {
-                        let output_name = Self::operand_name(
+                        let output_name = operand_name(
                             graph,
                             op.output_operand.expect("Single-output operation expected"),
                         );
 
                         if has_bias && op.input_operands.len() > 2 {
                             // output = bias + 0
-                            let bias_name = Self::operand_name(graph, op.input_operands[2]);
+                            let bias_name = operand_name(graph, op.input_operands[2]);
                             let zero_name = format!("{}_zero", op_name);
                             initializers.push(Self::create_scalar_initializer(
                                 zero_name.clone(),
@@ -1805,7 +1792,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             });
                         } else {
                             // output = input - input = 0
-                            let input_name = Self::operand_name(graph, input_id);
+                            let input_name = operand_name(graph, input_id);
                             nodes.push(NodeProto {
                                 input: vec![input_name.clone(), input_name],
                                 output: vec![output_name],
@@ -1907,7 +1894,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 if op.op_type == "batchNormalization" {
                     // Add scale (index 3 in Python API if provided, else default)
                     if has_scale && op.input_operands.len() > 3 {
-                        inputs.push(Self::operand_name(graph, op.input_operands[3]));
+                        inputs.push(operand_name(graph, op.input_operands[3]));
                     } else {
                         let scale_name = format!("{}_scale_default", op_name);
                         initializers.push(Self::create_vector_initializer(
@@ -1921,7 +1908,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                     // Add bias (index 4 in Python API if provided, else default)
                     if has_bias && op.input_operands.len() > 4 {
-                        inputs.push(Self::operand_name(graph, op.input_operands[4]));
+                        inputs.push(operand_name(graph, op.input_operands[4]));
                     } else {
                         let bias_name = format!("{}_bias_default", op_name);
                         initializers.push(Self::create_vector_initializer(
@@ -1935,12 +1922,12 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                     // Add mean (index 1 - required)
                     if op.input_operands.len() > 1 {
-                        inputs.push(Self::operand_name(graph, op.input_operands[1]));
+                        inputs.push(operand_name(graph, op.input_operands[1]));
                     }
 
                     // Add variance (index 2 - required)
                     if op.input_operands.len() > 2 {
-                        inputs.push(Self::operand_name(graph, op.input_operands[2]));
+                        inputs.push(operand_name(graph, op.input_operands[2]));
                     }
                 } else {
                     // Layer normalization and instance normalization
@@ -1949,7 +1936,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                     // Add scale input (from operand or create default with 1.0)
                     if has_scale && op.input_operands.len() > 1 {
-                        inputs.push(Self::operand_name(graph, op.input_operands[1]));
+                        inputs.push(operand_name(graph, op.input_operands[1]));
                     } else {
                         // Create default scale initializer (all 1.0) with proper dtype
                         let scale_name = format!("{}_scale_default", op_name);
@@ -1964,7 +1951,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                     // Add bias input (from operand or create default with 0.0) - optional for layer norm
                     if has_bias && op.input_operands.len() > 2 {
-                        inputs.push(Self::operand_name(graph, op.input_operands[2]));
+                        inputs.push(operand_name(graph, op.input_operands[2]));
                     } else if op.op_type != "layerNormalization" || has_bias {
                         // Batch/instance norm always need bias; layer norm only if explicitly requested
                         let bias_name = format!("{}_bias_default", op_name);
@@ -1981,7 +1968,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let attributes = Self::create_operation_attributes(op);
                 nodes.push(NodeProto {
                     input: inputs,
-                    output: vec![Self::operand_name(
+                    output: vec![operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
@@ -1993,8 +1980,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
             } else if op.op_type == "hardSwish" {
                 // HardSwish decomposition: x * clip(x + 3, 0, 6) / 6
                 // ONNX opset 13 doesn't have HardSwish, so we decompose it
-                let input_name = Self::operand_name(graph, op.input_operands[0]);
-                let output_name = Self::operand_name(
+                let input_name = operand_name(graph, op.input_operands[0]);
+                let output_name = operand_name(
                     graph,
                     op.output_operand.expect("Single-output operation expected"),
                 );
@@ -2110,7 +2097,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     let mut original_types = Vec::new();
 
                     for &input_id in &op.input_operands {
-                        let input_name = Self::operand_name(graph, input_id);
+                        let input_name = operand_name(graph, input_id);
                         let input_operand = graph.operand(input_id).ok_or_else(|| {
                             GraphError::InvalidConversionOperand { operand: input_id }
                         })?;
@@ -2154,7 +2141,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                     // Cast output back to original type (use first input's type as reference)
                     let output_type = original_types[0];
-                    let final_output_name = Self::operand_name(
+                    let final_output_name = operand_name(
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     );
@@ -2173,9 +2160,9 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         input: op
                             .input_operands
                             .iter()
-                            .map(|id| Self::operand_name(graph, *id))
+                            .map(|id| operand_name(graph, *id))
                             .collect(),
-                        output: vec![Self::operand_name(
+                        output: vec![operand_name(
                             graph,
                             op.output_operand.expect("Single-output operation expected"),
                         )],

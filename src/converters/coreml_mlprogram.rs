@@ -7,6 +7,7 @@
 /// - Better optimization
 ///
 /// This replaces the legacy NeuralNetwork format.
+use crate::converters::operand_name;
 use crate::error::GraphError;
 use crate::graph::{DataType, GraphInfo, Operation};
 use crate::protos::coreml::mil_spec::{
@@ -152,14 +153,6 @@ mod mil_ops {
 pub struct CoremlMlProgramConverter;
 
 impl CoremlMlProgramConverter {
-    /// Get operand name for an operand ID
-    fn operand_name(graph: &GraphInfo, id: u32) -> String {
-        graph
-            .operand(id)
-            .and_then(|op| op.name.clone())
-            .unwrap_or_else(|| format!("operand_{}", id))
-    }
-
     /// Create a MIL Value for a tensor operand
     fn create_value(
         graph: &GraphInfo,
@@ -172,7 +165,7 @@ impl CoremlMlProgramConverter {
                 reason: format!("Operand {} not found", operand_id),
             })?;
 
-        let name = Self::operand_name(graph, operand_id);
+        let name = operand_name(graph, operand_id);
 
         // Create ValueType for the operand
         let dtype = Self::mil_data_type(&operand.descriptor.data_type)?;
@@ -740,7 +733,7 @@ impl CoremlMlProgramConverter {
                 operand_name_overrides
                     .get(&id)
                     .cloned()
-                    .unwrap_or_else(|| Self::operand_name(graph, id))
+                    .unwrap_or_else(|| operand_name(graph, id))
             })
             .collect();
 
@@ -795,7 +788,7 @@ impl CoremlMlProgramConverter {
         op: &Operation,
     ) -> Result<MilOperation, GraphError> {
         // Get input operand name
-        let input_name = Self::operand_name(graph, op.input_operands[0]);
+        let input_name = operand_name(graph, op.input_operands[0]);
 
         // Get output types
         let outputs: Vec<NamedValueType> = op
@@ -2244,7 +2237,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
                             };
 
                             // Create transpose operation for filter
-                            let filter_name = Self::operand_name(graph_info, filter_operand_id);
+                            let filter_name = operand_name(graph_info, filter_operand_id);
                             let transposed_filter_name = format!("{}_transposed", filter_name);
 
                             // Store the override mapping
@@ -2320,7 +2313,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
                                 let perm = vec![0, 3, 1, 2];
 
                                 // Create transpose operation for input
-                                let input_name = Self::operand_name(graph_info, input_operand_id);
+                                let input_name = operand_name(graph_info, input_operand_id);
                                 let transposed_input_name = format!("{}_nchw", input_name);
 
                                 // Store the override mapping
@@ -2410,8 +2403,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
                                 }
 
                                 //Create reshape operation
-                                let input_name =
-                                    Self::operand_name(graph_info, op.input_operands[0]);
+                                let input_name = operand_name(graph_info, op.input_operands[0]);
                                 // Use input name to create unique intermediate name (don't rely on output_operands)
                                 let reshape_output_name = format!("{}_expand_reshaped", input_name);
 
@@ -2489,7 +2481,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
                     }
                 })?;
                 {
-                    let input_name = Self::operand_name(graph_info, op.input_operands[0]);
+                    let input_name = operand_name(graph_info, op.input_operands[0]);
                     let hardsigmoid_output_name = format!("{}_hardswish_hardsigmoid", input_name);
 
                     // Create hardsigmoid operation with alpha=1/6, beta=0.5
@@ -2552,7 +2544,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
 
                     // Get output name (using singular output_operand field)
                     let output_operand_id = op.output_operand.unwrap();
-                    let output_name = Self::operand_name(graph_info, output_operand_id);
+                    let output_name = operand_name(graph_info, output_operand_id);
                     let output_operand =
                         graph_info.operand(output_operand_id).ok_or_else(|| {
                             GraphError::ConversionFailed {
@@ -2619,7 +2611,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
                     }
                 })?;
 
-                let input_name = Self::operand_name(graph_info, op.input_operands[0]);
+                let input_name = operand_name(graph_info, op.input_operands[0]);
 
                 // Create typed -1 constant matching input dtype
                 let neg_one_immediate = match input_operand.descriptor.data_type {
@@ -2678,7 +2670,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
 
                 // Get output name
                 let output_operand_id = op.output_operand.unwrap();
-                let output_name = Self::operand_name(graph_info, output_operand_id);
+                let output_name = operand_name(graph_info, output_operand_id);
                 let output_operand = graph_info.operand(output_operand_id).ok_or_else(|| {
                     GraphError::ConversionFailed {
                         format: "coreml_mlprogram".to_string(),
@@ -2729,7 +2721,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
 
         // Add block outputs (output operand names)
         for &output_id in &graph_info.output_operands {
-            let output_name = Self::operand_name(graph_info, output_id);
+            let output_name = operand_name(graph_info, output_id);
             main_block.outputs.push(output_name);
         }
 
@@ -2761,7 +2753,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
         // Add input descriptions
         for &input_id in &graph_info.input_operands {
             if let Some(operand) = graph_info.operand(input_id) {
-                let input_name = Self::operand_name(graph_info, input_id);
+                let input_name = operand_name(graph_info, input_id);
                 function_desc.input.push(FeatureDescription {
                     name: input_name,
                     r#type: Some(Self::create_feature_type(&operand.descriptor)?),
@@ -2773,7 +2765,7 @@ impl super::GraphConverter for CoremlMlProgramConverter {
         // Add output descriptions
         for &output_id in &graph_info.output_operands {
             if let Some(operand) = graph_info.operand(output_id) {
-                let output_name = Self::operand_name(graph_info, output_id);
+                let output_name = operand_name(graph_info, output_id);
                 function_desc.output.push(FeatureDescription {
                     name: output_name,
                     r#type: Some(Self::create_feature_type(&operand.descriptor)?),
