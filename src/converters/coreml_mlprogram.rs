@@ -1524,9 +1524,10 @@ impl CoremlMlProgramConverter {
             }
 
             "gather" => {
-                // gather: params (data), indices, axis
+                // gather: x (data), indices, axis, validate_indices
+                // CoreML uses 'x' for the data input, not 'params'
                 if input_names.len() >= 2 {
-                    inputs.insert("params".to_string(), Self::create_argument(&input_names[0]));
+                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
                     inputs.insert(
                         "indices".to_string(),
                         Self::create_argument(&input_names[1]),
@@ -1537,6 +1538,9 @@ impl CoremlMlProgramConverter {
                 if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
                     inputs.insert("axis".to_string(), Self::create_immediate_int(axis as u32));
                 }
+
+                // Add validate_indices parameter (required by CoreML, defaults to true)
+                inputs.insert("validate_indices".to_string(), Self::create_immediate_bool(true));
             }
 
             "split" => {
