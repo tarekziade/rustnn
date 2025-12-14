@@ -1485,8 +1485,46 @@ impl CoremlMlProgramConverter {
                 }
             }
 
-            // Normalization operations
-            "batchnormalization" | "instancenormalization" | "layernormalization" => {
+            // Layer normalization (different from batch/instance normalization)
+            "layernormalization" => {
+                // Add input operand (only x)
+                if !input_names.is_empty() {
+                    inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
+                }
+
+                // Scale (gamma) is optional (2nd input)
+                if input_names.len() >= 2 {
+                    inputs.insert("gamma".to_string(), Self::create_argument(&input_names[1]));
+                }
+
+                // Bias (beta) is optional (3rd input)
+                if input_names.len() >= 3 {
+                    inputs.insert("beta".to_string(), Self::create_argument(&input_names[2]));
+                }
+
+                // Add axes parameter (REQUIRED by CoreML)
+                if let Some(axes) = op.attributes.get("axes").and_then(|v| v.as_array()) {
+                    let axes_i32: Vec<i32> = axes
+                        .iter()
+                        .filter_map(|v| v.as_i64().map(|i| i as i32))
+                        .collect();
+                    inputs.insert(
+                        "axes".to_string(),
+                        Self::create_int_array_argument(axes_i32),
+                    );
+                }
+
+                // Add epsilon parameter
+                if let Some(epsilon) = op.attributes.get("epsilon").and_then(|v| v.as_f64()) {
+                    inputs.insert(
+                        "epsilon".to_string(),
+                        Self::create_immediate_float(epsilon as f32),
+                    );
+                }
+            }
+
+            // Batch/instance normalization (have mean, variance inputs)
+            "batchnormalization" | "instancenormalization" => {
                 // Add input operands (input, mean, variance, optional scale, optional bias)
                 if !input_names.is_empty() {
                     inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
