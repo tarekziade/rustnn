@@ -1,7 +1,12 @@
 [package]
 name = "rustnn"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
+description = "W3C WebNN implementation with ONNX, CoreML, and TensorRT backends [DO NOT USE IN PRODUCTION - Development Release]"
+license = "Apache-2.0"
+repository = "https://github.com/tarekziade/rust-webnn-graph"
+keywords = ["webnn", "onnx", "coreml", "tensorrt", "neural-networks"]
+categories = ["science", "api-bindings"]
 
 [features]
 default = []
