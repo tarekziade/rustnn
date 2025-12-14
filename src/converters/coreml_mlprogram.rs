@@ -1496,6 +1496,30 @@ impl CoremlMlProgramConverter {
 
             // Layer normalization (different from batch/instance normalization)
             "layernormalization" => {
+                // Check if axes is empty - CoreML doesn't support empty axes
+                // Following Chromium (graph_builder_coreml.cc:4000-4019):
+                // When axes is empty, mean equals input, so output = bias + (scale * 0)
+                // We emulate this by: input - input = 0, then 0 + bias
+                let axes_vec: Vec<i32> =
+                    if let Some(axes) = op.attributes.get("axes").and_then(|v| v.as_array()) {
+                        axes.iter()
+                            .filter_map(|v| v.as_i64().map(|i| i as i32))
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
+
+                if axes_vec.is_empty() {
+                    // Empty axes case: use sub operation (input - input = 0)
+                    // CoreML doesn't support empty axes, so we emulate it
+                    // Note: This will be handled by inserting a sub operation in convert_operation
+                    // For now, return error as this needs special multi-operation handling
+                    return Err(GraphError::ConversionFailed {
+                        format: "coreml_mlprogram".to_string(),
+                        reason: "CoreML layer_norm with empty axes requires special handling (not yet implemented)".to_string(),
+                    });
+                }
+
                 // Add input operand (only x)
                 if !input_names.is_empty() {
                     inputs.insert("x".to_string(), Self::create_argument(&input_names[0]));
@@ -1531,17 +1555,11 @@ impl CoremlMlProgramConverter {
                     inputs.insert("beta".to_string(), Self::create_argument(&input_names[2]));
                 }
 
-                // Add axes parameter (REQUIRED by CoreML)
-                if let Some(axes) = op.attributes.get("axes").and_then(|v| v.as_array()) {
-                    let axes_i32: Vec<i32> = axes
-                        .iter()
-                        .filter_map(|v| v.as_i64().map(|i| i as i32))
-                        .collect();
-                    inputs.insert(
-                        "axes".to_string(),
-                        Self::create_int_array_argument(axes_i32),
-                    );
-                }
+                // Add axes parameter (REQUIRED by CoreML, must not be empty)
+                inputs.insert(
+                    "axes".to_string(),
+                    Self::create_int_array_argument(axes_vec),
+                );
 
                 // Add epsilon parameter
                 if let Some(epsilon) = op.attributes.get("epsilon").and_then(|v| v.as_f64()) {

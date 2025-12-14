@@ -610,6 +610,9 @@ def test_wpt_conformance(context, backend_name, wpt_test_case, operation):
                 "requires scale (gamma) parameter to be a constant" in error_str or
                 "requires bias (beta) parameter to be a constant" in error_str):
                 pytest.skip(f"CoreML limitation: normalization parameters must be constants - {e}")
+            # Skip CoreML layer_norm with empty axes (requires multi-operation emulation)
+            if "layer_norm with empty axes requires special handling" in error_str:
+                pytest.skip(f"CoreML limitation: layer_norm with empty axes not yet implemented - {e}")
         raise
 
     # Validate results against expected outputs
