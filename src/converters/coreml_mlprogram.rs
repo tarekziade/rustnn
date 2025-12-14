@@ -282,6 +282,15 @@ impl CoremlMlProgramConverter {
                     })),
                 }
             }
+            crate::graph::DataType::Float16 => {
+                // Float16 stored as raw bytes - store as bytes in CoreML
+                // CoreML will interpret these as fp16 based on the type descriptor
+                TensorValue {
+                    value: Some(tensor_value::Value::Bytes(tensor_value::RepeatedBytes {
+                        values: constant_data.data.clone().into(),
+                    })),
+                }
+            }
             _ => {
                 return Err(GraphError::ConversionFailed {
                     format: "coreml_mlprogram".to_string(),
