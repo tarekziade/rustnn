@@ -30,9 +30,6 @@ jobs:
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
-        env:
-          ORT_STRATEGY: system
-          ORT_USE_SYSTEM_PROVIDED_LIBS: 1
         with:
           target: ${{ matrix.target }}
           args: --release --out dist --features python,onnx-runtime -i python3.12
@@ -61,21 +58,6 @@ jobs:
             unzip protoc-${PROTOC_VERSION}-linux-${PROTOC_ARCH}.zip -d /usr/local
             chmod +x /usr/local/bin/protoc
             protoc --version
-
-            # Download and install ONNX Runtime
-            ORT_VERSION=1.23.2
-            if [ "${{ matrix.target }}" = "x86_64" ]; then
-              ORT_ARCH=x64
-            else
-              ORT_ARCH=aarch64
-            fi
-            ORT_TARBALL=onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}.tgz
-            wget https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/${ORT_TARBALL}
-            tar -xzf ${ORT_TARBALL}
-            ORT_LIB_DIR=$(pwd)/onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}/lib
-            echo "ORT_LIB_LOCATION=${ORT_LIB_DIR}" >> $GITHUB_ENV
-            echo "LD_LIBRARY_PATH=${ORT_LIB_DIR}:${LD_LIBRARY_PATH}" >> $GITHUB_ENV
-            echo "RUSTFLAGS=-L ${ORT_LIB_DIR}" >> $GITHUB_ENV
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
