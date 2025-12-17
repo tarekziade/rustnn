@@ -339,11 +339,15 @@ docs-build:
 	@echo "Building documentation..."
 	@command -v mkdocs >/dev/null 2>&1 || { echo "Installing mkdocs..."; pip install -r docs/requirements.txt; }
 	mkdocs build
+	@touch site/.nojekyll
+	@echo "Created .nojekyll file to prevent GitHub Pages Jekyll processing"
 
 ci-docs:
 	@echo "Building documentation in strict mode (CI)..."
 	@command -v mkdocs >/dev/null 2>&1 || { echo "Installing mkdocs..."; pip install -r docs/requirements.txt; }
 	mkdocs build --strict
+	@touch site/.nojekyll
+	@echo "Created .nojekyll file to prevent GitHub Pages Jekyll processing"
 
 docs-clean:
 	@echo "Cleaning documentation build artifacts..."
