@@ -1,0 +1,176 @@
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+mermaid.initialize({
+  startOnLoad: false,
+  theme: "base",
+  themeVariables: {
+    fontSize: "12px",
+    textColor: "#222222",
+    lineColor: "#333333"
+  },
+  flowchart: {
+    useMaxWidth: true,
+    htmlLabels: true,
+    nodeSpacing: 50,
+    rankSpacing: 60
+  }
+});
+
+/* Convert Pandoc's <pre><code class="mermaid">...</code></pre> into <div class="mermaid">...</div> */
+function normalizeMermaidBlocks(root = document) {
+  const candidates = Array.from(root.querySelectorAll('pre.mermaid, pre > code.mermaid'));
+  const pres = candidates.map(n => n.tagName.toLowerCase() === 'code' ? n.parentElement : n)
+                        .filter(Boolean);
+
+  pres.forEach(pre => {
+    // if already converted, skip
+    if (pre.dataset.mermaidNormalized) return;
+    const code = pre.querySelector('code');
+    const txt = code ? code.textContent : pre.textContent;
+    const div = document.createElement('div');
+    div.className = 'mermaid';
+    div.textContent = (txt || '').trim();
+    pre.parentNode.replaceChild(div, pre);
+    // mark original as normalized (for safety if re-run)
+    div.dataset.mermaidNormalized = "1";
+  });
+}
+
+/* Make injected SVGs responsive and remove tiny width/height */
+function fixRenderedSVGs(root = document) {
+  const svgEls = Array.from(root.querySelectorAll('.mermaid svg'));
+  svgEls.forEach(svg => {
+    try {
+      if (svg.hasAttribute('width')) svg.removeAttribute('width');
+      if (svg.hasAttribute('height')) svg.removeAttribute('height');
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', 'auto');
+      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      svg.style.display = 'block';
+    } catch (e) {
+      console.warn('mermaid: svg fix failed', e);
+    }
+  });
+}
+
+/* Render only mermaid blocks inside a given slide (or whole doc if no slide given).
+   Uses a data flag to avoid double-rendering. */
+async function renderMermaidIn(root) {
+  normalizeMermaidBlocks(root);
+
+  const mermaids = Array.from((root.querySelectorAll ? root.querySelectorAll('.mermaid') : []))
+                        .filter(el => !el.dataset.mermaidRendered);
+
+  if (mermaids.length === 0) return;
+
+  // If mermaid.run() exists prefer it; otherwise use init or mermaidAPI fallback.
+  try {
+    if (typeof mermaid.run === 'function') {
+      // mermaid.run() will render all .mermaid nodes in document; we call it once for performance
+      // but mark only those inside our root after render.
+      mermaid.run();
+    } else if (typeof mermaid.init === 'function') {
+      mermaid.init(undefined, mermaids);
+    } else if (mermaid.mermaidAPI && typeof mermaid.mermaidAPI.render === 'function') {
+      // fallback: render each entry individually
+      for (let i = 0; i < mermaids.length; i++) {
+        const el = mermaids[i];
+        const id = 'mermaid-' + i + '-' + Date.now();
+        const txt = el.textContent || '';
+        // mermaidAPI.render returns svg string via callback
+        // we wrap into a Promise to await sequentially
+        await new Promise((resolve) => {
+          mermaid.mermaidAPI.render(id, txt, (svgCode) => {
+            el.innerHTML = svgCode;
+            resolve();
+          }, el);
+        });
+      }
+    }
+    // small delay to let renderer inject SVGs, then fix them
+    setTimeout(() => {
+      fixRenderedSVGs(root);
+      // mark rendered nodes so we don't re-render
+      Array.from(root.querySelectorAll('.mermaid')).forEach(el => el.dataset.mermaidRendered = "1");
+    }, 40);
+    // another pass later for slow engines
+    setTimeout(() => {
+      fixRenderedSVGs(root);
+      Array.from(root.querySelectorAll('.mermaid')).forEach(el => el.dataset.mermaidRendered = "1");
+    }, 300);
+  } catch (err) {
+    console.error('Mermaid render error:', err);
+  }
+}
+
+/* Helper: render the currently active slide (fast) */
+function renderCurrentSlide() {
+  const current = (window.Reveal && typeof Reveal.getCurrentSlide === 'function')
+    ? Reveal.getCurrentSlide()
+    : document.querySelector('.slides section.present');
+
+  if (current) {
+    renderMermaidIn(current);
+  } else {
+    // fallback: render entire document
+    renderMermaidIn(document);
+  }
+}
+
+/* Attach Reveal event listeners and initial render */
+document.addEventListener('DOMContentLoaded', () => {
+  // If Reveal exists, render on ready + slidechanged + fragmentshown + overviewhidden
+  if (window.Reveal && typeof Reveal.on === 'function') {
+    Reveal.on('ready', () => {
+      // render first visible slide
+      renderCurrentSlide();
+      // also render any other slides that may be visible (fragments / vertical)
+      // render whole document once to ensure diagrams in speaker notes etc. are available
+      renderMermaidIn(document);
+    });
+
+    Reveal.on('slidechanged', (event) => {
+      // event.currentSlide is the newly active slide
+      if (event && event.currentSlide) {
+        renderMermaidIn(event.currentSlide);
+      } else {
+        renderCurrentSlide();
+      }
+    });
+
+    // fragments may introduce new mermaid blocks; render when fragments become visible
+    Reveal.on('fragmentshown', (event) => {
+      const frag = event && event.fragment ? event.fragment : null;
+      if (frag) renderMermaidIn(frag.closest('section') || frag);
+    });
+
+    // when exiting overview, render current slide (some browsers delay)
+    Reveal.on('overviewhidden', () => {
+      renderCurrentSlide();
+    });
+  } else {
+    // no Reveal: render all mermaid blocks on DOM load
+    renderMermaidIn(document);
+  }
+
+  // As an additional safety: observe the document for new pre/code insertion (e.g., async content)
+  const mo = new MutationObserver(mutations => {
+    let found = false;
+    for (const m of mutations) {
+      if (m.addedNodes && m.addedNodes.length) {
+        m.addedNodes.forEach(n => {
+          if (n.nodeType === 1 && (n.matches('pre.mermaid') || n.querySelector && n.querySelector('code.mermaid'))) {
+            found = true;
+          }
+        });
+      }
+    }
+    if (found) {
+      // normalize + render only for currently visible slide to be safe
+      renderCurrentSlide();
+    }
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+});
+</script>
