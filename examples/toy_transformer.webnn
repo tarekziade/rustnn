@@ -1,0 +1,15 @@
+webnn_graph "toy_transformer" v1 {
+  inputs {
+    input: f32[1, 4];
+  }
+
+  consts {
+    weights: f32[4, 3] @scalar(0.5);
+  }
+
+  nodes {
+    probs = matmul(input, weights);
+  }
+
+  outputs { probs; }
+}

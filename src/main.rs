@@ -7,7 +7,7 @@ use rustnn::{ContextProperties, GraphError, GraphValidator, graph_to_dot, load_g
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Validate WebNN graph descriptions", long_about = None)]
 struct Cli {
-    /// Path to a JSON file describing a mojom-like GraphInfo structure.
+    /// Path to a WebNN graph file (.webnn text or .json)
     graph: PathBuf,
     /// Optional override for the tensor byte length limit.
     #[arg(long)]

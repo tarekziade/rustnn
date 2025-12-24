@@ -1,0 +1,15 @@
+webnn_graph "sample_graph" v1 {
+  inputs {
+    lhs: f32[2, 2];
+  }
+
+  consts {
+    rhs: f32[2, 2] @scalar(1.0);
+  }
+
+  nodes {
+    sum = add(lhs, rhs);
+  }
+
+  outputs { sum; }
+}

@@ -1,47 +1,32 @@
 {
-  "operands": [
-    {
-      "kind": "input",
-      "descriptor": {
-        "data_type": "float32",
-        "shape": [2, 2],
-        "pending_permutation": []
-      },
-      "name": "lhs"
-    },
-    {
-      "kind": "constant",
-      "descriptor": {
-        "data_type": "float32",
-        "shape": [2, 2],
-        "pending_permutation": []
-      }
-    },
-    {
-      "kind": "output",
-      "descriptor": {
-        "data_type": "float32",
-        "shape": [2, 2],
-        "pending_permutation": []
-      },
-      "name": "sum"
-    }
-  ],
-  "input_operands": [0],
-  "output_operands": [2],
-  "operations": [
-    {
-      "type": "add",
-      "input_operands": [0, 1],
-      "output_operand": 2,
-      "label": "add_lhs_rhs"
-    }
-  ],
-  "constant_operand_ids_to_handles": {
-    "1": {
-      "data": "AACAPwAAAEAAAEBAAACAQA==",
-      "label": "rhs_weights"
+  "format": "webnn-graph-json",
+  "version": 1,
+  "inputs": {
+    "lhs": {
+      "dataType": "float32",
+      "shape": [2, 2]
     }
   },
-  "id_to_constant_tensor_operand_map": {}
+  "consts": {
+    "rhs": {
+      "dataType": "float32",
+      "shape": [2, 2],
+      "init": {
+        "kind": "inlineBytes",
+        "bytes": [0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64]
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "add_lhs_rhs",
+      "op": "add",
+      "inputs": ["lhs", "rhs"],
+      "options": {},
+      "outputs": ["sum"]
+    }
+  ],
+  "outputs": {
+    "sum": "sum"
+  }
 }

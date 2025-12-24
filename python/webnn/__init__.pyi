@@ -346,6 +346,34 @@ class MLGraph:
         """Get list of output names"""
         ...
 
+    def save(self, path: str) -> None:
+        """
+        Save the graph to a .webnn JSON file
+
+        Args:
+            path: File path to save the graph (e.g., "model.webnn")
+
+        Example:
+            >>> graph.save("my_model.webnn")
+        """
+        ...
+
+    @staticmethod
+    def load(path: str) -> "MLGraph":
+        """
+        Load a graph from a .webnn JSON file
+
+        Args:
+            path: File path to load the graph from (e.g., "model.webnn")
+
+        Returns:
+            The loaded MLGraph
+
+        Example:
+            >>> graph = MLGraph.load("my_model.webnn")
+        """
+        ...
+
 class MLTensor:
     """
     MLTensor represents an opaque typed tensor with data storage

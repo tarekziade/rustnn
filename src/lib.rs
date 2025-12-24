@@ -7,6 +7,7 @@ pub mod loader;
 pub mod protos;
 pub mod shape_inference;
 pub mod validator;
+pub mod webnn_json;
 
 #[cfg(feature = "python")]
 pub mod python;
