@@ -989,54 +989,93 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     ..Default::default()
                 });
             } else if op.op_type == "expand" {
-                // Expand requires shape as a second input tensor in ONNX (not as an attribute)
-                let mut inputs: Vec<String> = op
-                    .input_operands
-                    .iter()
-                    .map(|id| operand_name(graph, *id))
-                    .collect();
+                // WebNN expand has two variants:
+                // 1. With 'axes' - adds dimensions (maps to ONNX Unsqueeze)
+                // 2. With 'newShape' - expands shape (maps to ONNX Expand)
 
-                // Extract the new shape from attributes (required)
-                let new_shape = op
-                    .attributes
-                    .get("newShape")
-                    .and_then(|v| v.as_array())
-                    .ok_or_else(|| GraphError::ConversionFailed {
+                if let Some(axes_val) = op.attributes.get("axes").and_then(|v| v.as_array()) {
+                    // WebNN expand with axes -> ONNX Unsqueeze
+                    // In ONNX opset 13+, axes must be provided as an input tensor, not attribute
+                    let axes_values: Vec<i64> =
+                        axes_val.iter().filter_map(|v| v.as_i64()).collect();
+
+                    let mut inputs: Vec<String> = op
+                        .input_operands
+                        .iter()
+                        .map(|id| operand_name(graph, *id))
+                        .collect();
+
+                    // Create axes tensor name and add as second input
+                    let axes_name = format!("{}_axes", op_name);
+                    inputs.push(axes_name.clone());
+
+                    // Add axes as an initializer (constant tensor)
+                    initializers.push(TensorProto {
+                        name: Some(axes_name),
+                        data_type: Some(ProtoDataType::Int64 as i32),
+                        dims: vec![axes_values.len() as i64], // 1D tensor
+                        int64_data: axes_values,
+                        ..Default::default()
+                    });
+
+                    nodes.push(NodeProto {
+                        input: inputs,
+                        output: vec![operand_name(
+                            graph,
+                            op.output_operand.expect("Single-output operation expected"),
+                        )],
+                        name: Some(op_name.clone()),
+                        op_type: Some("Unsqueeze".to_string()),
+                        attribute: vec![], // No attributes for Unsqueeze in opset 13+
+                        ..Default::default()
+                    });
+                } else if let Some(new_shape) =
+                    op.attributes.get("newShape").and_then(|v| v.as_array())
+                {
+                    // WebNN expand with newShape -> ONNX Expand
+                    let mut inputs: Vec<String> = op
+                        .input_operands
+                        .iter()
+                        .map(|id| operand_name(graph, *id))
+                        .collect();
+
+                    let shape_values: Vec<i64> = new_shape
+                        .iter()
+                        .filter_map(|v| v.as_u64().map(|u| u as i64))
+                        .collect();
+
+                    let shape_name = format!("{}_shape", op_name);
+                    inputs.push(shape_name.clone());
+
+                    // Add shape as an initializer (constant tensor)
+                    initializers.push(TensorProto {
+                        name: Some(shape_name),
+                        data_type: Some(ProtoDataType::Int64 as i32),
+                        dims: vec![shape_values.len() as i64], // 1D tensor
+                        int64_data: shape_values,
+                        ..Default::default()
+                    });
+
+                    nodes.push(NodeProto {
+                        input: inputs,
+                        output: vec![operand_name(
+                            graph,
+                            op.output_operand.expect("Single-output operation expected"),
+                        )],
+                        name: Some(op_name),
+                        op_type: Some("Expand".to_string()),
+                        attribute: vec![], // No attributes for Expand
+                        ..Default::default()
+                    });
+                } else {
+                    return Err(GraphError::ConversionFailed {
                         format: "onnx".to_string(),
                         reason: format!(
-                            "Expand operation missing 'newShape' attribute in operation {}",
+                            "Expand operation requires either 'axes' or 'newShape' attribute in operation {}",
                             op_name
                         ),
-                    })?;
-
-                let shape_values: Vec<i64> = new_shape
-                    .iter()
-                    .filter_map(|v| v.as_u64().map(|u| u as i64))
-                    .collect();
-
-                let shape_name = format!("{}_shape", op_name);
-                inputs.push(shape_name.clone());
-
-                // Add shape as an initializer (constant tensor)
-                initializers.push(TensorProto {
-                    name: Some(shape_name),
-                    data_type: Some(ProtoDataType::Int64 as i32),
-                    dims: vec![shape_values.len() as i64], // 1D tensor
-                    int64_data: shape_values,
-                    ..Default::default()
-                });
-
-                nodes.push(NodeProto {
-                    input: inputs,
-                    output: vec![operand_name(
-                        graph,
-                        op.output_operand.expect("Single-output operation expected"),
-                    )],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
-                    attribute: vec![], // No attributes for Expand
-                    ..Default::default()
-                });
+                    });
+                }
             } else if op.op_type.starts_with("reduce") {
                 // Reduction operations - in ONNX opset 13, only ReduceSum supports axes as input
                 // In opset 18+, ReduceMean, ReduceProd, ReduceMax, ReduceMin also support axes as input
@@ -1388,6 +1427,20 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         operand: data_operand_id,
                     }
                 })?;
+
+                // Check if axis is within bounds
+                if axis >= data_operand.descriptor.shape.len() {
+                    return Err(GraphError::ConversionFailed {
+                        format: "onnx".to_string(),
+                        reason: format!(
+                            "Gather operation: axis {} is out of bounds for shape with {} dimensions (operand {})",
+                            axis,
+                            data_operand.descriptor.shape.len(),
+                            data_operand_id
+                        ),
+                    });
+                }
+
                 let dim_size = data_operand.descriptor.shape[axis] as i64;
 
                 // Second input: indices tensor - may need casting and clamping

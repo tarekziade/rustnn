@@ -149,8 +149,9 @@ impl PyMLGraph {
             serde_json::from_str(&content)
                 .map_err(|e| PyIOError::new_err(format!("Failed to parse JSON: {}", e)))?
         } else {
-            // WebNN text DSL format
-            webnn_graph::parser::parse_wg_text(&content).map_err(|e| {
+            // WebNN text DSL format - sanitize identifiers first
+            let sanitized = crate::loader::sanitize_webnn_identifiers(&content);
+            webnn_graph::parser::parse_wg_text(&sanitized).map_err(|e| {
                 PyIOError::new_err(format!("Failed to parse WebNN text format: {}", e))
             })?
         };
@@ -206,11 +207,22 @@ impl PyMLGraph {
         let weights_data = fs::read(weights_path)
             .map_err(|e| PyIOError::new_err(format!("Failed to read weights: {}", e)))?;
 
+        // Create a sanitized lookup map: dots and colons in manifest keys -> underscores
+        // This allows the sanitized graph references to match manifest entries
+        use std::collections::HashMap;
+        let sanitized_manifest: HashMap<String, _> = manifest
+            .tensors
+            .iter()
+            .map(|(key, value)| (key.replace("::", "__").replace('.', "_"), value))
+            .collect();
+
         // Resolve weight references in constants
         for (_name, const_decl) in graph_json.consts.iter_mut() {
             if let ConstInit::Weights { r#ref } = &const_decl.init {
-                // Look up weight in manifest
-                if let Some(tensor_entry) = manifest.tensors.get(r#ref) {
+                // Look up weight in sanitized manifest (all keys have underscores)
+                let tensor_entry = sanitized_manifest.get(r#ref);
+
+                if let Some(tensor_entry) = tensor_entry {
                     let offset = tensor_entry.byte_offset as usize;
                     let length = tensor_entry.byte_length as usize;
 
