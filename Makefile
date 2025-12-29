@@ -17,6 +17,14 @@ ORT_DIR ?= target/onnxruntime
 ORT_LIB_DIR ?= $(ORT_DIR)/$(ORT_DIR_NAME)/lib
 ORT_LIB_LOCATION ?= $(ORT_LIB_DIR)
 MATURIN_ARGS ?=
+UNAME_S := $(shell uname)
+ifeq ($(UNAME_S),Darwin)
+	ORT_SHARED_GLOB ?= $(ORT_LIB_DIR)/libonnxruntime*.dylib
+else ifeq ($(OS),Windows_NT)
+	ORT_SHARED_GLOB ?= $(ORT_LIB_DIR)/onnxruntime.dll
+else
+	ORT_SHARED_GLOB ?= $(ORT_LIB_DIR)/libonnxruntime*.so*
+endif
 .PHONY: build test fmt run viz onnx coreml coreml-validate onnx-validate validate-all-env \
 	python-dev python-build python-test python-test-fast python-test-wpt python-test-wpt-onnx python-test-wpt-coreml \
 	python-perf python-perf-full python-clean python-example \
@@ -114,14 +122,14 @@ python-build: onnxruntime-download
 	$(PYTHON) -m pip install maturin
 	@echo "Staging ONNX Runtime dylibs into python package..."
 	@mkdir -p python/webnn
-	cp $(ORT_LIB_DIR)/libonnxruntime*.dylib python/webnn/
+	cp $(ORT_SHARED_GLOB) python/webnn/
 	ORT_STRATEGY=system \
 	ORT_LIB_LOCATION=$(ORT_LIB_LOCATION) \
 	DYLD_LIBRARY_PATH=$(ORT_LIB_DIR) \
 	RUSTFLAGS="-L $(ORT_LIB_DIR)" \
 	$(PYTHON) -m maturin build $(MATURIN_ARGS) --features python,onnx-runtime,coreml-runtime --release
 	@echo "Cleaning staged ONNX Runtime dylibs..."
-	rm -f python/webnn/libonnxruntime*.dylib
+	rm -f python/webnn/libonnxruntime*.dylib python/webnn/libonnxruntime*.so* python/webnn/onnxruntime.dll
 
 python-test: python-dev
 	@echo "Running Python tests (includes WPT conformance tests)..."
