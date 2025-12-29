@@ -43,6 +43,7 @@ jobs:
           PYTHON: python3.12
           ORT_TARBALL: onnxruntime-linux-${{ matrix.target == 'x86_64' && 'x64' || 'aarch64' }}-${{ env.ORT_VERSION || '1.23.2' }}.tgz
           ORT_BASE: https://github.com/microsoft/onnxruntime/releases/download/v${{ env.ORT_VERSION || '1.23.2' }}
+          PYO3_CROSS_PYTHON: python3.12
           MATURIN_ARGS: --out dist --compatibility manylinux_2_28 -i python3.12${{ matrix.target == 'aarch64' && ' --target aarch64-unknown-linux-gnu' || '' }}
         run: make python-build
 
