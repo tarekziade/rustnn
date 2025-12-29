@@ -126,7 +126,7 @@ jobs:
           PYTHON: py -3.12
           ORT_TARBALL: onnxruntime-win-${{ matrix.target }}-${{ env.ORT_VERSION }}.zip
           ORT_BASE: https://github.com/microsoft/onnxruntime/releases/download/v${{ env.ORT_VERSION }}
-          MATURIN_ARGS: --out dist -i \"py -3.12\"
+          MATURIN_ARGS: --out dist -i "py -3.12"
         run: make python-build
 
       - name: Upload wheels
