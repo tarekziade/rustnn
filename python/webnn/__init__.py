@@ -102,10 +102,7 @@ class AsyncMLContext:
         self._context = context
 
     async def dispatch(
-        self,
-        graph: MLGraph,
-        inputs: Dict[str, MLTensor],
-        outputs: Dict[str, MLTensor]
+        self, graph: MLGraph, inputs: Dict[str, MLTensor], outputs: Dict[str, MLTensor]
     ) -> None:
         """Execute graph computation asynchronously (WebNN MLTensor Explainer).
 
@@ -165,10 +162,18 @@ class AsyncMLContext:
         """Create a graph builder (synchronous)."""
         return self._context.create_graph_builder()
 
-    def create_tensor(self, shape, data_type: str, readable: bool = True,
-                      writable: bool = True, exportable_to_gpu: bool = False) -> MLTensor:
+    def create_tensor(
+        self,
+        shape,
+        data_type: str,
+        readable: bool = True,
+        writable: bool = True,
+        exportable_to_gpu: bool = False,
+    ) -> MLTensor:
         """Create a tensor (synchronous)."""
-        return self._context.create_tensor(shape, data_type, readable, writable, exportable_to_gpu)
+        return self._context.create_tensor(
+            shape, data_type, readable, writable, exportable_to_gpu
+        )
 
     def compute(self, graph: MLGraph, inputs: Dict[str, np.ndarray], outputs=None):
         """Compute (synchronous) - prefer dispatch() for async execution."""
@@ -204,4 +209,4 @@ __all__ = [
     "Hub",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.5.11"
