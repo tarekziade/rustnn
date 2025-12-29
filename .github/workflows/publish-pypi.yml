@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+
 env:
   ORT_VERSION: 1.23.2
 
@@ -23,48 +24,38 @@ jobs:
         include:
           - target: x86_64
             runs_on: ubuntu-latest
+            ort_arch: x64
+            rust_target: x86_64-unknown-linux-gnu
           - target: aarch64
             runs_on: [self-hosted, Linux, ARM64]
+            ort_arch: aarch64
+            rust_target: aarch64-unknown-linux-gnu
     runs-on: ${{ matrix.runs_on }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # Runs inside the manylinux container managed by maturin-action.
+      # We deliberately call `make python-build` so your ORT download + staging logic happens.
+      - name: Build wheels (manylinux via maturin-action + make)
+        uses: PyO3/maturin-action@v1
+        env:
+          ORT_TARBALL: onnxruntime-linux-${{ matrix.ort_arch }}-${{ env.ORT_VERSION }}.tgz
+          ORT_BASE: https://github.com/microsoft/onnxruntime/releases/download/v${{ env.ORT_VERSION }}
+          # Makefile defaults ORT_VERSION too; keep them consistent
+          ORT_VERSION: ${{ env.ORT_VERSION }}
+          # Ensure the Makefile uses the manylinux python
+          PYTHON: /opt/python/cp312-cp312/bin/python
+          # manylinux ships with unzip, but your download can be .zip on Windows/mac;
+          # for Linux tarball is .tgz so unzip shouldn't be required. Keep as-is.
+          MATURIN_ARGS: >-
+            --out dist
+            --compatibility manylinux_2_28
         with:
-          python-version: "3.12"
-
-      - name: Check Docker
-        run: docker --version
-
-      - name: Build wheels (manylinux container via make)
-        run: |
-          if [ "${{ matrix.target }}" = "x86_64" ]; then
-            PLATFORM="x86_64"
-            ORT_ARCH="x64"
-            RUST_TARGET="x86_64-unknown-linux-gnu"
-            MATURIN_TARGET=""
-          else
-            PLATFORM="aarch64"
-            ORT_ARCH="aarch64"
-            RUST_TARGET="aarch64-unknown-linux-gnu"
-            MATURIN_TARGET=" --target aarch64-unknown-linux-gnu"
-          fi
-
-          IMAGE="quay.io/pypa/manylinux_2_28_${PLATFORM}"
-          PYBIN="/opt/python/cp312-cp312/bin/python"
-
-          docker run --rm -v "$PWD:/work" -w /work \
-            -e PYTHON="$PYBIN" \
-            -e ORT_TARBALL="onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}.tgz" \
-            -e ORT_BASE="https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}" \
-            -e PYO3_CROSS_PYTHON="$PYBIN" \
-            -e MATURIN_ARGS="--out dist --compatibility manylinux_2_28${MATURIN_TARGET}" \
-            "$IMAGE" bash -lc "\
-              yum install -y unzip && \
-              $PYBIN -m pip install --upgrade pip maturin && \
-              rustup target add ${RUST_TARGET} && \
-              make python-build"
+          manylinux: 2_28
+          command: bash
+          args: -lc "make python-build"
+          # Ensure the Rust target is available in the container
+          target: ${{ matrix.rust_target }}
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -93,8 +84,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install protobuf
-          protoc --version
           python3.12 -m pip install --upgrade pip
           python3.12 -m pip install maturin
 
@@ -134,8 +123,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          choco install protoc -y
-          protoc --version
           py -3.12 -m pip install --upgrade pip
           py -3.12 -m pip install maturin
 
