@@ -4,7 +4,7 @@ use crate::error::GraphError;
 use crate::graph::GraphInfo;
 
 mod coreml_mlprogram;
-mod onnx;
+pub mod onnx;
 mod weight_file_builder;
 
 pub use coreml_mlprogram::CoremlMlProgramConverter;

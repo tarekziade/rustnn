@@ -116,10 +116,33 @@ pub fn load_graph_from_path(path: impl AsRef<Path>) -> Result<GraphInfo, GraphEr
 
     // If a manifest + weights file exist alongside the graph, inline referenced weights
     // so that downstream conversion has access to raw bytes.
-    if let (Ok(manifest_text), Ok(weights_bytes)) = (
-        fs::read_to_string(path_ref.with_file_name("manifest.json")),
-        fs::read(path_ref.with_file_name("model.weights")),
-    ) {
+    let stem = path_ref
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default()
+        .to_string();
+
+    let manifest_path = [
+        path_ref.with_file_name("manifest.json"),
+        path_ref.with_file_name(format!("{}.manifest.json", stem)),
+    ]
+    .into_iter()
+    .find(|p| p.exists());
+
+    let weights_path = [
+        path_ref.with_file_name("model.weights"),
+        path_ref.with_file_name(format!("{}.weights", stem)),
+    ]
+    .into_iter()
+    .find(|p| p.exists());
+
+    if let (Some(manifest_path), Some(weights_path)) = (manifest_path, weights_path) {
+        let Ok(manifest_text) = fs::read_to_string(&manifest_path) else {
+            return webnn_json::from_graph_json(&graph_json);
+        };
+        let Ok(weights_bytes) = fs::read(&weights_path) else {
+            return webnn_json::from_graph_json(&graph_json);
+        };
         #[derive(Debug, Deserialize)]
         struct Manifest {
             #[allow(dead_code)]

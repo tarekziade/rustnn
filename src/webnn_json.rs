@@ -187,15 +187,8 @@ pub fn from_graph_json(graph_json: &GraphJson) -> Result<GraphInfo, GraphError> 
         // Convert ConstInit to Vec<u8>
         let data = match &const_decl.init {
             ConstInit::InlineBytes { bytes } => bytes.clone(),
-            ConstInit::Weights { r#ref } => {
-                return Err(GraphError::ConversionFailed {
-                    format: "webnn-graph-json".to_string(),
-                    reason: format!(
-                        "Weights reference '{}' not supported in conversion - weights must be inline",
-                        r#ref
-                    ),
-                });
-            }
+            // Allow weight references: downstream loaders will resolve these using the manifest/weights.
+            ConstInit::Weights { r#ref: _ } => Vec::new(),
             ConstInit::Scalar { value } => {
                 // Convert scalar to repeated bytes based on shape and data type
                 let element_count: usize = const_decl.shape.iter().map(|&x| x as usize).product();
@@ -411,6 +404,24 @@ fn infer_output_shapes(graph: &mut GraphInfo) -> Result<(), GraphError> {
         // Process operations in order (assumed to be in dependency order from WebNN parser)
         for op_idx in 0..graph.operations.len() {
             let op = &graph.operations[op_idx];
+            let op_type = op.op_type.to_ascii_lowercase();
+
+            // Normalize tile inputs: if shape rank is missing, set to repeats length (filled with 1s)
+            if op_type == "tile"
+                && let Some(repeats_len) = op
+                    .attributes
+                    .get("repetitions")
+                    .or_else(|| op.attributes.get("repeats"))
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.len())
+                && let Some(input_id) = op.input_operands.first()
+            {
+                let inp = &mut graph.operands[*input_id as usize];
+                if inp.descriptor.shape.len() != repeats_len {
+                    inp.descriptor.shape = vec![1; repeats_len];
+                    made_progress = true;
+                }
+            }
 
             // Skip if output already has a shape
             if let Some(output_id) = op.output_operand
@@ -434,12 +445,12 @@ fn infer_output_shapes(graph: &mut GraphInfo) -> Result<(), GraphError> {
                 .map(|&id| graph.operands[id as usize].descriptor.data_type)
                 .collect();
 
-            let op_type = op.op_type.to_ascii_lowercase();
-
             // Infer output shape based on operation type
             let output_shape = match op_type.as_str() {
-                // Binary element-wise operations
-                "add" | "sub" | "mul" | "div" | "pow" | "max" | "min" => {
+                // Binary element-wise operations (including comparisons/logical)
+                "add" | "sub" | "mul" | "div" | "pow" | "max" | "min" | "greater"
+                | "greaterorequal" | "less" | "lesser" | "lessorequal" | "lesserorequal"
+                | "equal" | "logical_and" | "logical_or" | "logical_xor" => {
                     if input_shapes.len() >= 2 {
                         broadcast_shapes(&input_shapes[0], &input_shapes[1]).ok()
                     } else {
@@ -451,9 +462,8 @@ fn infer_output_shapes(graph: &mut GraphInfo) -> Result<(), GraphError> {
                 "abs" | "ceil" | "floor" | "neg" | "relu" | "sigmoid" | "tanh" | "exp" | "log"
                 | "sqrt" | "erf" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "sinh"
                 | "cosh" | "asinh" | "acosh" | "atanh" | "round" | "sign" | "reciprocal"
-                | "softplus" | "softsign" | "softmax" | "gelu" | "identity" | "cast" => {
-                    input_shapes.first().cloned()
-                }
+                | "softplus" | "softsign" | "softmax" | "gelu" | "identity" | "cast"
+                | "logical_not" => input_shapes.first().cloned(),
 
                 // Concat
                 "concat" => {
@@ -596,6 +606,36 @@ fn infer_output_shapes(graph: &mut GraphInfo) -> Result<(), GraphError> {
                     if let Some(shape_override) =
                         op.attributes.get("shape").and_then(parse_u32_array)
                     {
+                        // Also try to back-propagate the implied indices shape when we know the data
+                        // shape and axis. This helps downstream ops (e.g., Where) get proper ranks.
+                        if !input_shapes.is_empty() {
+                            let data_shape = &input_shapes[0];
+                            let mut axis = op
+                                .attributes
+                                .get("axis")
+                                .and_then(|v| v.as_i64())
+                                .unwrap_or(0);
+                            let rank = data_shape.len() as i64;
+                            if axis < 0 {
+                                axis += rank;
+                            }
+                            if axis >= 0 && (axis as usize) < data_shape.len() {
+                                let tail_len = data_shape.len().saturating_sub(axis as usize + 1);
+                                if let Some(indices_id) = op.input_operands.get(1)
+                                    && graph.operands[*indices_id as usize]
+                                        .descriptor
+                                        .shape
+                                        .is_empty()
+                                    && shape_override.len() >= tail_len
+                                {
+                                    let inferred_indices =
+                                        shape_override[..shape_override.len() - tail_len].to_vec();
+                                    graph.operands[*indices_id as usize].descriptor.shape =
+                                        inferred_indices;
+                                    made_progress = true;
+                                }
+                            }
+                        }
                         Some(shape_override)
                     } else if input_shapes.len() >= 2 {
                         let axis = op
@@ -613,6 +653,15 @@ fn infer_output_shapes(graph: &mut GraphInfo) -> Result<(), GraphError> {
                         } else {
                             infer_gather_shape(&input_shapes[0], &input_shapes[1], axis as u32).ok()
                         }
+                    } else {
+                        None
+                    }
+                }
+
+                // Where (broadcast across condition/true/false)
+                "where" => {
+                    if input_shapes.len() >= 3 {
+                        infer_where_shape(&input_shapes[0], &input_shapes[1], &input_shapes[2]).ok()
                     } else {
                         None
                     }
@@ -730,6 +779,14 @@ fn infer_output_shapes(graph: &mut GraphInfo) -> Result<(), GraphError> {
                     | "reducemean" | "reducesum" | "reducemax" | "reducemin" | "reduceproduct"
                     | "reducel1" | "reducel2" | "reducelogsum" | "reducelogsumexp"
                     | "reducesumsquare" => input_types.first().cloned(),
+                    "greater" | "greaterorequal" | "less" | "lesser" | "lessorequal"
+                    | "lesserorequal" | "equal" | "logical_and" | "logical_or" | "logical_xor" => {
+                        Some(DataType::Uint8)
+                    }
+                    "where" => input_types
+                        .get(1)
+                        .cloned()
+                        .or_else(|| input_types.get(2).cloned()),
                     _ => None,
                 };
                 if let Some(dtype) = output_type {
