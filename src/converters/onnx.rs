@@ -11,6 +11,9 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use prost::Message;
 use std::env;
+use webnn_onnx_utils::{
+    attributes::AttrBuilder, data_types as utils_data_types, tensor_data::TensorData,
+};
 
 #[derive(Default)]
 pub struct OnnxConverter;
@@ -47,62 +50,28 @@ impl OnnxConverter {
     }
 
     fn data_type_code(data_type: DataType) -> ProtoDataType {
-        match data_type {
-            DataType::Float32 => ProtoDataType::Float,
-            // Treat WebNN uint8 as ONNX uint8; comparison/logical ops explicitly insert casts.
-            DataType::Uint8 => ProtoDataType::Uint8,
-            DataType::Int8 => ProtoDataType::Int8,
-            DataType::Int32 => ProtoDataType::Int32,
-            DataType::Float16 => ProtoDataType::Float16,
-            DataType::Uint32 => ProtoDataType::Uint32,
-            DataType::Int64 => ProtoDataType::Int64,
-            DataType::Uint64 => ProtoDataType::Uint64,
-        }
+        // Convert rust-webnn-graph DataType to webnn_onnx_utils DataType first
+        let utils_dtype = match data_type {
+            DataType::Float32 => utils_data_types::DataType::Float32,
+            DataType::Float16 => utils_data_types::DataType::Float16,
+            DataType::Int32 => utils_data_types::DataType::Int32,
+            DataType::Uint32 => utils_data_types::DataType::Uint32,
+            DataType::Int64 => utils_data_types::DataType::Int64,
+            DataType::Uint64 => utils_data_types::DataType::Uint64,
+            DataType::Int8 => utils_data_types::DataType::Int8,
+            DataType::Uint8 => utils_data_types::DataType::Uint8,
+        };
+        // Use shared library conversion
+        utils_data_types::webnn_to_onnx(utils_dtype)
     }
 
     fn create_scalar_initializer(name: String, dtype: ProtoDataType, value: f32) -> TensorProto {
-        let mut tensor = TensorProto {
-            name: Some(name),
-            data_type: Some(dtype as i32),
-            dims: vec![], // Scalar
-            ..Default::default()
-        };
+        // Convert ProtoDataType to utils DataType
+        let utils_dtype = utils_data_types::onnx_proto_to_webnn(dtype)
+            .unwrap_or(utils_data_types::DataType::Float32);
 
-        // Set data based on type
-        match dtype {
-            ProtoDataType::Float => {
-                tensor.float_data = vec![value];
-            }
-            ProtoDataType::Float16 => {
-                // Convert f32 to f16 using half crate's from_f32
-                let f16_value = half::f16::from_f32(value);
-                // Store as raw bytes
-                tensor.raw_data = Some(prost::bytes::Bytes::from(f16_value.to_le_bytes().to_vec()));
-            }
-            ProtoDataType::Int8 => {
-                tensor.int32_data = vec![value as i32];
-            }
-            ProtoDataType::Uint8 => {
-                tensor.int32_data = vec![value as i32];
-            }
-            ProtoDataType::Int32 => {
-                tensor.int32_data = vec![value as i32];
-            }
-            ProtoDataType::Uint32 => {
-                tensor.uint64_data = vec![value as u64];
-            }
-            ProtoDataType::Int64 => {
-                tensor.int64_data = vec![value as i64];
-            }
-            ProtoDataType::Uint64 => {
-                tensor.uint64_data = vec![value as u64];
-            }
-            _ => {
-                tensor.float_data = vec![value];
-            }
-        }
-
-        tensor
+        // Use shared library to create scalar tensor
+        TensorData::scalar(utils_dtype.clone(), value).to_tensor_proto(name, utils_dtype, vec![])
     }
 
     /// Create a vector initializer with proper data type handling
@@ -112,46 +81,16 @@ impl OnnxConverter {
         shape: Vec<i64>,
         value: f32,
     ) -> TensorProto {
-        let size = shape.iter().product::<i64>() as usize;
-        let mut tensor = TensorProto {
-            name: Some(name),
-            data_type: Some(dtype as i32),
-            dims: shape,
-            ..Default::default()
-        };
+        // Convert ProtoDataType to utils DataType
+        let utils_dtype = utils_data_types::onnx_proto_to_webnn(dtype)
+            .unwrap_or(utils_data_types::DataType::Float32);
 
-        // Set data based on type
-        match dtype {
-            ProtoDataType::Float => {
-                tensor.float_data = vec![value; size];
-            }
-            ProtoDataType::Float16 => {
-                // Convert f32 to f16 and store as raw bytes
-                let f16_value = half::f16::from_f32(value);
-                let bytes: Vec<u8> = (0..size).flat_map(|_| f16_value.to_le_bytes()).collect();
-                tensor.raw_data = Some(prost::bytes::Bytes::from(bytes));
-            }
-            ProtoDataType::Int8 => {
-                tensor.int32_data = vec![value as i32; size];
-            }
-            ProtoDataType::Uint8 => {
-                tensor.int32_data = vec![value as i32; size];
-            }
-            ProtoDataType::Int32 => {
-                tensor.int32_data = vec![value as i32; size];
-            }
-            ProtoDataType::Uint32 => {
-                tensor.uint64_data = vec![value as u64; size];
-            }
-            ProtoDataType::Int64 => {
-                tensor.int64_data = vec![value as i64; size];
-            }
-            _ => {
-                tensor.float_data = vec![value; size];
-            }
-        }
-
-        tensor
+        // Use shared library to create filled tensor
+        TensorData::filled(utils_dtype.clone(), &shape, value).to_tensor_proto(
+            name,
+            utils_dtype,
+            shape,
+        )
     }
 
     fn onnx_op_type(op_type: &str) -> String {
@@ -283,37 +222,22 @@ impl OnnxConverter {
 
     /// Helper: Parse a JSON array attribute as Vec<i64>
     fn parse_i64_array(op: &Operation, json_key: &str) -> Option<Vec<i64>> {
-        op.attributes
-            .get(json_key)
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_i64().or_else(|| v.as_u64().map(|u| u as i64)))
-                    .collect()
-            })
-            .filter(|vec: &Vec<i64>| !vec.is_empty())
+        // Use shared library's parse_json_ints
+        webnn_onnx_utils::attributes::parse_json_ints(&op.attributes, json_key)
     }
 
-    /// Helper: Add an integer array attribute to the attributes vector
+    /// Helper: Add an integer array attribute using shared AttrBuilder
     fn add_ints_attribute(attributes: &mut Vec<AttributeProto>, name: &str, values: Vec<i64>) {
         if !values.is_empty() {
-            attributes.push(AttributeProto {
-                name: Some(name.to_string()),
-                r#type: Some(AttributeType::Ints as i32),
-                ints: values,
-                ..Default::default()
-            });
+            let builder = AttrBuilder::new().add_ints(name, values);
+            attributes.extend(builder.build());
         }
     }
 
-    /// Helper: Add an integer attribute to the attributes vector
+    /// Helper: Add an integer attribute using shared AttrBuilder
     fn add_int_attribute(attributes: &mut Vec<AttributeProto>, name: &str, value: i64) {
-        attributes.push(AttributeProto {
-            name: Some(name.to_string()),
-            r#type: Some(AttributeType::Int as i32),
-            i: Some(value),
-            ..Default::default()
-        });
+        let builder = AttrBuilder::new().add_int(name, value);
+        attributes.extend(builder.build());
     }
 
     /// Create ONNX attributes for conv2d operation
@@ -413,12 +337,12 @@ impl OnnxConverter {
         NodeProto {
             input: vec![input],
             output: vec![output],
-            name: Some(node_name.to_string()),
-            op_type: Some("Cast".to_string()),
+            name: node_name.to_string(),
+            op_type: "Cast".to_string(),
             attribute: vec![AttributeProto {
-                name: Some("to".to_string()),
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(to_data_type as i64),
+                name: "to".to_string(),
+                r#type: AttributeType::Int as i32,
+                i: to_data_type as i64,
                 ..Default::default()
             }],
             ..Default::default()
@@ -442,9 +366,9 @@ impl OnnxConverter {
 
         if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
             attributes.push(AttributeProto {
-                name: Some("axis".to_string()),
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(axis as i64),
+                name: "axis".to_string(),
+                r#type: AttributeType::Int as i32,
+                i: axis as i64,
                 ..Default::default()
             });
         }
@@ -455,9 +379,9 @@ impl OnnxConverter {
             .and_then(|v| v.as_bool())
         {
             attributes.push(AttributeProto {
-                name: Some("keepdims".to_string()), // ONNX uses "keepdims" not "keepDimensions"
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(if keep_dims { 1 } else { 0 }),
+                name: "keepdims".to_string(), // ONNX uses "keepdims" not "keepDimensions"
+                r#type: AttributeType::Int as i32,
+                i: if keep_dims { 1 } else { 0 },
                 ..Default::default()
             });
         }
@@ -474,9 +398,9 @@ impl OnnxConverter {
         // Concat requires an axis attribute in ONNX
         if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
             attributes.push(AttributeProto {
-                name: Some("axis".to_string()),
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(axis as i64),
+                name: "axis".to_string(),
+                r#type: AttributeType::Int as i32,
+                i: axis as i64,
                 ..Default::default()
             });
         }
@@ -513,9 +437,9 @@ impl OnnxConverter {
             };
 
             attributes.push(AttributeProto {
-                name: Some("to".to_string()),
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(type_code),
+                name: "to".to_string(),
+                r#type: AttributeType::Int as i32,
+                i: type_code,
                 ..Default::default()
             });
         }
@@ -529,9 +453,9 @@ impl OnnxConverter {
 
         if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_i64()) {
             attributes.push(AttributeProto {
-                name: Some("axis".to_string()),
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(axis),
+                name: "axis".to_string(),
+                r#type: AttributeType::Int as i32,
+                i: axis,
                 ..Default::default()
             });
         }
@@ -552,18 +476,18 @@ impl OnnxConverter {
 
         if let Some(upper) = op.attributes.get("upper").and_then(|v| v.as_bool()) {
             attributes.push(AttributeProto {
-                name: Some("upper".to_string()),
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(if upper { 1 } else { 0 }),
+                name: "upper".to_string(),
+                r#type: AttributeType::Int as i32,
+                i: if upper { 1 } else { 0 },
                 ..Default::default()
             });
         }
 
         if let Some(diagonal) = op.attributes.get("diagonal").and_then(|v| v.as_i64()) {
             attributes.push(AttributeProto {
-                name: Some("k".to_string()), // ONNX uses "k" for diagonal offset
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(diagonal),
+                name: "k".to_string(), // ONNX uses "k" for diagonal offset
+                r#type: AttributeType::Int as i32,
+                i: diagonal,
                 ..Default::default()
             });
         }
@@ -577,18 +501,18 @@ impl OnnxConverter {
 
         if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
-                name: Some("alpha".to_string()),
-                r#type: Some(AttributeType::Float as i32),
-                f: Some(alpha as f32),
+                name: "alpha".to_string(),
+                r#type: AttributeType::Float as i32,
+                f: alpha as f32,
                 ..Default::default()
             });
         }
 
         if let Some(beta) = op.attributes.get("beta").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
-                name: Some("beta".to_string()),
-                r#type: Some(AttributeType::Float as i32),
-                f: Some(beta as f32),
+                name: "beta".to_string(),
+                r#type: AttributeType::Float as i32,
+                f: beta as f32,
                 ..Default::default()
             });
         }
@@ -602,18 +526,18 @@ impl OnnxConverter {
 
         if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
-                name: Some("alpha".to_string()),
-                r#type: Some(AttributeType::Float as i32),
-                f: Some(alpha as f32),
+                name: "alpha".to_string(),
+                r#type: AttributeType::Float as i32,
+                f: alpha as f32,
                 ..Default::default()
             });
         }
 
         if let Some(beta) = op.attributes.get("beta").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
-                name: Some("beta".to_string()),
-                r#type: Some(AttributeType::Float as i32),
-                f: Some(beta as f32),
+                name: "beta".to_string(),
+                r#type: AttributeType::Float as i32,
+                f: beta as f32,
                 ..Default::default()
             });
         }
@@ -627,9 +551,9 @@ impl OnnxConverter {
 
         if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
-                name: Some("alpha".to_string()),
-                r#type: Some(AttributeType::Float as i32),
-                f: Some(alpha as f32),
+                name: "alpha".to_string(),
+                r#type: AttributeType::Float as i32,
+                f: alpha as f32,
                 ..Default::default()
             });
         }
@@ -643,9 +567,9 @@ impl OnnxConverter {
 
         if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
-                name: Some("alpha".to_string()),
-                r#type: Some(AttributeType::Float as i32),
-                f: Some(alpha as f32),
+                name: "alpha".to_string(),
+                r#type: AttributeType::Float as i32,
+                f: alpha as f32,
                 ..Default::default()
             });
         }
@@ -662,36 +586,36 @@ impl OnnxConverter {
 
         if let Some(alpha) = op.attributes.get("alpha").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
-                name: Some("alpha".to_string()),
-                r#type: Some(AttributeType::Float as i32),
-                f: Some(alpha as f32),
+                name: "alpha".to_string(),
+                r#type: AttributeType::Float as i32,
+                f: alpha as f32,
                 ..Default::default()
             });
         }
 
         if let Some(beta) = op.attributes.get("beta").and_then(|v| v.as_f64()) {
             attributes.push(AttributeProto {
-                name: Some("beta".to_string()),
-                r#type: Some(AttributeType::Float as i32),
-                f: Some(beta as f32),
+                name: "beta".to_string(),
+                r#type: AttributeType::Float as i32,
+                f: beta as f32,
                 ..Default::default()
             });
         }
 
         if let Some(a_transpose) = op.attributes.get("a_transpose").and_then(|v| v.as_bool()) {
             attributes.push(AttributeProto {
-                name: Some("transA".to_string()),
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(if a_transpose { 1 } else { 0 }),
+                name: "transA".to_string(),
+                r#type: AttributeType::Int as i32,
+                i: if a_transpose { 1 } else { 0 },
                 ..Default::default()
             });
         }
 
         if let Some(b_transpose) = op.attributes.get("b_transpose").and_then(|v| v.as_bool()) {
             attributes.push(AttributeProto {
-                name: Some("transB".to_string()),
-                r#type: Some(AttributeType::Int as i32),
-                i: Some(if b_transpose { 1 } else { 0 }),
+                name: "transB".to_string(),
+                r#type: AttributeType::Int as i32,
+                i: if b_transpose { 1 } else { 0 },
                 ..Default::default()
             });
         }
@@ -710,9 +634,9 @@ impl OnnxConverter {
             .and_then(|v| v.as_f64())
             .unwrap_or(1e-5);
         attributes.push(AttributeProto {
-            name: Some("epsilon".to_string()),
-            r#type: Some(AttributeType::Float as i32),
-            f: Some(epsilon as f32),
+            name: "epsilon".to_string(),
+            r#type: AttributeType::Float as i32,
+            f: epsilon as f32,
             ..Default::default()
         });
 
@@ -731,9 +655,9 @@ impl OnnxConverter {
         // If not, we should emulate using primitive operations (like Chromium does)
         let axis = axes.first().copied().unwrap_or(-1);
         attributes.push(AttributeProto {
-            name: Some("axis".to_string()),
-            r#type: Some(AttributeType::Int as i32),
-            i: Some(axis),
+            name: "axis".to_string(),
+            r#type: AttributeType::Int as i32,
+            i: axis,
             ..Default::default()
         });
 
@@ -751,9 +675,9 @@ impl OnnxConverter {
             .and_then(|v| v.as_f64())
             .unwrap_or(1e-5);
         attributes.push(AttributeProto {
-            name: Some("epsilon".to_string()),
-            r#type: Some(AttributeType::Float as i32),
-            f: Some(epsilon as f32),
+            name: "epsilon".to_string(),
+            r#type: AttributeType::Float as i32,
+            f: epsilon as f32,
             ..Default::default()
         });
 
@@ -1083,22 +1007,22 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 // For Int64, use int64_data field; for other types, use raw_data with zeros
                 match operand.descriptor.data_type {
                     DataType::Int64 => TensorProto {
-                        name: Some(operand_name(graph, *id)),
-                        data_type: Some(dtype as i32),
+                        name: operand_name(graph, *id),
+                        data_type: dtype as i32,
                         dims: operand.descriptor.shape.iter().map(|d| *d as i64).collect(),
                         int64_data: vec![0i64; element_count],
                         ..Default::default()
                     },
                     DataType::Int32 => TensorProto {
-                        name: Some(operand_name(graph, *id)),
-                        data_type: Some(dtype as i32),
+                        name: operand_name(graph, *id),
+                        data_type: dtype as i32,
                         dims: operand.descriptor.shape.iter().map(|d| *d as i64).collect(),
                         int32_data: vec![0i32; element_count],
                         ..Default::default()
                     },
                     DataType::Float32 => TensorProto {
-                        name: Some(operand_name(graph, *id)),
-                        data_type: Some(dtype as i32),
+                        name: operand_name(graph, *id),
+                        data_type: dtype as i32,
                         dims: operand.descriptor.shape.iter().map(|d| *d as i64).collect(),
                         float_data: vec![0f32; element_count],
                         ..Default::default()
@@ -1114,10 +1038,10 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         };
                         let zero_data = vec![0u8; element_count * bytes_per_element];
                         TensorProto {
-                            name: Some(operand_name(graph, *id)),
-                            data_type: Some(dtype as i32),
+                            name: operand_name(graph, *id),
+                            data_type: dtype as i32,
                             dims: operand.descriptor.shape.iter().map(|d| *d as i64).collect(),
-                            raw_data: Some(prost::bytes::Bytes::from(zero_data)),
+                            raw_data: zero_data,
                             ..Default::default()
                         }
                     }
@@ -1125,10 +1049,10 @@ impl crate::converters::GraphConverter for OnnxConverter {
             } else {
                 // Normal case: use provided data
                 TensorProto {
-                    name: Some(operand_name(graph, *id)),
-                    data_type: Some(Self::data_type_code(operand.descriptor.data_type) as i32),
+                    name: operand_name(graph, *id),
+                    data_type: Self::data_type_code(operand.descriptor.data_type) as i32,
                     dims: operand.descriptor.shape.iter().map(|d| *d as i64).collect(),
-                    raw_data: Some(prost::bytes::Bytes::from(data.data.clone())),
+                    raw_data: data.data.clone(),
                     ..Default::default()
                 }
             };
@@ -1258,10 +1182,10 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     .unwrap_or_default();
 
                 initializers.push(TensorProto {
-                    name: Some(operand_name(graph, output_id)),
-                    data_type: Some(Self::data_type_code(data_type) as i32),
+                    name: operand_name(graph, output_id),
+                    data_type: Self::data_type_code(data_type) as i32,
                     dims: shape,
-                    raw_data: Some(prost::bytes::Bytes::from(data)),
+                    raw_data: data,
                     ..Default::default()
                 });
 
@@ -1294,12 +1218,11 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             // Expand scalar constant to shape [1]
                             let expanded_name = format!("{}_scalar{}_expanded", op_name, input_idx);
                             initializers.push(TensorProto {
-                                name: Some(expanded_name.clone()),
-                                data_type: Some(
-                                    Self::data_type_code(operand.descriptor.data_type) as i32
-                                ),
+                                name: expanded_name.clone(),
+                                data_type: Self::data_type_code(operand.descriptor.data_type)
+                                    as i32,
                                 dims: vec![1],
-                                raw_data: Some(prost::bytes::Bytes::from(data.data.clone())),
+                                raw_data: data.data.clone(),
                                 ..Default::default()
                             });
                             inputs.push(expanded_name);
@@ -1309,10 +1232,10 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             let expanded_name = format!("{}_scalar{}_expanded", op_name, input_idx);
                             if let Some(cloned) = initializers
                                 .iter()
-                                .find(|t| t.name.as_deref() == Some(&input_name))
+                                .find(|t| t.name == input_name)
                                 .map(|orig| {
                                     let mut cloned = orig.clone();
-                                    cloned.name = Some(expanded_name.clone());
+                                    cloned.name = expanded_name.clone();
                                     cloned.dims = vec![1];
                                     cloned
                                 })
@@ -1329,11 +1252,11 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             nodes.push(NodeProto {
                                 input: vec![input_name.clone()],
                                 output: vec![unsq_name.clone()],
-                                name: Some(format!("{}_unsqueeze_{}", op_name, input_idx)),
-                                op_type: Some("Unsqueeze".to_string()),
+                                name: format!("{}_unsqueeze_{}", op_name, input_idx),
+                                op_type: "Unsqueeze".to_string(),
                                 attribute: vec![AttributeProto {
-                                    name: Some("axes".to_string()),
-                                    r#type: Some(AttributeType::Ints as i32),
+                                    name: "axes".to_string(),
+                                    r#type: AttributeType::Ints as i32,
                                     ints: vec![0],
                                     ..Default::default()
                                 }],
@@ -1355,8 +1278,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: attributes,
                     ..Default::default()
                 });
@@ -1401,8 +1324,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(NodeProto {
                     input: cast_inputs,
                     output: vec![bool_output_name.clone()],
-                    name: Some(op_name.clone()),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name.clone(),
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: attributes,
                     ..Default::default()
                 });
@@ -1431,8 +1354,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         .map(|id| operand_name(graph, *id))
                         .collect(),
                     output: vec![bool_output_name.clone()],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: attributes,
                     ..Default::default()
                 });
@@ -1475,8 +1398,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: attributes,
                     ..Default::default()
                 });
@@ -1520,8 +1443,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             graph,
                             op.output_operand.expect("Single-output operation expected"),
                         )],
-                        name: Some(format!("{}_identity", op_name)),
-                        op_type: Some("Identity".to_string()),
+                        name: format!("{}_identity", op_name),
+                        op_type: "Identity".to_string(),
                         attribute: vec![],
                         ..Default::default()
                     });
@@ -1530,8 +1453,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 let repeats_name = format!("{}_repeats", op_name);
                 initializers.push(TensorProto {
-                    name: Some(repeats_name.clone()),
-                    data_type: Some(ProtoDataType::Int64 as i32),
+                    name: repeats_name.clone(),
+                    data_type: ProtoDataType::Int64 as i32,
                     dims: vec![repeats.len() as i64],
                     int64_data: repeats,
                     ..Default::default()
@@ -1544,8 +1467,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: vec![],
                     ..Default::default()
                 });
@@ -1600,8 +1523,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: vec![], // No attributes for Clip in opset 11+
                     ..Default::default()
                 });
@@ -1627,8 +1550,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                         // Add shape as an initializer (constant tensor)
                         initializers.push(TensorProto {
-                            name: Some(shape_name),
-                            data_type: Some(ProtoDataType::Int64 as i32),
+                            name: shape_name,
+                            data_type: ProtoDataType::Int64 as i32,
                             dims: vec![shape_values.len() as i64], // 1D tensor
                             int64_data: shape_values,
                             ..Default::default()
@@ -1667,8 +1590,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                     // Add shape as an initializer (constant tensor)
                     initializers.push(TensorProto {
-                        name: Some(shape_name),
-                        data_type: Some(ProtoDataType::Int64 as i32),
+                        name: shape_name,
+                        data_type: ProtoDataType::Int64 as i32,
                         dims: vec![shape_values.len() as i64], // 1D tensor
                         int64_data: shape_values,
                         ..Default::default()
@@ -1681,8 +1604,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: vec![], // No attributes for Reshape
                     ..Default::default()
                 });
@@ -1709,8 +1632,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                     // Add axes as an initializer (constant tensor)
                     initializers.push(TensorProto {
-                        name: Some(axes_name),
-                        data_type: Some(ProtoDataType::Int64 as i32),
+                        name: axes_name,
+                        data_type: ProtoDataType::Int64 as i32,
                         dims: vec![axes_values.len() as i64], // 1D tensor
                         int64_data: axes_values,
                         ..Default::default()
@@ -1722,8 +1645,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             graph,
                             op.output_operand.expect("Single-output operation expected"),
                         )],
-                        name: Some(op_name.clone()),
-                        op_type: Some("Unsqueeze".to_string()),
+                        name: op_name.clone(),
+                        op_type: "Unsqueeze".to_string(),
                         attribute: vec![], // No attributes for Unsqueeze in opset 13+
                         ..Default::default()
                     });
@@ -1747,8 +1670,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                     // Add shape as an initializer (constant tensor)
                     initializers.push(TensorProto {
-                        name: Some(shape_name),
-                        data_type: Some(ProtoDataType::Int64 as i32),
+                        name: shape_name,
+                        data_type: ProtoDataType::Int64 as i32,
                         dims: vec![shape_values.len() as i64], // 1D tensor
                         int64_data: shape_values,
                         ..Default::default()
@@ -1760,8 +1683,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             graph,
                             op.output_operand.expect("Single-output operation expected"),
                         )],
-                        name: Some(op_name),
-                        op_type: Some("Expand".to_string()),
+                        name: op_name,
+                        op_type: "Expand".to_string(),
                         attribute: vec![], // No attributes for Expand
                         ..Default::default()
                     });
@@ -1798,12 +1721,12 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     nodes.push(NodeProto {
                         input: vec![input_name],
                         output: vec![cast_output.clone()],
-                        name: Some(format!("{}_pre_cast", op_name)),
-                        op_type: Some("Cast".to_string()),
+                        name: format!("{}_pre_cast", op_name),
+                        op_type: "Cast".to_string(),
                         attribute: vec![AttributeProto {
-                            name: Some("to".to_string()),
-                            r#type: Some(AttributeType::Int as i32),
-                            i: Some(ProtoDataType::Float as i32 as i64),
+                            name: "to".to_string(),
+                            r#type: AttributeType::Int as i32,
+                            i: ProtoDataType::Float as i32 as i64,
                             ..Default::default()
                         }],
                         ..Default::default()
@@ -1831,8 +1754,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         inputs.push(axes_name.clone());
 
                         initializers.push(TensorProto {
-                            name: Some(axes_name),
-                            data_type: Some(ProtoDataType::Int64 as i32),
+                            name: axes_name,
+                            data_type: ProtoDataType::Int64 as i32,
                             dims: vec![axes_i64.len() as i64],
                             int64_data: axes_i64,
                             ..Default::default()
@@ -1840,8 +1763,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     } else {
                         // Add axes as an attribute (for operations that don't support axes as input in opset 13)
                         attributes.push(AttributeProto {
-                            name: Some("axes".to_string()),
-                            r#type: Some(AttributeType::Ints as i32),
+                            name: "axes".to_string(),
+                            r#type: AttributeType::Ints as i32,
                             ints: axes_i64,
                             ..Default::default()
                         });
@@ -1855,9 +1778,9 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     .and_then(|v| v.as_bool())
                 {
                     attributes.push(AttributeProto {
-                        name: Some("keepdims".to_string()),
-                        r#type: Some(AttributeType::Int as i32),
-                        i: Some(if keep_dims { 1 } else { 0 }),
+                        name: "keepdims".to_string(),
+                        r#type: AttributeType::Int as i32,
+                        i: if keep_dims { 1 } else { 0 },
                         ..Default::default()
                     });
                 }
@@ -1877,8 +1800,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(NodeProto {
                     input: inputs,
                     output: vec![reduce_output_name.clone()],
-                    name: Some(op_name.clone()),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name.clone(),
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: attributes,
                     ..Default::default()
                 });
@@ -1889,12 +1812,12 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     nodes.push(NodeProto {
                         input: vec![reduce_output_name],
                         output: vec![final_output_name],
-                        name: Some(format!("{}_post_cast", op_name)),
-                        op_type: Some("Cast".to_string()),
+                        name: format!("{}_post_cast", op_name),
+                        op_type: "Cast".to_string(),
                         attribute: vec![AttributeProto {
-                            name: Some("to".to_string()),
-                            r#type: Some(AttributeType::Int as i32),
-                            i: Some(original_type as i32 as i64),
+                            name: "to".to_string(),
+                            r#type: AttributeType::Int as i32,
+                            i: original_type as i32 as i64,
                             ..Default::default()
                         }],
                         ..Default::default()
@@ -1945,8 +1868,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             graph,
                             op.output_operand.expect("Single-output operation expected"),
                         )],
-                        name: Some(op_name),
-                        op_type: Some("Identity".to_string()),
+                        name: op_name,
+                        op_type: "Identity".to_string(),
                         ..Default::default()
                     });
                     continue; // Skip the rest of the slice handling
@@ -1972,8 +1895,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let starts_name = format!("{}_starts", op_name);
                 inputs.push(starts_name.clone());
                 initializers.push(TensorProto {
-                    name: Some(starts_name),
-                    data_type: Some(ProtoDataType::Int64 as i32),
+                    name: starts_name,
+                    data_type: ProtoDataType::Int64 as i32,
                     dims: vec![starts_len as i64],
                     int64_data: starts,
                     ..Default::default()
@@ -1983,8 +1906,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let ends_name = format!("{}_ends", op_name);
                 inputs.push(ends_name.clone());
                 initializers.push(TensorProto {
-                    name: Some(ends_name),
-                    data_type: Some(ProtoDataType::Int64 as i32),
+                    name: ends_name,
+                    data_type: ProtoDataType::Int64 as i32,
                     dims: vec![ends.len() as i64],
                     int64_data: ends,
                     ..Default::default()
@@ -1997,8 +1920,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let axes_name = format!("{}_axes", op_name);
                 inputs.push(axes_name.clone());
                 initializers.push(TensorProto {
-                    name: Some(axes_name),
-                    data_type: Some(ProtoDataType::Int64 as i32),
+                    name: axes_name,
+                    data_type: ProtoDataType::Int64 as i32,
                     dims: vec![axes_data.len() as i64],
                     int64_data: axes_data,
                     ..Default::default()
@@ -2009,8 +1932,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     let steps_name = format!("{}_steps", op_name);
                     inputs.push(steps_name.clone());
                     initializers.push(TensorProto {
-                        name: Some(steps_name),
-                        data_type: Some(ProtoDataType::Int64 as i32),
+                        name: steps_name,
+                        data_type: ProtoDataType::Int64 as i32,
                         dims: vec![steps_data.len() as i64],
                         int64_data: steps_data,
                         ..Default::default()
@@ -2023,8 +1946,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: vec![], // No attributes for Slice in opset 13+
                     ..Default::default()
                 });
@@ -2040,9 +1963,9 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut attributes = Vec::new();
                 if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
                     attributes.push(AttributeProto {
-                        name: Some("axis".to_string()),
-                        r#type: Some(AttributeType::Int as i32),
-                        i: Some(axis as i64),
+                        name: "axis".to_string(),
+                        r#type: AttributeType::Int as i32,
+                        i: axis as i64,
                         ..Default::default()
                     });
                 }
@@ -2071,8 +1994,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                         // Create initializer for split sizes
                         let splits_tensor = TensorProto {
-                            name: Some(splits_name.clone()),
-                            data_type: Some(ProtoDataType::Int64 as i32),
+                            name: splits_name.clone(),
+                            data_type: ProtoDataType::Int64 as i32,
                             dims: vec![split_sizes.len() as i64],
                             int64_data: split_sizes,
                             ..Default::default()
@@ -2087,8 +2010,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(NodeProto {
                     input: inputs,
                     output: outputs,
-                    name: Some(op_name),
-                    op_type: Some("Split".to_string()),
+                    name: op_name,
+                    op_type: "Split".to_string(),
                     attribute: attributes,
                     ..Default::default()
                 });
@@ -2159,16 +2082,16 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                 // Create scalar initializers for min and max
                 initializers.push(TensorProto {
-                    name: Some(clamp_min_name.clone()),
-                    data_type: Some(ProtoDataType::Int64 as i32),
+                    name: clamp_min_name.clone(),
+                    data_type: ProtoDataType::Int64 as i32,
                     dims: vec![],
                     int64_data: vec![-dim_size],
                     ..Default::default()
                 });
 
                 initializers.push(TensorProto {
-                    name: Some(clamp_max_name.clone()),
-                    data_type: Some(ProtoDataType::Int64 as i32),
+                    name: clamp_max_name.clone(),
+                    data_type: ProtoDataType::Int64 as i32,
                     dims: vec![],
                     int64_data: vec![dim_size - 1],
                     ..Default::default()
@@ -2178,8 +2101,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(NodeProto {
                     input: vec![indices_after_cast, clamp_min_name, clamp_max_name],
                     output: vec![clamped_indices_name.clone()],
-                    name: Some(format!("{}_clip_indices", op_name)),
-                    op_type: Some("Clip".to_string()),
+                    name: format!("{}_clip_indices", op_name),
+                    op_type: "Clip".to_string(),
                     ..Default::default()
                 });
 
@@ -2200,8 +2123,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         {
                             let shape_const_name = format!("{}_indices_shape", op_name);
                             initializers.push(TensorProto {
-                                name: Some(shape_const_name.clone()),
-                                data_type: Some(ProtoDataType::Int64 as i32),
+                                name: shape_const_name.clone(),
+                                data_type: ProtoDataType::Int64 as i32,
                                 dims: vec![target_indices_shape.len() as i64],
                                 int64_data: target_indices_shape
                                     .iter()
@@ -2213,8 +2136,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             nodes.push(NodeProto {
                                 input: vec![final_indices.clone(), shape_const_name],
                                 output: vec![reshaped_name.clone()],
-                                name: Some(format!("{}_reshape_indices", op_name)),
-                                op_type: Some("Reshape".to_string()),
+                                name: format!("{}_reshape_indices", op_name),
+                                op_type: "Reshape".to_string(),
                                 ..Default::default()
                             });
                             final_indices = reshaped_name;
@@ -2232,8 +2155,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
-                    name: Some(op_name),
-                    op_type: Some("Gather".to_string()),
+                    name: op_name,
+                    op_type: "Gather".to_string(),
                     attribute: attributes,
                     ..Default::default()
                 });
@@ -2255,11 +2178,11 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     nodes.push(NodeProto {
                         input: vec![input_name],
                         output: vec![transpose_output.clone()],
-                        name: Some(format!("{}_transpose_input", op_name)),
-                        op_type: Some("Transpose".to_string()),
+                        name: format!("{}_transpose_input", op_name),
+                        op_type: "Transpose".to_string(),
                         attribute: vec![AttributeProto {
-                            name: Some("perm".to_string()),
-                            r#type: Some(AttributeType::Ints as i32),
+                            name: "perm".to_string(),
+                            r#type: AttributeType::Ints as i32,
                             ints: vec![0, 3, 1, 2], // NHWC → NCHW
                             ..Default::default()
                         }],
@@ -2315,11 +2238,11 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     nodes.push(NodeProto {
                         input: vec![filter_name],
                         output: vec![transpose_output.clone()],
-                        name: Some(format!("{}_transpose_filter", op_name)),
-                        op_type: Some("Transpose".to_string()),
+                        name: format!("{}_transpose_filter", op_name),
+                        op_type: "Transpose".to_string(),
                         attribute: vec![AttributeProto {
-                            name: Some("perm".to_string()),
-                            r#type: Some(AttributeType::Ints as i32),
+                            name: "perm".to_string(),
+                            r#type: AttributeType::Ints as i32,
                             ints: perm,
                             ..Default::default()
                         }],
@@ -2344,8 +2267,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: attributes,
                     ..Default::default()
                 });
@@ -2409,8 +2332,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             nodes.push(NodeProto {
                                 input: vec![bias_name, zero_name],
                                 output: vec![output_name],
-                                name: Some(op_name),
-                                op_type: Some("Add".to_string()),
+                                name: op_name,
+                                op_type: "Add".to_string(),
                                 ..Default::default()
                             });
                         } else {
@@ -2419,8 +2342,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             nodes.push(NodeProto {
                                 input: vec![input_name.clone(), input_name],
                                 output: vec![output_name],
-                                name: Some(op_name),
-                                op_type: Some("Sub".to_string()),
+                                name: op_name,
+                                op_type: "Sub".to_string(),
                                 ..Default::default()
                             });
                         }
@@ -2595,8 +2518,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         graph,
                         op.output_operand.expect("Single-output operation expected"),
                     )],
-                    name: Some(op_name),
-                    op_type: Some(Self::onnx_op_type(&op.op_type)),
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
                     attribute: attributes,
                     ..Default::default()
                 });
@@ -2631,8 +2554,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(NodeProto {
                     input: vec![input_name.clone(), three_name],
                     output: vec![add_output.clone()],
-                    name: Some(format!("{}_add", op_name)),
-                    op_type: Some("Add".to_string()),
+                    name: format!("{}_add", op_name),
+                    op_type: "Add".to_string(),
                     ..Default::default()
                 });
 
@@ -2654,8 +2577,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(NodeProto {
                     input: vec![add_output, zero_name, six_name],
                     output: vec![clip_output.clone()],
-                    name: Some(format!("{}_clip", op_name)),
-                    op_type: Some("Clip".to_string()),
+                    name: format!("{}_clip", op_name),
+                    op_type: "Clip".to_string(),
                     ..Default::default()
                 });
 
@@ -2671,8 +2594,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(NodeProto {
                     input: vec![clip_output, six_div_name],
                     output: vec![div_output.clone()],
-                    name: Some(format!("{}_div", op_name)),
-                    op_type: Some("Div".to_string()),
+                    name: format!("{}_div", op_name),
+                    op_type: "Div".to_string(),
                     ..Default::default()
                 });
 
@@ -2680,8 +2603,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 nodes.push(NodeProto {
                     input: vec![input_name, div_output],
                     output: vec![output_name],
-                    name: Some(format!("{}_mul", op_name)),
-                    op_type: Some("Mul".to_string()),
+                    name: format!("{}_mul", op_name),
+                    op_type: "Mul".to_string(),
                     ..Default::default()
                 });
             } else {
@@ -2804,8 +2727,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     nodes.push(NodeProto {
                         input: cast_inputs,
                         output: vec![op_output_name.clone()],
-                        name: Some(op_name.clone()),
-                        op_type: Some(Self::onnx_op_type(&op.op_type)),
+                        name: op_name.clone(),
+                        op_type: Self::onnx_op_type(&op.op_type),
                         attribute: attributes,
                         ..Default::default()
                     });
@@ -2838,8 +2761,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             graph,
                             op.output_operand.expect("Single-output operation expected"),
                         )],
-                        name: Some(op_name),
-                        op_type: Some(Self::onnx_op_type(&op.op_type)),
+                        name: op_name,
+                        op_type: Self::onnx_op_type(&op.op_type),
                         attribute: attributes,
                         ..Default::default()
                     });
@@ -2850,8 +2773,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
         // Add value_info for operands where we have inferred shapes
         let mut seen_names = std::collections::HashSet::new();
         for vi in inputs_val.iter().chain(outputs_val.iter()) {
-            if let Some(name) = &vi.name {
-                seen_names.insert(name.clone());
+            if !vi.name.is_empty() {
+                seen_names.insert(vi.name.clone());
             }
         }
         for (idx, operand) in graph.operands.iter().enumerate() {
@@ -2882,7 +2805,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
         }
 
         let graph_proto = GraphProto {
-            name: Some("webnn_graph".to_string()),
+            name: "webnn_graph".to_string(),
             node: nodes,
             input: inputs_val,
             output: outputs_val,
@@ -2892,14 +2815,14 @@ impl crate::converters::GraphConverter for OnnxConverter {
         };
 
         let model = ModelProto {
-            ir_version: Some(7), // IR version 7 = ONNX 1.6-1.9 (supports opset 12-13)
-            model_version: Some(1),
-            producer_name: Some("rustnn".to_string()),
-            producer_version: Some("0.1.0".to_string()),
+            ir_version: 7, // IR version 7 = ONNX 1.6-1.9 (supports opset 12-13)
+            model_version: 1,
+            producer_name: "rustnn".to_string(),
+            producer_version: "0.1.0".to_string(),
             graph: Some(graph_proto),
             opset_import: vec![OperatorSetIdProto {
-                version: Some(13),
-                domain: Some("".to_string()), // Empty string = default ONNX domain
+                version: 13,
+                domain: "".to_string(), // Empty string = default ONNX domain
             }],
             ..Default::default()
         };
@@ -2917,11 +2840,11 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
 fn value_info(name: &str, desc: &crate::graph::OperandDescriptor) -> ValueInfoProto {
     ValueInfoProto {
-        name: Some(name.to_string()),
+        name: name.to_string(),
         r#type: Some(TypeProto {
             value: Some(crate::protos::onnx::type_proto::Value::TensorType(
                 TensorTypeProto {
-                    elem_type: Some(OnnxConverter::data_type_code(desc.data_type) as i32),
+                    elem_type: OnnxConverter::data_type_code(desc.data_type) as i32,
                     shape: Some(TensorShapeProto {
                         dim: desc
                             .shape
@@ -2932,7 +2855,7 @@ fn value_info(name: &str, desc: &crate::graph::OperandDescriptor) -> ValueInfoPr
                                         *d as i64,
                                     ),
                                 ),
-                                denotation: None,
+                                denotation: String::new(),
                             })
                             .collect(),
                     }),

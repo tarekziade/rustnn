@@ -35,6 +35,7 @@ base64 = "0.22"
 prost = "0.12"
 prost-types = "0.12"
 bytes = "1.6"
+webnn-onnx-utils = { path = "../webnn-onnx-utils" }
 bytemuck = { version = "1.15", features = ["extern_crate_std"] }
 ndarray = { version = "0.16", optional = true }
 objc = { version = "0.2", optional = true }

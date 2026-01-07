@@ -25,14 +25,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.bytes(["."]); // Fix clippy::needless_borrows_for_generic_args
 
     let coreml_dir = "protos/coreml";
-    let onnx_dir = "protos/onnx";
 
     let mut coreml_files = collect_protos(coreml_dir);
     coreml_files.sort();
-    let onnx_files = vec![format!("{}/onnx-ml.proto", onnx_dir)];
 
+    // Only compile CoreML protos - ONNX protos come from webnn-onnx-utils
     config.compile_protos(&coreml_files, &[coreml_dir])?;
-    config.compile_protos(&onnx_files, &[onnx_dir])?;
 
     println!("cargo:rerun-if-changed=protos");
     println!("cargo:rerun-if-changed=build.rs");

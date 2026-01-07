@@ -25,8 +25,7 @@ pub mod coreml {
     pub use specification::StringVector;
 }
 
-// Allow clippy warnings in generated protobuf code
-#[allow(clippy::all)]
+// Re-export ONNX protos from webnn-onnx-utils to ensure type compatibility
 pub mod onnx {
-    include!(concat!(env!("OUT_DIR"), "/onnx.rs"));
+    pub use webnn_onnx_utils::protos::onnx::*;
 }
