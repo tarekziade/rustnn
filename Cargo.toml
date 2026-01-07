@@ -35,7 +35,6 @@ base64 = "0.22"
 prost = "0.12"
 prost-types = "0.12"
 bytes = "1.6"
-webnn-onnx-utils = { path = "../webnn-onnx-utils" }
 bytemuck = { version = "1.15", features = ["extern_crate_std"] }
 ndarray = { version = "0.16", optional = true }
 objc = { version = "0.2", optional = true }
@@ -45,6 +44,7 @@ trtx = { version = "0.2.0", optional = true }
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 regex = "1.11"
 webnn-graph = { git = "https://github.com/rustnn/webnn-graph", branch = "main" }
+webnn-onnx-utils = { git = "https://github.com/rustnn/webnn-onnx-utils", branch = "main" }
 
 [build-dependencies]
 prost-build = "0.12"
