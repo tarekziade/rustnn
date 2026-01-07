@@ -43,7 +43,7 @@ half = "2.4"
 trtx = { version = "0.2.0", optional = true }
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 regex = "1.11"
-webnn-graph = { path = "../webnn-wg" }
+webnn-graph = { git = "https://github.com/rustnn/webnn-graph", branch = "main" }
 
 [build-dependencies]
 prost-build = "0.12"
