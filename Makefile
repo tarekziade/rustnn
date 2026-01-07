@@ -385,9 +385,9 @@ mobilenet-demo-hub: python-dev
 minilm-demo-hub: python-dev
 	@echo "Installing demo dependencies..."
 	@if [ -f .venv-webnn/bin/python ]; then \
-		.venv-webnn/bin/pip install -q transformers torch --index-url https://download.pytorch.org/whl/cpu; \
+		.venv-webnn/bin/pip install -q transformers torch --extra-index-url https://download.pytorch.org/whl/cpu; \
 	else \
-		pip install -q transformers torch --index-url https://download.pytorch.org/whl/cpu; \
+		pip install -q transformers torch --extra-index-url https://download.pytorch.org/whl/cpu; \
 	fi
 	@echo "========================================================================"
 	@echo "Running all-MiniLM-L6-v2 demo (Hugging Face Hub)"
