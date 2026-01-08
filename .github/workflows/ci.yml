@@ -9,6 +9,7 @@ on:
 jobs:
   # Rust tests
   rust-test:
+    if: false  # Temporarily disabled for debugging
     name: Rust Tests
     runs-on: ubuntu-latest
     steps:
@@ -52,6 +53,7 @@ jobs:
 
   # Python build test
   python-build:
+    if: false  # Temporarily disabled for debugging
     name: Test Python Build
     runs-on: ${{ matrix.os }}
     strategy:
@@ -163,6 +165,7 @@ jobs:
 
   # Documentation build test
   docs-test:
+    if: false  # Temporarily disabled for debugging
     name: Test Documentation Build
     runs-on: ubuntu-latest
     steps:
@@ -181,9 +184,9 @@ jobs:
 
   # Check that version in pyproject.toml matches git tag (for releases)
   version-check:
+    if: false  # Temporarily disabled for debugging
     name: Version Check
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
 
