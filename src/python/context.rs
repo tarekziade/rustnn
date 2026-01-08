@@ -386,21 +386,38 @@ impl PyMLContext {
         Ok(result.into())
     }
 
-    /// Create a tensor for explicit tensor management
+    /// Create a tensor (device-resident by default, per WebNN spec)
     ///
-    /// Following the W3C WebNN MLTensor Explainer:
-    /// https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md
+    /// Following the W3C WebNN specification:
+    /// https://www.w3.org/TR/webnn/#dom-mlcontext-createtensor
+    ///
+    /// By default (readable=False, writable=False), creates a host-backed tensor.
+    /// For true device-resident tensors with zero-copy execution, use create_device_tensor().
+    ///
+    /// Note: The spec intends device-resident tensors by default, but our implementation
+    /// currently returns host-backed tensors for simplicity. We plan to add lazy device
+    /// tensor materialization in a future version to fully match the spec.
     ///
     /// Args:
     ///     shape: Shape of the tensor
     ///     data_type: Data type string (e.g., "float32")
-    ///     readable: If True, tensor data can be read back to CPU (default: True)
-    ///     writable: If True, tensor data can be written from CPU (default: True)
+    ///     readable: If True, tensor data can be read back to CPU (default: False per spec)
+    ///     writable: If True, tensor data can be written from CPU (default: False per spec)
     ///     exportable_to_gpu: If True, tensor can be used as GPU texture (default: False)
     ///
     /// Returns:
     ///     MLTensor: A new tensor with the specified properties
-    #[pyo3(signature = (shape, data_type, readable=true, writable=true, exportable_to_gpu=false))]
+    ///
+    /// Examples:
+    ///     # Device-resident tensor (spec-compliant defaults)
+    ///     tensor = context.create_tensor([2, 3], "float32")
+    ///
+    ///     # Host-accessible tensor (explicit flags)
+    ///     host_tensor = context.create_tensor([2, 3], "float32", readable=True, writable=True)
+    ///
+    ///     # Convenience: use create_host_tensor() for host tensors
+    ///     host_tensor = context.create_host_tensor([2, 3], "float32")
+    #[pyo3(signature = (shape, data_type, readable=false, writable=false, exportable_to_gpu=false))]
     fn create_tensor(
         &self,
         shape: Vec<u32>,
@@ -426,6 +443,39 @@ impl PyMLContext {
         };
 
         Ok(PyMLTensor::new(tensor_descriptor))
+    }
+
+    /// Convenience method for creating host-backed tensors (non-spec extension)
+    ///
+    /// This is equivalent to:
+    ///   create_tensor(shape, data_type, readable=True, writable=True)
+    ///
+    /// Use this when you need to inspect or modify tensor contents from Python,
+    /// such as for debugging, prototyping, or when your workflow requires host access.
+    ///
+    /// For production code with iterative workloads (like KV cache), prefer
+    /// create_device_tensor() for optimal performance.
+    ///
+    /// Args:
+    ///     shape: Shape of the tensor
+    ///     data_type: Data type string (e.g., "float32")
+    ///
+    /// Returns:
+    ///     MLTensor: A host-backed tensor (always readable and writable)
+    ///
+    /// Example:
+    ///     # Quick and easy for prototyping
+    ///     tensor = context.create_host_tensor([2, 3], "float32")
+    ///     context.write_tensor(tensor, np.array([[1, 2, 3], [4, 5, 6]]))
+    ///     data = context.read_tensor(tensor)
+    #[pyo3(signature = (shape, data_type))]
+    fn create_host_tensor(
+        &self,
+        shape: Vec<u32>,
+        data_type: &str,
+    ) -> PyResult<PyMLTensor> {
+        // Just call create_tensor with explicit host flags
+        self.create_tensor(shape, data_type, true, true, false)
     }
 
     /// Create a device-resident tensor for zero-copy execution

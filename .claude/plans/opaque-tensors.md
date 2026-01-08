@@ -1,7 +1,66 @@
-# Opaque Device Tensors Implementation Plan
+# Device-Resident Tensors Implementation Plan
+
+## Status: Phase 1-3 Complete (2026-01-08)
+
+Phase 1-2 were committed on 2026-01-08. Phase 3 demonstration is working with ONNX backend showing 1.04x speedup on KV cache workloads.
 
 ## Goal
 Implement device-resident tensor I/O binding in rustnn to eliminate host round-trips for iterative GenAI workloads (KV cache). Tensors remain on GPU/NPU across decode steps, with explicit host transfers only when needed.
+
+## WebNN Spec Compliance
+
+### MLTensor is the Default Interface
+
+Based on the W3C WebNN specification (https://www.w3.org/TR/webnn/):
+
+1. **MLTensor is the primary execution interface**:
+   - `dispatch(graph, inputs, outputs)` takes `MLNamedTensors` (maps of MLTensor)
+   - There is NO `compute()` method with ArrayBufferViews in the spec
+   - `createTensor(descriptor)` creates MLTensor objects
+   - `readTensor(tensor)` / `writeTensor(tensor, data)` handle host I/O
+
+2. **All tensors are "opaque" by default**:
+   - MLTensor backing storage is implementation-defined
+   - Can be host memory, device memory, or memory-mapped
+   - Descriptor flags (`readable`, `writable`) control host access
+   - Device-resident is an optimization, not a separate API
+
+3. **Our implementation aligns with the spec**:
+   - `create_tensor()` → MLTensor (host-backed, readable/writable)
+   - `create_device_tensor()` → MLDeviceTensor (device-backed, zero-copy capable)
+   - `dispatch()` works with both, routing to appropriate backend path
+   - Non-standard `compute()` exists for convenience (numpy arrays)
+
+### Recommendation
+
+**ACTION REQUIRED**: Refactor `create_tensor()` API to match spec behavior (device-resident by default).
+
+See detailed refactoring plan: `.claude/plans/tensor-api-refactoring.md`
+
+**Current API (WRONG)**:
+```python
+# Wrong: defaults to host-backed (readable=True, writable=True)
+tensor = context.create_tensor([2, 3], "float32")
+
+# Wrong: separate method for device tensors
+device_tensor = context.create_device_tensor(graph, [2, 3], "float32")
+```
+
+**Proposed API (CORRECT)**:
+```python
+# Correct: device-resident by default (matches spec)
+tensor = context.create_tensor([2, 3], "float32")  # readable=False, writable=False
+
+# Correct: explicit host access when needed
+host_tensor = context.create_tensor([2, 3], "float32", readable=True, writable=True)
+
+# Convenience: always host-backed (non-spec)
+host_tensor = context.create_host_tensor([2, 3], "float32")
+```
+
+**Migration Path**: 3-phase rollout (non-breaking → deprecation → breaking change)
+
+Additionally, the `compute()` method with numpy arrays should be documented as a convenience wrapper, not the primary interface.
 
 ## Current Architecture Summary
 
@@ -34,9 +93,11 @@ for output in outputs {
 ```
 This defeats the purpose of persistent tensors for KV cache.
 
-## Implementation Plan
+## Implementation Status
 
-### Phase 1: Core Rust Infrastructure
+### ✅ Phase 1: Core Rust Infrastructure (COMPLETE)
+
+**Completed 2026-01-08**
 
 #### 1.1 Add TensorValue Enum (src/tensor.rs - NEW FILE)
 **Purpose**: Unified representation for host and device tensors
@@ -216,9 +277,11 @@ impl PyMLContext {
 **Files to modify:**
 - `src/python/context.rs` - Add session caching
 
-### Phase 2: Python API
+### ✅ Phase 2: Python API (COMPLETE)
 
-#### 2.1 Expose DeviceTensor to Python (src/python/tensor.rs)
+**Completed 2026-01-08**
+
+#### 2.1 Expose DeviceTensor to Python (src/python/tensor.rs) ✅
 **Purpose**: New Python class for device-resident tensors
 
 **Implementation:**
@@ -489,9 +552,13 @@ enum OutputSpec<'a> {
 **Files to modify:**
 - `src/python/context.rs` - Rewrite dispatch() to support device tensors
 
-### Phase 3: Backend Integration
+### ⚠️ Phase 3: Backend Integration (PARTIAL - ONNX only)
 
-#### 3.1 Complete ONNX Runtime IoBinding (src/executors/onnx.rs)
+**ONNX Backend: Complete (2026-01-08)**
+**CoreML Backend: Not started**
+**TensorRT Backend: Not started**
+
+#### 3.1 Complete ONNX Runtime IoBinding (src/executors/onnx.rs) ✅
 **Priority**: This is the critical path for KV cache optimization
 
 **Implementation steps:**
@@ -504,16 +571,152 @@ enum OutputSpec<'a> {
 **Files to modify:**
 - `src/executors/onnx.rs` - Complete IoBinding implementation
 
-#### 3.2 CoreML Device Tensors (src/executors/coreml.rs)
-**Note**: CoreML may not support persistent device tensors via Objective-C FFI
+#### 3.2 CoreML Device Tensors (src/executors/coreml.rs) ❌ NOT STARTED
 
-**Fallback strategy:**
-- Store device tensors as host buffers
-- Still expose DeviceTensor API to Python
-- Copy on execute (no worse than current state)
+**Status**: No implementation yet
+
+**Challenge**: CoreML's Objective-C API (MLMultiArray) design:
+- MLMultiArray objects can persist between predictions
+- Data is accessible via `dataPointer` property
+- Could potentially avoid copies by reusing MLMultiArray objects
+- Requires investigation of CoreML prediction API lifecycle
+
+**Proposed Implementation**:
+
+```rust
+// src/executors/coreml.rs
+
+pub struct CoreMLDeviceTensor {
+    multi_array: *mut Object,  // MLMultiArray* (retained)
+    shape: Vec<usize>,
+    dtype: DataType,
+    session: Option<Arc<CoreMLSession>>,  // Keep model alive
+}
+
+impl DeviceTensorBackend for CoreMLDeviceTensor {
+    fn read_to_host(&self) -> Result<Vec<f32>, GraphError> {
+        unsafe {
+            // Get data pointer from MLMultiArray
+            let data_ptr: *mut f32 = msg_send![self.multi_array, dataPointer];
+            let count = self.shape.iter().product();
+
+            // Copy from MLMultiArray to host Vec
+            Ok(std::slice::from_raw_parts(data_ptr, count).to_vec())
+        }
+    }
+
+    fn write_from_host(&mut self, data: &[f32]) -> Result<(), GraphError> {
+        unsafe {
+            // Get data pointer from MLMultiArray
+            let data_ptr: *mut f32 = msg_send![self.multi_array, dataPointer];
+            let count = self.shape.iter().product();
+
+            // Copy from host Vec to MLMultiArray
+            std::ptr::copy_nonoverlapping(
+                data.as_ptr(),
+                data_ptr,
+                count
+            );
+        }
+        Ok(())
+    }
+}
+
+// New function: Create device tensor from MLMultiArray
+pub fn create_coreml_device_tensor(
+    shape: &[usize],
+    dtype: DataType,
+) -> Result<CoreMLDeviceTensor, GraphError> {
+    unsafe {
+        // Create MLMultiArrayShape
+        let ns_shape = create_ns_array_from_shape(shape)?;
+
+        // Create MLMultiArray
+        let multi_array: *mut Object = msg_send![
+            class!(MLMultiArray),
+            alloc
+        ];
+        let multi_array: *mut Object = msg_send![
+            multi_array,
+            initWithShape: ns_shape
+            dataType: ml_data_type_from_dtype(dtype)
+            error: ptr::null_mut()
+        ];
+
+        if multi_array.is_null() {
+            return Err(GraphError::DeviceTensor(
+                "Failed to create MLMultiArray".into()
+            ));
+        }
+
+        // Retain the MLMultiArray
+        let _: () = msg_send![multi_array, retain];
+
+        Ok(CoreMLDeviceTensor {
+            multi_array,
+            shape: shape.to_vec(),
+            dtype,
+            session: None,
+        })
+    }
+}
+
+// Execute with MLMultiArray I/O (zero-copy within CoreML)
+pub fn run_coreml_with_device_tensors(
+    model: &Object,  // MLModel*
+    inputs: Vec<(&str, &CoreMLDeviceTensor)>,
+    outputs: Vec<(&str, &mut CoreMLDeviceTensor)>,
+) -> Result<(), GraphError> {
+    unsafe {
+        // Create MLDictionaryFeatureProvider with input MLMultiArrays
+        let input_dict = create_feature_dict(inputs)?;
+
+        // Create output MLDictionaryFeatureProvider with pre-allocated arrays
+        let output_dict = create_output_feature_dict(outputs)?;
+
+        // Predict with both input and output feature providers
+        let options: *mut Object = msg_send![class!(MLPredictionOptions), new];
+
+        let result: *mut Object = msg_send![
+            model,
+            predictionFromFeatures: input_dict
+            options: options
+            error: ptr::null_mut()
+        ];
+
+        if result.is_null() {
+            return Err(GraphError::DeviceTensor(
+                "CoreML prediction failed".into()
+            ));
+        }
+
+        // Results are written to output MLMultiArrays in-place
+        Ok(())
+    }
+}
+```
+
+**Key Benefits**:
+- MLMultiArray objects persist across predictions
+- Data stays in CoreML's memory space (Metal/ANE buffers)
+- Zero-copy for iterative workloads
+- Natural fit for KV cache patterns
+
+**Investigation Needed**:
+1. Can MLMultiArray data pointer be reused across predictions?
+2. Does CoreML copy or reference input MLMultiArray data?
+3. Can we pre-allocate output MLMultiArrays and pass them to predictions?
+4. Memory management: when does CoreML release MLMultiArray backing storage?
 
 **Files to modify:**
-- `src/executors/coreml.rs` - Add CoreMLDeviceTensor (backed by Vec<f32>)
+- `src/executors/coreml.rs` - Add CoreMLDeviceTensor + device execution path
+- `src/tensor.rs` - Register CoreMLDeviceTensor backend
+
+**Fallback Strategy** (if zero-copy not possible):
+- Store device tensors as host Vec<f32> buffers
+- Copy to/from MLMultiArray on each prediction
+- Still better than current dispatch() which converts via numpy
+- Provides consistent API even if performance doesn't improve
 
 #### 3.3 TensorRT Device Tensors (src/executors/trtx.rs)
 **Note**: Depends on `trtx` crate capabilities
@@ -525,9 +728,11 @@ enum OutputSpec<'a> {
 **Files to modify:**
 - `src/executors/trtx.rs` - Add TrtxDeviceTensor if supported
 
-### Phase 4: Testing & Validation
+### ✅ Phase 4: Testing & Validation (COMPLETE for ONNX)
 
-#### 4.1 Rust Unit Tests
+**Completed 2026-01-08**
+
+#### 4.1 Rust Unit Tests ✅
 **Files**: `src/tensor.rs`, `src/executors/onnx.rs`
 
 ```rust
@@ -655,9 +860,11 @@ def test_kv_cache_no_copies():
     print(f"Completed 100 steps with only 1 host transfer")
 ```
 
-### Phase 5: Documentation & Examples
+### ⚠️ Phase 5: Documentation & Examples (PARTIAL)
 
-#### 5.1 Update API Reference
+**Status**: Examples and tests complete, documentation needs updates
+
+#### 5.1 Update API Reference ❌ TODO
 **Files**: `docs/user-guide/api-reference.md`
 
 Add sections:
@@ -745,18 +952,80 @@ Add section on device tensors:
 4. **Tested**: 20+ tests covering device tensor operations
 5. **Documented**: API reference and KV cache example complete
 
-## Open Questions
+## What Was Accomplished (Phase 1-3)
 
-1. **Session creation timing**: When to create ONNX session for device tensors?
-   - Option A: Require build() first, then create_device_tensor()
-   - Option B: Lazy session creation on first create_device_tensor()
-   - **Recommendation**: Option A - explicit build() before device tensors
+### Core Infrastructure ✅
+- Created `src/tensor.rs` with `DeviceTensorBackend` trait and `DeviceTensorHandle` type
+- Implemented `OrtDeviceTensor` in `src/executors/onnx.rs` using ONNX Runtime Value API
+- Added ONNX session caching to `src/python/context.rs` for device tensor creation
+- Added error types to `src/error.rs` for device tensor operations
 
-2. **Multi-dtype support**: Start with f32 only or support all types?
-   - **Recommendation**: Start with f32, add types incrementally
+### Python API ✅
+- Created `PyMLDeviceTensor` class in `src/python/tensor.rs` with:
+  - Properties: `shape`, `data_type`, `size`, `device`, `backend`
+  - Methods: `read()`, `write()`, `destroy()`
+- Added `create_device_tensor()` to `PyMLContext`
+- Extended `dispatch()` to automatically route between host and device tensor paths
+- Implemented `dispatch_with_device_tensors()` for zero-copy execution
 
-3. **Device selection**: Explicit device parameter or infer from backend?
-   - **Recommendation**: Infer from backend, optional override later
+### Testing ✅
+- Created `tests/test_device_tensors.py` with 9 integration tests
+- Created `examples/kv_cache_device_tensors.py` comprehensive demo (300+ lines)
+- Validated KV cache ping-pong pattern with both host and device tensors
+- Measured 1.04x speedup for 50-step decode loop
 
-4. **Output allocation**: Pre-allocate or auto-allocate?
-   - **Recommendation**: Support both - pre-allocated for KV cache, auto for others
+### Key Design Decisions Made
+
+1. **Session creation timing**: ✅ RESOLVED
+   - Device tensors require graph to be built first
+   - `create_device_tensor(graph, shape, dtype)` takes graph parameter
+   - Session is retrieved from context's session cache
+
+2. **Multi-dtype support**: ✅ RESOLVED
+   - Started with f32 support only
+   - Can be extended to other types incrementally
+   - Type conversion handled by ONNX Runtime
+
+3. **Device selection**: ✅ RESOLVED
+   - Device inferred from backend (OnnxCpu → CPU, OnnxGpu → CUDA)
+   - No explicit device parameter needed initially
+   - Can add override parameter in future
+
+4. **Output allocation**: ✅ RESOLVED
+   - Pre-allocated device tensors for outputs
+   - User creates output tensors before calling dispatch()
+   - Perfect for KV cache ping-pong pattern
+
+## Next Steps
+
+### Critical (P0) - API Alignment
+1. ❌ TODO: Refactor `create_tensor()` to be device-first (see `tensor-api-refactoring.md`)
+   - Add `create_host_tensor()` convenience method
+   - Add deprecation warnings to old defaults
+   - Update all examples and tests
+   - Prepare migration guide for v1.0
+
+### Immediate (P0) - Completed Work
+1. ✅ DONE: Core ONNX device tensor implementation
+2. ✅ DONE: Python API with dispatch() routing
+3. ✅ DONE: KV cache demo and tests
+4. ❌ TODO: Update API reference documentation
+
+### High Priority (P1) - CoreML Support
+1. Investigate MLMultiArray lifecycle and memory management
+2. Prototype CoreMLDeviceTensor with read/write methods
+3. Implement `run_coreml_with_device_tensors()` execution path
+4. Test on macOS with Neural Engine workloads
+5. Benchmark KV cache performance vs host tensors
+
+### Medium Priority (P2) - TensorRT Support
+1. Research `trtx` crate capabilities for device tensors
+2. Check if CUDA buffers can be reused across inferences
+3. Implement TrtxDeviceTensor if supported
+4. Benchmark on NVIDIA GPU
+
+### Low Priority (P3) - Polish
+1. Add multi-dtype support (float16, int8, etc.)
+2. Add explicit device selection override
+3. Auto-allocate output tensors option
+4. Performance profiling tools

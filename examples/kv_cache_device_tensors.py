@@ -68,12 +68,12 @@ def run_with_host_tensors(ctx, graph, num_steps=50):
 
     print(f"Running {num_steps} steps with HOST tensors...")
 
-    # Initialize KV cache (host tensors)
+    # Initialize KV cache (host tensors for this baseline)
     kv_shape = [batch_size, num_heads, seq_len, head_dim]
-    past_key = ctx.create_tensor(kv_shape, "float32")
-    past_value = ctx.create_tensor(kv_shape, "float32")
-    present_key = ctx.create_tensor(kv_shape, "float32")
-    present_value = ctx.create_tensor(kv_shape, "float32")
+    past_key = ctx.create_host_tensor(kv_shape, "float32")
+    past_value = ctx.create_host_tensor(kv_shape, "float32")
+    present_key = ctx.create_host_tensor(kv_shape, "float32")
+    present_value = ctx.create_host_tensor(kv_shape, "float32")
 
     # Initialize with zeros
     ctx.write_tensor(past_key, np.zeros(kv_shape, dtype=np.float32))

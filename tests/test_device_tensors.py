@@ -112,7 +112,7 @@ def test_dispatch_with_device_tensors(context, simple_graph):
 def test_dispatch_mixed_tensors(context, simple_graph):
     """Test dispatch with mix of host and device tensors"""
     # Host input tensor
-    x_host = context.create_tensor([2, 3], "float32")
+    x_host = context.create_host_tensor([2, 3], "float32")
     x_data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
     context.write_tensor(x_host, x_data)
 

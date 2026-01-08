@@ -1559,7 +1559,7 @@ def test_broadcasting_computation(context, builder):
 # MLTensor Tests
 def test_create_tensor(context):
     """Test creating a tensor"""
-    tensor = context.create_tensor([2, 3], "float32")
+    tensor = context.create_host_tensor([2, 3], "float32")
 
     assert tensor.shape == [2, 3]
     assert tensor.data_type == "float32"
@@ -1568,7 +1568,7 @@ def test_create_tensor(context):
 
 def test_write_read_tensor(context):
     """Test writing and reading tensor data"""
-    tensor = context.create_tensor([2, 3], "float32")
+    tensor = context.create_host_tensor([2, 3], "float32")
 
     # Write data to tensor
     data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
@@ -1582,7 +1582,7 @@ def test_write_read_tensor(context):
 
 def test_write_tensor_shape_mismatch(context):
     """Test that writing wrong shape raises error"""
-    tensor = context.create_tensor([2, 3], "float32")
+    tensor = context.create_host_tensor([2, 3], "float32")
     wrong_data = np.array([[1, 2], [3, 4]], dtype=np.float32)
 
     with pytest.raises(ValueError, match="Shape mismatch"):
@@ -1591,7 +1591,7 @@ def test_write_tensor_shape_mismatch(context):
 
 def test_tensor_initial_data(context):
     """Test that tensors are initialized with zeros"""
-    tensor = context.create_tensor([2, 3], "float32")
+    tensor = context.create_host_tensor([2, 3], "float32")
     result = context.read_tensor(tensor)
 
     expected = np.zeros((2, 3), dtype=np.float32)
@@ -1600,8 +1600,8 @@ def test_tensor_initial_data(context):
 
 def test_tensor_different_shapes(context):
     """Test creating tensors with different shapes"""
-    tensor1 = context.create_tensor([5], "float32")
-    tensor2 = context.create_tensor([2, 3, 4], "float32")
+    tensor1 = context.create_host_tensor([5], "float32")
+    tensor2 = context.create_host_tensor([2, 3, 4], "float32")
 
     assert tensor1.shape == [5]
     assert tensor1.size == 5
@@ -1612,7 +1612,7 @@ def test_tensor_different_shapes(context):
 
 def test_tensor_repr(context):
     """Test tensor string representation"""
-    tensor = context.create_tensor([2, 3], "float32")
+    tensor = context.create_host_tensor([2, 3], "float32")
     repr_str = repr(tensor)
 
     assert "MLTensor" in repr_str
@@ -1621,12 +1621,18 @@ def test_tensor_repr(context):
 
 
 def test_tensor_descriptor_flags(context):
-    """Test MLTensor descriptor flags per W3C MLTensor Explainer"""
-    # Test default flags (readable=True, writable=True, exportable_to_gpu=False)
+    """Test MLTensor descriptor flags per W3C WebNN spec"""
+    # Test default flags (readable=False, writable=False per spec)
     tensor_default = context.create_tensor([2, 3], "float32")
-    assert tensor_default.readable == True
-    assert tensor_default.writable == True
+    assert tensor_default.readable == False
+    assert tensor_default.writable == False
     assert tensor_default.exportable_to_gpu == False
+
+    # Test host tensor convenience method
+    tensor_host = context.create_host_tensor([2, 3], "float32")
+    assert tensor_host.readable == True
+    assert tensor_host.writable == True
+    assert tensor_host.exportable_to_gpu == False
 
     # Test custom flags
     tensor_readonly = context.create_tensor([2, 3], "float32", readable=True, writable=False)
@@ -1643,7 +1649,7 @@ def test_tensor_descriptor_flags(context):
 
 def test_tensor_destroy(context):
     """Test explicit tensor resource cleanup with destroy()"""
-    tensor = context.create_tensor([2, 3], "float32")
+    tensor = context.create_host_tensor([2, 3], "float32")
 
     # Write some data
     data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
@@ -1695,8 +1701,8 @@ def test_dispatch_method(context, builder):
     graph = builder.build({"output": y})
 
     # Create input and output tensors
-    input_tensor = context.create_tensor([2, 3], "float32")
-    output_tensor = context.create_tensor([2, 3], "float32")
+    input_tensor = context.create_host_tensor([2, 3], "float32")
+    output_tensor = context.create_host_tensor([2, 3], "float32")
 
     # Write input data
     input_data = np.array([[1, -2, 3], [-4, 5, -6]], dtype=np.float32)
@@ -1717,7 +1723,7 @@ def test_dispatch_method(context, builder):
 def test_tensor_workflow(context, builder):
     """Test complete tensor workflow with graph execution"""
     # Create tensors for inputs and outputs
-    input_tensor = context.create_tensor([2, 3], "float32")
+    input_tensor = context.create_host_tensor([2, 3], "float32")
 
     # Write input data
     input_data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
