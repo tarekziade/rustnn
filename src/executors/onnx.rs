@@ -26,17 +26,8 @@ fn ensure_ort_initialized() -> Result<(), GraphError> {
             .commit();
 
         if !success {
-            // Check if ORT_DYLIB_PATH is set and provide helpful error message
-            let dylib_path_hint = if std::env::var("ORT_DYLIB_PATH").is_err() {
-                "\n\nHint: Set ORT_DYLIB_PATH environment variable to the directory containing \
-                 the ONNX Runtime shared library (libonnxruntime.so/dylib/dll).\n\
-                 Example: export ORT_DYLIB_PATH=/path/to/onnxruntime/lib"
-            } else {
-                ""
-            };
-
             result = Err(GraphError::OnnxRuntimeFailed {
-                reason: format!("ort init failed{dylib_path_hint}"),
+                reason: "ort init failed - unable to initialize ONNX Runtime".to_string(),
             });
         }
     });
