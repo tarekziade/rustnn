@@ -191,20 +191,22 @@ This section summarizes **typical input/output tensor types**, following the Web
 Use case: efficient on-device image classification.
 
 Graph:
-input  
-→ conv2d  
-→ batchNormalization  
-→ hardSwish  
-→ conv2d  
-→ batchNormalization  
-→ hardSwish  
-→ conv2d  
-→ batchNormalization  
-→ relu  
-→ averagePool2d  
-→ reshape  
-→ gemm  
-→ softmax  
+```mermaid
+flowchart TD
+    A[input] --> B[conv2d]
+    B --> C[batchNormalization]
+    C --> D[hardSwish]
+    D --> E[conv2d]
+    E --> F[batchNormalization]
+    F --> G[hardSwish]
+    G --> H[conv2d]
+    H --> I[batchNormalization]
+    I --> J[relu]
+    J --> K[averagePool2d]
+    K --> L[reshape]
+    L --> M[gemm]
+    M --> N[softmax]
+```
 
 Why each step is there:
 - input: An image tensor (typically H×W×C or N×C×H×W) enters the model.
@@ -229,26 +231,28 @@ Why each step is there:
 Use case: autoregressive text generation (predict next token from previous tokens).
 
 Graph:
-input  
-→ gather  
-→ add  
-→ layerNormalization  
-→ matmul  
-→ split  
-→ matmul  
-→ triangular  
-→ softmax  
-→ matmul  
-→ matmul  
-→ add  
-→ layerNormalization  
-→ matmul  
-→ gelu  
-→ matmul  
-→ add  
-→ layerNormalization  
-→ matmul  
-→ softmax  
+```mermaid
+flowchart TD
+    A[input] --> B[gather]
+    B --> C[add]
+    C --> D[layerNormalization]
+    D --> E[matmul]
+    E --> F[split]
+    F --> G[matmul]
+    G --> H[triangular]
+    H --> I[softmax]
+    I --> J[matmul]
+    J --> K[matmul]
+    K --> L[add]
+    L --> M[layerNormalization]
+    M --> N[matmul]
+    N --> O[gelu]
+    O --> P[matmul]
+    P --> Q[add]
+    Q --> R[layerNormalization]
+    R --> S[matmul]
+    S --> T[softmax]
+```
 
 Why each step is there:
 - input: Token IDs (and implicitly a running context length) arrive as the prompt prefix.
@@ -281,22 +285,24 @@ Why each step is there:
 Use case: sentence/document embeddings for search and similarity.
 
 Graph:
-input  
-→ gather  
-→ add  
-→ layerNormalization  
-→ matmul  
-→ softmax  
-→ matmul  
-→ add  
-→ layerNormalization  
-→ matmul  
-→ gelu  
-→ matmul  
-→ add  
-→ reduceMean  
-→ sqrt  
-→ div  
+```mermaid
+flowchart TD
+    A[input] --> B[gather]
+    B --> C[add]
+    C --> D[layerNormalization]
+    D --> E[matmul]
+    E --> F[softmax]
+    F --> G[matmul]
+    G --> H[add]
+    H --> I[layerNormalization]
+    I --> J[matmul]
+    J --> K[gelu]
+    K --> L[matmul]
+    L --> M[add]
+    M --> N[reduceMean]
+    N --> O[sqrt]
+    O --> P[div]
+```
 
 Why each step is there:
 - input: Token IDs for a sentence or document.
@@ -321,16 +327,18 @@ Why each step is there:
 Use case: image embeddings for similarity and clustering.
 
 Graph:
-input  
-→ conv2d  
-→ relu  
-→ conv2d  
-→ relu  
-→ averagePool2d  
-→ reshape  
-→ gemm  
-→ sqrt  
-→ div  
+```mermaid
+flowchart TD
+    A[input] --> B[conv2d]
+    B --> C[relu]
+    C --> D[conv2d]
+    D --> E[relu]
+    E --> F[averagePool2d]
+    F --> G[reshape]
+    G --> H[gemm]
+    H --> I[sqrt]
+    I --> J[div]
+```
 
 Why each step is there:
 - input: Image tensor.
