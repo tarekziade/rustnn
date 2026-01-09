@@ -8,6 +8,10 @@ on:
       - 'python/**'
       - '.github/workflows/docs*.yml'
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest

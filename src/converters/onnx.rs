@@ -1,16 +1,16 @@
 use crate::converters::{ConvertedGraph, operand_name};
+use crate::debug_print;
 use crate::error::GraphError;
-use crate::graph::{DataType, GraphInfo, Operation};
+use crate::graph::{DataType, GraphInfo, OperandKind, Operation};
 use crate::protos::onnx::{
     AttributeProto, GraphProto, ModelProto, NodeProto, OperatorSetIdProto, TensorProto,
     TensorShapeProto, TypeProto, ValueInfoProto, attribute_proto::AttributeType,
     tensor_proto::DataType as ProtoDataType, type_proto::Tensor as TensorTypeProto,
 };
-use crate::shape_inference::infer_transpose_shape;
+use crate::shape_inference::{broadcast_shapes, infer_matmul_shape, infer_transpose_shape};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use prost::Message;
-use std::env;
 use webnn_onnx_utils::{
     attributes::AttrBuilder, data_types as utils_data_types, tensor_data::TensorData,
 };
@@ -19,32 +19,24 @@ use webnn_onnx_utils::{
 pub struct OnnxConverter;
 
 impl OnnxConverter {
-    fn debug_enabled() -> bool {
-        env::var("RUSTNN_ONNX_DEBUG")
-            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(false)
-    }
-
     fn invalid_operand(
         context: &str,
         operand: u32,
         op_info: Option<(&Operation, usize)>,
     ) -> GraphError {
-        if Self::debug_enabled() {
-            if let Some((op, idx)) = op_info {
-                eprintln!(
-                    "[DEBUG] Invalid operand {} at {} (op #{} type={} label={:?} inputs={:?} outputs={:?})",
-                    operand,
-                    context,
-                    idx,
-                    op.op_type,
-                    op.label,
-                    op.input_operands,
-                    op.output_operands
-                );
-            } else {
-                eprintln!("[DEBUG] Invalid operand {} at {}", operand, context);
-            }
+        if let Some((op, idx)) = op_info {
+            debug_print!(
+                "[DEBUG] Invalid operand {} at {} (op #{} type={} label={:?} inputs={:?} outputs={:?})",
+                operand,
+                context,
+                idx,
+                op.op_type,
+                op.label,
+                op.input_operands,
+                op.output_operands
+            );
+        } else {
+            debug_print!("[DEBUG] Invalid operand {} at {}", operand, context);
         }
         GraphError::InvalidConversionOperand { operand }
     }
@@ -396,11 +388,11 @@ impl OnnxConverter {
         let mut attributes = Vec::new();
 
         // Concat requires an axis attribute in ONNX
-        if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
+        if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_i64()) {
             attributes.push(AttributeProto {
                 name: "axis".to_string(),
                 r#type: AttributeType::Int as i32,
-                i: axis as i64,
+                i: axis,
                 ..Default::default()
             });
         }
@@ -738,32 +730,83 @@ impl crate::converters::GraphConverter for OnnxConverter {
     }
 
     fn convert(&self, graph: &GraphInfo) -> Result<ConvertedGraph, GraphError> {
+        debug_print!("[DEBUG] Starting ONNX conversion");
+        debug_print!("  Total operations: {}", graph.operations.len());
+        let expand_count = graph
+            .operations
+            .iter()
+            .filter(|op| op.op_type == "expand")
+            .count();
+        debug_print!("  Expand operations: {}", expand_count);
+
         let mut initializers = Vec::new();
         let mut inputs_val = Vec::new();
         let mut outputs_val = Vec::new();
-        let mut value_infos = Vec::new();
+        let mut value_infos = Vec::new(); // Will add entries for explicitly tracked shapes
+        let mut skipped_inputs = std::collections::HashSet::new(); // Track skipped empty KV inputs
+        let operand_remapping: std::collections::HashMap<u32, u32> =
+            std::collections::HashMap::new(); // Map skipped outputs to replacements
 
         for &id in &graph.input_operands {
             let operand = graph.operand(id).ok_or_else(|| {
-                if Self::debug_enabled() {
-                    eprintln!(
-                        "[DEBUG] Missing input operand {} while building ONNX graph",
-                        id
-                    );
-                }
+                debug_print!(
+                    "[DEBUG] Missing input operand {} while building ONNX graph",
+                    id
+                );
                 Self::invalid_operand("graph input lookup", id, None)
             })?;
-            inputs_val.push(value_info(&operand_name(graph, id), &operand.descriptor));
+
+            // Skip KV cache inputs with empty dimensions (past_sequence_length=0)
+            // These inputs are never used in the computation - they're just concatenated
+            // with new KV, and concat(empty, new) = new.
+            let input_name = operand_name(graph, id);
+            let has_empty_dimension = operand.descriptor.shape.contains(&0);
+            let is_kv_input = input_name.starts_with("past_key_values_");
+
+            // Debug: print all KV input shapes
+            if is_kv_input {
+                debug_print!(
+                    "[ONNX CONVERTER] KV input: {} shape={:?} has_empty={}",
+                    input_name,
+                    operand.descriptor.shape,
+                    has_empty_dimension
+                );
+            }
+
+            if has_empty_dimension && is_kv_input {
+                debug_print!(
+                    "[DEBUG] Skipping empty KV cache input: {} (shape: {:?})",
+                    input_name,
+                    operand.descriptor.shape
+                );
+                skipped_inputs.insert(id);
+                continue;
+            }
+
+            inputs_val.push(value_info(&input_name, &operand.descriptor));
         }
 
-        for &id in &graph.output_operands {
+        // Sort outputs: "logits" first, then alphabetically by name
+        // This ensures ONNX models have logits at output 0 (expected by users)
+        let mut sorted_outputs: Vec<u32> = graph.output_operands.clone();
+        sorted_outputs.sort_by_key(|&id| {
+            let operand = graph.operand(id);
+            let name = operand.and_then(|op| op.name.as_deref()).unwrap_or("");
+            // Sort key: (priority, name)
+            // "logits" gets priority 0 (first), everything else gets priority 1 (alphabetically)
+            if name == "logits" {
+                (0, String::new())
+            } else {
+                (1, name.to_string())
+            }
+        });
+
+        for &id in &sorted_outputs {
             let operand = graph.operand(id).ok_or_else(|| {
-                if Self::debug_enabled() {
-                    eprintln!(
-                        "[DEBUG] Missing output operand {} while building ONNX graph",
-                        id
-                    );
-                }
+                debug_print!(
+                    "[DEBUG] Missing output operand {} while building ONNX graph",
+                    id
+                );
                 Self::invalid_operand("graph output lookup", id, None)
             })?;
 
@@ -811,14 +854,32 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
         for op in &graph.operations {
             if op.op_type.eq_ignore_ascii_case("expand") {
-                if op.input_operands.len() >= 2
-                    && let (Some(&input_id), Some(output_id)) =
-                        (op.input_operands.first(), op.output_operand)
+                if let (Some(&input_id), Some(output_id)) =
+                    (op.input_operands.first(), op.output_operand)
                     && let Some(input_operand) = graph.operand(input_id)
                 {
                     type_overrides.insert(output_id, input_operand.descriptor.data_type);
-                    if let Some(shape) = operand_shapes.get(&op.input_operands[1]) {
+
+                    // Check for newShape attribute first
+                    if let Some(new_shape_attr) = op.attributes.get("newShape") {
+                        if let Some(new_shape_array) = new_shape_attr.as_array() {
+                            let shape: Vec<u32> = new_shape_array
+                                .iter()
+                                .filter_map(|v| v.as_i64().or_else(|| v.as_u64().map(|u| u as i64)))
+                                .map(|v| v as u32)
+                                .collect();
+                            if !shape.is_empty() {
+                                shape_overrides.insert(output_id, shape.clone());
+                                operand_shapes.insert(output_id, shape);
+                            }
+                        }
+                    }
+                    // Fall back to shape from second input operand (if present)
+                    else if op.input_operands.len() >= 2
+                        && let Some(shape) = operand_shapes.get(&op.input_operands[1])
+                    {
                         shape_overrides.insert(output_id, shape.clone());
+                        operand_shapes.insert(output_id, shape.clone());
                     }
                 }
             } else if op.op_type.eq_ignore_ascii_case("shape") {
@@ -892,16 +953,260 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         operand_shapes.insert(output_id, in_shape);
                     }
                 }
-            } else if op.op_type.eq_ignore_ascii_case("add") {
+            } else if op.op_type.eq_ignore_ascii_case("cos")
+                || op.op_type.eq_ignore_ascii_case("sin")
+                || op.op_type.eq_ignore_ascii_case("tan")
+                || op.op_type.eq_ignore_ascii_case("exp")
+                || op.op_type.eq_ignore_ascii_case("log")
+                || op.op_type.eq_ignore_ascii_case("abs")
+                || op.op_type.eq_ignore_ascii_case("neg")
+                || op.op_type.eq_ignore_ascii_case("sqrt")
+                || op.op_type.eq_ignore_ascii_case("relu")
+                || op.op_type.eq_ignore_ascii_case("sigmoid")
+                || op.op_type.eq_ignore_ascii_case("tanh")
+                || op.op_type.eq_ignore_ascii_case("cast")
+            {
+                // Track unary element-wise operations (preserve input shape and type)
                 if let Some(output_id) = op.output_operand
-                    && op.input_operands.len() == 2
-                    && let (Some(lhs), Some(rhs)) = (
+                    && let Some(&input_id) = op.input_operands.first()
+                {
+                    let output_name = graph
+                        .operand(output_id)
+                        .and_then(|op| op.name.as_ref())
+                        .map(|s| s.as_str())
+                        .unwrap_or("unknown");
+
+                    // Preserve shape from input
+                    if let Some(input_shape) = operand_shapes.get(&input_id) {
+                        debug_print!(
+                            "[UNARY DEBUG] {} op {} preserves shape {:?} from input {}",
+                            op.op_type,
+                            output_name,
+                            input_shape,
+                            input_id
+                        );
+                        shape_overrides.insert(output_id, input_shape.clone());
+                        operand_shapes.insert(output_id, input_shape.clone());
+                    } else {
+                        debug_print!(
+                            "[UNARY WARNING] {} op {} has no input shape for input {}",
+                            op.op_type,
+                            output_name,
+                            input_id
+                        );
+                    }
+
+                    // Preserve type from input (except Cast which changes type)
+                    if !op.op_type.eq_ignore_ascii_case("cast") {
+                        let input_type = type_overrides
+                            .get(&input_id)
+                            .copied()
+                            .or_else(|| graph.operand(input_id).map(|op| op.descriptor.data_type));
+
+                        if let Some(dtype) = input_type {
+                            type_overrides.insert(output_id, dtype);
+                        }
+                    }
+                }
+            } else if op.op_type.eq_ignore_ascii_case("add")
+                || op.op_type.eq_ignore_ascii_case("sub")
+                || op.op_type.eq_ignore_ascii_case("mul")
+                || op.op_type.eq_ignore_ascii_case("div")
+                || op.op_type.eq_ignore_ascii_case("pow")
+            {
+                // Track binary element-wise operation output shapes (use broadcasting)
+                if let Some(output_id) = op.output_operand
+                    && op.input_operands.len() >= 2
+                {
+                    // Try to compute broadcast shape from inputs
+                    if let (Some(lhs), Some(rhs)) = (
                         operand_shapes.get(&op.input_operands[0]),
                         operand_shapes.get(&op.input_operands[1]),
-                    )
-                    && lhs == rhs
+                    ) && let Ok(result_shape) = broadcast_shapes(lhs, rhs)
+                    {
+                        shape_overrides.insert(output_id, result_shape.clone());
+                        operand_shapes.insert(output_id, result_shape);
+                    }
+
+                    // Preserve type from first input (binary ops typically preserve input type)
+                    if let Some(&first_input_id) = op.input_operands.first() {
+                        let input_type =
+                            type_overrides.get(&first_input_id).copied().or_else(|| {
+                                graph
+                                    .operand(first_input_id)
+                                    .map(|op| op.descriptor.data_type)
+                            });
+
+                        if let Some(dtype) = input_type {
+                            type_overrides.insert(output_id, dtype);
+                        }
+                    }
+                }
+            } else if op.op_type.eq_ignore_ascii_case("matmul") {
+                // Track matmul output shapes
+                if let Some(output_id) = op.output_operand
+                    && op.input_operands.len() == 2
                 {
-                    shape_overrides.insert(output_id, lhs.clone());
+                    let output_name = graph
+                        .operand(output_id)
+                        .and_then(|op| op.name.as_ref())
+                        .map(|s| s.as_str())
+                        .unwrap_or("unknown");
+
+                    // Get input shapes
+                    let lhs_shape = operand_shapes.get(&op.input_operands[0]);
+                    let rhs_shape = operand_shapes.get(&op.input_operands[1]);
+
+                    if let (Some(lhs), Some(rhs)) = (lhs_shape, rhs_shape) {
+                        if let Ok(out_shape) = infer_matmul_shape(lhs, rhs) {
+                            debug_print!(
+                                "[MATMUL DEBUG] Matmul {} tracked output shape {:?} from inputs {:?} @ {:?}",
+                                output_name,
+                                out_shape,
+                                lhs,
+                                rhs
+                            );
+                            shape_overrides.insert(output_id, out_shape.clone());
+                            operand_shapes.insert(output_id, out_shape);
+                        } else {
+                            debug_print!(
+                                "[MATMUL WARNING] Matmul {} failed to infer shape from inputs {:?} @ {:?}",
+                                output_name,
+                                lhs,
+                                rhs
+                            );
+                        }
+                    } else {
+                        debug_print!(
+                            "[MATMUL WARNING] Matmul {} missing input shapes: lhs={} rhs={}",
+                            output_name,
+                            lhs_shape.is_some(),
+                            rhs_shape.is_some()
+                        );
+                    }
+
+                    // Preserve type from first input
+                    let input_type =
+                        type_overrides
+                            .get(&op.input_operands[0])
+                            .copied()
+                            .or_else(|| {
+                                graph
+                                    .operand(op.input_operands[0])
+                                    .map(|op| op.descriptor.data_type)
+                            });
+
+                    if let Some(dtype) = input_type {
+                        type_overrides.insert(output_id, dtype);
+                    }
+                }
+            } else if op.op_type.eq_ignore_ascii_case("concat") {
+                // Track concat output shapes
+                if let Some(output_id) = op.output_operand
+                    && op.input_operands.len() >= 2
+                {
+                    let output_name = graph
+                        .operand(output_id)
+                        .and_then(|op| op.name.as_ref())
+                        .map(|s| s.as_str())
+                        .unwrap_or("unknown");
+
+                    // Get axis attribute
+                    let axis = op
+                        .attributes
+                        .get("axis")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0);
+
+                    // Get input shapes
+                    let input_shapes: Vec<_> = op
+                        .input_operands
+                        .iter()
+                        .filter_map(|id| operand_shapes.get(id))
+                        .collect();
+
+                    if input_shapes.len() == op.input_operands.len() && !input_shapes.is_empty() {
+                        let rank = input_shapes[0].len() as i64;
+                        let mut axis = axis;
+                        if axis < 0 {
+                            axis += rank;
+                        }
+                        if axis >= 0 && (axis as usize) < input_shapes[0].len() {
+                            let mut out_shape = input_shapes[0].clone();
+                            let concat_axis = axis as usize;
+                            for shape in &input_shapes[1..] {
+                                out_shape[concat_axis] += shape[concat_axis];
+                            }
+                            debug_print!(
+                                "[CONCAT DEBUG] Concat {} tracked output shape {:?}",
+                                output_name,
+                                out_shape
+                            );
+                            shape_overrides.insert(output_id, out_shape.clone());
+                            operand_shapes.insert(output_id, out_shape);
+                        }
+                    } else {
+                        debug_print!(
+                            "[CONCAT WARNING] Concat {} missing input shapes: have {}/{} inputs",
+                            output_name,
+                            input_shapes.len(),
+                            op.input_operands.len()
+                        );
+                    }
+
+                    // Preserve type from first input (concat requires all inputs have same type)
+                    if let Some(&first_input_id) = op.input_operands.first() {
+                        // Check if we have a type override for the first input
+                        let input_type =
+                            type_overrides.get(&first_input_id).copied().or_else(|| {
+                                // Fall back to descriptor type
+                                graph
+                                    .operand(first_input_id)
+                                    .map(|op| op.descriptor.data_type)
+                            });
+
+                        if let Some(dtype) = input_type {
+                            type_overrides.insert(output_id, dtype);
+                        }
+                    }
+                }
+            } else if op.op_type.eq_ignore_ascii_case("unsqueeze") {
+                // Track unsqueeze output shapes (adds dimensions)
+                if let Some(output_id) = op.output_operand
+                    && let Some(&input_id) = op.input_operands.first()
+                    && let Some(input_shape) = operand_shapes.get(&input_id)
+                    && let Some(axes_val) = op.attributes.get("axes")
+                {
+                    let axes_i64: Vec<i64> = if let Some(arr) = axes_val.as_array() {
+                        arr.iter().filter_map(|v| v.as_i64()).collect()
+                    } else {
+                        vec![]
+                    };
+
+                    if !axes_i64.is_empty() {
+                        use crate::shape_inference::infer_unsqueeze_shape;
+                        let axes_u32: Vec<u32> = axes_i64
+                            .iter()
+                            .map(|&a| {
+                                if a < 0 {
+                                    ((input_shape.len() as i64 + 1) + a) as u32
+                                } else {
+                                    a as u32
+                                }
+                            })
+                            .collect();
+
+                        if let Ok(out_shape) = infer_unsqueeze_shape(input_shape, &axes_u32) {
+                            shape_overrides.insert(output_id, out_shape.clone());
+                            operand_shapes.insert(output_id, out_shape);
+
+                            // Preserve input type for unsqueeze output
+                            if let Some(input_operand) = graph.operand(input_id) {
+                                type_overrides
+                                    .insert(output_id, input_operand.descriptor.data_type);
+                            }
+                        }
+                    }
                 }
             }
             // Reshape: if newShape is static, set output shape
@@ -984,12 +1289,10 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
         for (id, data) in &graph.constant_operand_ids_to_handles {
             let operand = graph.operand(*id).ok_or_else(|| {
-                if Self::debug_enabled() {
-                    eprintln!(
-                        "[DEBUG] Missing constant operand {} while building initializers",
-                        id
-                    );
-                }
+                debug_print!(
+                    "[DEBUG] Missing constant operand {} while building initializers",
+                    id
+                );
                 Self::invalid_operand("initializer lookup", *id, None)
             })?;
 
@@ -1064,53 +1367,132 @@ impl crate::converters::GraphConverter for OnnxConverter {
         let mut nodes = Vec::new();
         let mut cast_counter = 0;
 
-        let debug = Self::debug_enabled();
-
-        if debug {
-            if let Some(opd) = graph.operands.get(34) {
-                eprintln!(
-                    "[DEBUG] Operand 34 name={:?} dtype={:?} shape={:?}",
-                    opd.name, opd.descriptor.data_type, opd.descriptor.shape
-                );
-            } else {
-                eprintln!("[DEBUG] Operand 34 not present in operands table");
-            }
+        if let Some(opd) = graph.operands.get(34) {
+            debug_print!(
+                "[DEBUG] Operand 34 name={:?} dtype={:?} shape={:?}",
+                opd.name,
+                opd.descriptor.data_type,
+                opd.descriptor.shape
+            );
+        } else {
+            debug_print!("[DEBUG] Operand 34 not present in operands table");
         }
 
         for (idx, op) in graph.operations.iter().enumerate() {
             // Debug guard: ensure all input operands exist
             for &input_id in &op.input_operands {
-                if graph.operand(input_id).is_none() {
-                    if debug {
-                        let input_name = graph
-                            .operands
-                            .get(input_id as usize)
-                            .and_then(|opd| opd.name.clone())
-                            .unwrap_or_else(|| format!("<unnamed:{}>", input_id));
-                        eprintln!(
-                            "[DEBUG] Missing operand id {} name '{}' for op {} ({}) at index {}. Inputs: {:?}",
-                            input_id,
-                            input_name,
-                            op.label.clone().unwrap_or_else(|| op.op_type.clone()),
-                            op.op_type,
-                            idx,
-                            op.input_operands
-                        );
-                        eprintln!(
-                            "[DEBUG] operands.len()={} valid ids 0..{}",
-                            graph.operands.len(),
-                            graph.operands.len().saturating_sub(1)
-                        );
-                        eprintln!(
-                            "[DEBUG] Failing op detail: idx={} type={} label={:?} inputs={:?}",
-                            idx, op.op_type, op.label, op.input_operands
-                        );
-                    }
+                // Resolve remapping first
+                let resolved_id = operand_remapping
+                    .get(&input_id)
+                    .copied()
+                    .unwrap_or(input_id);
+                if graph.operand(resolved_id).is_none() {
+                    let input_name = graph
+                        .operands
+                        .get(input_id as usize)
+                        .and_then(|opd| opd.name.clone())
+                        .unwrap_or_else(|| format!("<unnamed:{}>", input_id));
+                    debug_print!(
+                        "[DEBUG] Missing operand id {} name '{}' for op {} ({}) at index {}. Inputs: {:?}",
+                        input_id,
+                        input_name,
+                        op.label.clone().unwrap_or_else(|| op.op_type.clone()),
+                        op.op_type,
+                        idx,
+                        op.input_operands
+                    );
+                    debug_print!(
+                        "[DEBUG] operands.len()={} valid ids 0..{}",
+                        graph.operands.len(),
+                        graph.operands.len().saturating_sub(1)
+                    );
+                    debug_print!(
+                        "[DEBUG] Failing op detail: idx={} type={} label={:?} inputs={:?}",
+                        idx,
+                        op.op_type,
+                        op.label,
+                        op.input_operands
+                    );
                     return Err(Self::invalid_operand(
                         "op input lookup",
                         input_id,
                         Some((op, idx)),
                     ));
+                }
+            }
+
+            // Replace concat operations with empty KV inputs with Identity nodes
+            // For past_sequence_length=0, concat(empty, new) = new, so we just copy the input
+            if op.op_type.eq_ignore_ascii_case("concat") {
+                let has_skipped_input = op
+                    .input_operands
+                    .iter()
+                    .any(|&id| skipped_inputs.contains(&id));
+
+                // Debug: print all concat ops
+                debug_print!(
+                    "[ONNX CONVERTER] Concat op idx={} has {} inputs, has_skipped={}",
+                    idx,
+                    op.input_operands.len(),
+                    has_skipped_input
+                );
+
+                if has_skipped_input {
+                    // Find the non-skipped input (the actual new KV)
+                    let remaining_inputs: Vec<_> = op
+                        .input_operands
+                        .iter()
+                        .filter(|&&id| !skipped_inputs.contains(&id))
+                        .copied()
+                        .collect();
+
+                    debug_print!(
+                        "[ONNX CONVERTER]   Remaining inputs: {}",
+                        remaining_inputs.len()
+                    );
+
+                    if remaining_inputs.len() == 1 {
+                        // Perfect case: one skipped (empty past), one remaining (new KV)
+                        let output_id = op.output_operand.ok_or_else(|| {
+                            Self::invalid_operand("concat output", idx as u32, Some((op, idx)))
+                        })?;
+
+                        let input_id = remaining_inputs[0];
+                        let resolved_input_id = operand_remapping
+                            .get(&input_id)
+                            .copied()
+                            .unwrap_or(input_id);
+                        let input_name = operand_name(graph, resolved_input_id);
+                        let output_name = operand_name(graph, output_id);
+
+                        debug_print!(
+                            "[ONNX CONVERTER]   Creating Identity node: {} -> {}",
+                            input_name,
+                            output_name
+                        );
+
+                        // Create an Identity node: output = Identity(input)
+                        let identity_node = NodeProto {
+                            input: vec![input_name],
+                            output: vec![output_name.clone()],
+                            name: format!("identity_{}", output_id),
+                            op_type: "Identity".to_string(),
+                            ..Default::default()
+                        };
+
+                        nodes.push(identity_node);
+
+                        // Track shape for the output
+                        operand_shapes.insert(
+                            output_id,
+                            graph
+                                .operand(resolved_input_id)
+                                .map(|opd| opd.descriptor.shape.clone())
+                                .unwrap_or_default(),
+                        );
+
+                        continue;
+                    }
                 }
             }
 
@@ -1120,30 +1502,85 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     Self::invalid_operand("constant output", idx as u32, Some((op, idx)))
                 })?;
 
-                // Extract attributes
-                let data_b64 = op
-                    .attributes
-                    .get("data")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| {
-                        if Self::debug_enabled() {
-                            eprintln!("[DEBUG] Constant operation missing 'data' attribute:");
-                            eprintln!("  Operation index: {}", idx);
-                            eprintln!("  Output operand: {}", output_id);
-                            eprintln!("  Attributes: {:?}", op.attributes);
-                            eprintln!("  Label: {:?}", op.label);
-                        }
-                        GraphError::ConversionFailed {
+                // Get constant data: try 'init' attribute first (reference to named constant),
+                // then fall back to 'data' attribute (inline base64)
+                let data = if let Some(init_ref) =
+                    op.attributes.get("init").and_then(|v| v.as_str())
+                {
+                    // 'init' attribute references a named constant declaration (e.g., "$_name")
+                    // The operand name in the graph keeps the '$' prefix
+                    debug_print!("[DEBUG] Constant operation with 'init' reference:");
+                    debug_print!("  Operation index: {}", idx);
+                    debug_print!("  Output operand: {}", output_id);
+                    debug_print!("  Init reference: {}", init_ref);
+                    debug_print!("  Looking for constant operand named: {}", init_ref);
+
+                    // Find the constant operand with matching name
+                    // Note: Named constants from the constants{} section have OperandKind::Constant
+                    let const_operand_id = graph
+                        .operands
+                        .iter()
+                        .enumerate()
+                        .find(|(_, op)| {
+                            op.name.as_deref() == Some(init_ref) && op.kind == OperandKind::Constant
+                        })
+                        .map(|(id, _)| id as u32)
+                        .ok_or_else(|| {
+                            debug_print!("[DEBUG] Failed to find constant operand:");
+                            debug_print!("  All constant operands:");
+                            for (id, op) in graph.operands.iter().enumerate() {
+                                if op.kind == OperandKind::Constant {
+                                    debug_print!("    ID {}: name={:?}", id, op.name);
+                                }
+                            }
+                            GraphError::ConversionFailed {
+                                format: "onnx".to_string(),
+                                reason: format!(
+                                    "Constant op init='{}' references unknown constant operand",
+                                    init_ref
+                                ),
+                            }
+                        })?;
+
+                    // Look up the constant data
+                    graph
+                        .constant_operand_ids_to_handles
+                        .get(&const_operand_id)
+                        .map(|const_data| const_data.data.clone())
+                        .ok_or_else(|| GraphError::ConversionFailed {
                             format: "onnx".to_string(),
-                            reason: "Constant op missing 'data' attribute".to_string(),
-                        }
-                    })?;
-                let data = STANDARD
-                    .decode(data_b64)
-                    .map_err(|e| GraphError::ConversionFailed {
+                            reason: format!(
+                                "Constant op init='{}' found operand {} but no data in constant_operand_ids_to_handles",
+                                init_ref, const_operand_id
+                            ),
+                        })?
+                } else if let Some(data_b64) = op.attributes.get("data").and_then(|v| v.as_str()) {
+                    // 'data' attribute contains inline base64-encoded data
+                    STANDARD
+                        .decode(data_b64)
+                        .map_err(|e| GraphError::ConversionFailed {
+                            format: "onnx".to_string(),
+                            reason: format!("Constant op base64 decode failed: {}", e),
+                        })?
+                } else {
+                    // Neither 'init' nor 'data' found
+                    debug_print!("[DEBUG] Constant operation missing 'data' or 'init' attribute:");
+                    debug_print!("  Operation index: {}", idx);
+                    debug_print!("  Output operand: {}", output_id);
+                    if let Some(obj) = op.attributes.as_object() {
+                        debug_print!(
+                            "  Available attributes: {:?}",
+                            obj.keys().collect::<Vec<_>>()
+                        );
+                    } else {
+                        debug_print!("  Attributes: {:?}", op.attributes);
+                    }
+                    debug_print!("  Label: {:?}", op.label);
+                    return Err(GraphError::ConversionFailed {
                         format: "onnx".to_string(),
-                        reason: format!("Constant op base64 decode failed: {}", e),
-                    })?;
+                        reason: "Constant op missing both 'data' and 'init' attributes".to_string(),
+                    });
+                };
 
                 let dtype_str = op
                     .attributes
@@ -1202,19 +1639,40 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut inputs: Vec<String> = Vec::new();
 
                 for (input_idx, input_id) in op.input_operands.iter().enumerate() {
-                    let operand = graph.operand(*input_id).ok_or_else(|| {
-                        if Self::debug_enabled() {
-                            eprintln!(
-                                "[DEBUG] Missing operand {} in expand at op idx {}",
-                                input_id, idx
-                            );
-                        }
-                        Self::invalid_operand("concat input lookup", *input_id, Some((op, idx)))
-                    })?;
-                    let input_name = operand_name(graph, *input_id);
+                    // Resolve any remapping first (for skipped concat outputs used as inputs)
+                    let resolved_id = operand_remapping
+                        .get(input_id)
+                        .copied()
+                        .unwrap_or(*input_id);
 
-                    if operand.descriptor.shape.is_empty() {
-                        if let Some(data) = graph.constant_operand_ids_to_handles.get(input_id) {
+                    let operand = graph.operand(resolved_id).ok_or_else(|| {
+                        debug_print!(
+                            "[DEBUG] Missing operand {} in concat at op idx {}",
+                            resolved_id,
+                            idx
+                        );
+                        Self::invalid_operand("concat input lookup", resolved_id, Some((op, idx)))
+                    })?;
+                    // Use remapped operand name if this input was a skipped concat output
+                    let input_name = {
+                        let resolved_id = operand_remapping
+                            .get(input_id)
+                            .copied()
+                            .unwrap_or(*input_id);
+                        operand_name(graph, resolved_id)
+                    };
+
+                    // Use tracked shape if available, otherwise fall back to descriptor
+                    // Check both original and resolved IDs for shape tracking
+                    let input_shape = operand_shapes
+                        .get(&resolved_id)
+                        .or_else(|| operand_shapes.get(input_id))
+                        .cloned()
+                        .unwrap_or_else(|| operand.descriptor.shape.clone());
+
+                    if input_shape.is_empty() {
+                        if let Some(data) = graph.constant_operand_ids_to_handles.get(&resolved_id)
+                        {
                             // Expand scalar constant to shape [1]
                             let expanded_name = format!("{}_scalar{}_expanded", op_name, input_idx);
                             initializers.push(TensorProto {
@@ -1248,18 +1706,25 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                         {
                             // Fallback: insert Unsqueeze to lift scalar to 1D
+                            // Opset 14: axes must be provided as input tensor
                             let unsq_name = format!("{}_scalar{}_unsq", op_name, input_idx);
+                            let axes_name = format!("{}_unsqueeze_{}_axes", op_name, input_idx);
+
+                            // Create axes initializer
+                            initializers.push(TensorProto {
+                                name: axes_name.clone(),
+                                data_type: ProtoDataType::Int64 as i32,
+                                dims: vec![1],
+                                int64_data: vec![0],
+                                ..Default::default()
+                            });
+
                             nodes.push(NodeProto {
-                                input: vec![input_name.clone()],
+                                input: vec![input_name.clone(), axes_name],
                                 output: vec![unsq_name.clone()],
                                 name: format!("{}_unsqueeze_{}", op_name, input_idx),
                                 op_type: "Unsqueeze".to_string(),
-                                attribute: vec![AttributeProto {
-                                    name: "axes".to_string(),
-                                    r#type: AttributeType::Ints as i32,
-                                    ints: vec![0],
-                                    ..Default::default()
-                                }],
+                                attribute: vec![], // No attributes in opset 14
                                 ..Default::default()
                             });
                             inputs.push(unsq_name);
@@ -1271,6 +1736,26 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 }
 
                 let attributes = Self::create_operation_attributes(op);
+
+                // Debug: trace concat operations to find rank mismatches
+                if op_name.contains("concat") {
+                    debug_print!(
+                        "[RUST DEBUG] Concat {} has {} inputs:",
+                        op_name,
+                        op.input_operands.len()
+                    );
+                    for (input_idx, input_id) in op.input_operands.iter().enumerate() {
+                        if let Some(operand) = graph.operand(*input_id) {
+                            debug_print!(
+                                "  Input {}: operand_{} shape={:?} rank={}",
+                                input_idx,
+                                input_id,
+                                operand.descriptor.shape,
+                                operand.descriptor.shape.len()
+                            );
+                        }
+                    }
+                }
 
                 nodes.push(NodeProto {
                     input: inputs,
@@ -1371,6 +1856,49 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     ProtoDataType::Uint8,
                 ));
                 cast_counter += 1;
+            } else if op.op_type.eq_ignore_ascii_case("triangular") {
+                // Triangular operation: Cast integer inputs to float32
+                let input_id = op.input_operands[0];
+                let input_operand = graph.operand(input_id).ok_or_else(|| {
+                    Self::invalid_operand("triangular input", input_id, Some((op, idx)))
+                })?;
+
+                let needs_cast = matches!(
+                    input_operand.descriptor.data_type,
+                    DataType::Int32 | DataType::Int64 | DataType::Uint32 | DataType::Uint8
+                );
+
+                let input_name = if needs_cast {
+                    let cast_output = format!("{}_input_float", op_name);
+                    debug_print!(
+                        "[FIX] Triangular op {} has {:?} input, casting to Float32",
+                        op_name,
+                        input_operand.descriptor.data_type
+                    );
+                    nodes.push(Self::create_cast_node(
+                        &format!("{}_pre_cast", op_name),
+                        operand_name(graph, input_id),
+                        cast_output.clone(),
+                        ProtoDataType::Float,
+                    ));
+                    cast_output
+                } else {
+                    operand_name(graph, input_id)
+                };
+
+                let attributes = Self::create_operation_attributes(op);
+
+                nodes.push(NodeProto {
+                    input: vec![input_name],
+                    output: vec![operand_name(
+                        graph,
+                        op.output_operand.expect("Single-output operation expected"),
+                    )],
+                    name: op_name.clone(),
+                    op_type: Self::onnx_op_type(&op.op_type),
+                    attribute: attributes,
+                    ..Default::default()
+                });
             } else if op.op_type.eq_ignore_ascii_case("where") {
                 let mut inputs: Vec<String> = op
                     .input_operands
@@ -1553,7 +2081,7 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             name: shape_name,
                             data_type: ProtoDataType::Int64 as i32,
                             dims: vec![shape_values.len() as i64], // 1D tensor
-                            int64_data: shape_values,
+                            int64_data: shape_values.clone(),
                             ..Default::default()
                         });
                     } else if let Some(shape_operand_name) = new_shape_attr.as_str() {
@@ -1612,7 +2140,13 @@ impl crate::converters::GraphConverter for OnnxConverter {
             } else if op.op_type == "expand" {
                 // WebNN expand has two variants:
                 // 1. With 'axes' - adds dimensions (maps to ONNX Unsqueeze)
-                // 2. With 'newShape' - expands shape (maps to ONNX Expand)
+                // 2. With 'newShape' - expands shape (maps to ONNX Expand or Reshape)
+
+                debug_print!("[DEBUG] Processing WebNN expand operation:");
+                debug_print!("  Op name: {}", op_name);
+                if let Some(obj) = op.attributes.as_object() {
+                    debug_print!("  Attributes: {:?}", obj.keys().collect::<Vec<_>>());
+                }
 
                 if let Some(axes_val) = op.attributes.get("axes").and_then(|v| v.as_array()) {
                     // WebNN expand with axes -> ONNX Unsqueeze
@@ -1653,7 +2187,10 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 } else if let Some(new_shape) =
                     op.attributes.get("newShape").and_then(|v| v.as_array())
                 {
-                    // WebNN expand with newShape -> ONNX Expand
+                    // WebNN expand with newShape can be either:
+                    // 1. ONNX Expand (broadcasting-compatible shapes)
+                    // 2. ONNX Reshape (arbitrary shape changes)
+
                     let mut inputs: Vec<String> = op
                         .input_operands
                         .iter()
@@ -1665,8 +2202,117 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         .filter_map(|v| v.as_u64().map(|u| u as i64))
                         .collect();
 
+                    // Get input operand shape to determine if this is broadcasting or reshaping
+                    let input_id = op.input_operands[0];
+                    // Use tracked shape if available, otherwise fall back to descriptor
+                    let input_shape = operand_shapes.get(&input_id).cloned().unwrap_or_else(|| {
+                        graph.operands[input_id as usize].descriptor.shape.clone()
+                    });
+
+                    // Check if shapes are broadcasting-compatible (ONNX Expand rules):
+                    // - Align shapes from the right
+                    // - Each dimension pair must be equal or one must be 1
+                    // - SPECIAL CASE: Scalars (rank 0) from constants should use Reshape, not Expand
+                    let is_broadcast_compatible = {
+                        let mut compatible = true;
+                        let input_rank = input_shape.len();
+                        let target_rank = shape_values.len();
+
+                        debug_print!("[DEBUG] Expand operation:");
+                        debug_print!("  Op name: {}", op_name);
+                        debug_print!("  Input operand ID: {}", input_id);
+                        debug_print!("  Input shape: {:?} (rank={})", input_shape, input_rank);
+                        debug_print!("  Target shape: {:?} (rank={})", shape_values, target_rank);
+
+                        // Only apply scalar handling to actual constant operands
+                        // Runtime computed values may have different shapes than static descriptors
+                        let is_constant = graph
+                            .constant_operand_ids_to_handles
+                            .contains_key(&input_id);
+
+                        // Scalars (rank 0) need special handling regardless of whether they're constants:
+                        // Reshape to target rank with all 1s, then expand will broadcast properly
+                        if input_rank == 0 {
+                            debug_print!(
+                                "  Scalar input (constant={}) - will reshape to match target rank with all 1s",
+                                is_constant
+                            );
+
+                            // Step 1: Reshape scalar to [1,1,...,1] with same rank as target
+                            let reshape_intermediate =
+                                format!("{}_scalar_to_rank{}", op_name, target_rank);
+                            let reshape_shape_name = format!("{}_reshape_shape", op_name);
+
+                            // Create shape [1,1,...,1] with target_rank dimensions
+                            let intermediate_shape = vec![1i64; target_rank];
+
+                            initializers.push(TensorProto {
+                                name: reshape_shape_name.clone(),
+                                data_type: ProtoDataType::Int64 as i32,
+                                dims: vec![target_rank as i64],
+                                int64_data: intermediate_shape,
+                                ..Default::default()
+                            });
+
+                            nodes.push(NodeProto {
+                                input: vec![inputs[0].clone(), reshape_shape_name],
+                                output: vec![reshape_intermediate.clone()],
+                                name: format!("{}_scalar_reshape", op_name),
+                                op_type: "Reshape".to_string(),
+                                attribute: vec![],
+                                ..Default::default()
+                            });
+
+                            // Step 2: Update input for subsequent Expand to use reshaped tensor
+                            inputs[0] = reshape_intermediate;
+
+                            // Now it's compatible for expand (from [1,1,...,1] to target shape)
+                            compatible = true;
+                        } else {
+                            // Align from right and check each dimension
+                            for i in 0..input_rank.min(target_rank) {
+                                let input_dim = input_shape[input_rank - 1 - i];
+                                let target_dim = shape_values[target_rank - 1 - i] as u32;
+
+                                // Dimensions are compatible if they're equal or either is 1
+                                if input_dim != target_dim && input_dim != 1 && target_dim != 1 {
+                                    debug_print!(
+                                        "  Incompatible at dim {}: {} vs {}",
+                                        i,
+                                        input_dim,
+                                        target_dim
+                                    );
+                                    compatible = false;
+                                    break;
+                                }
+                            }
+                        }
+
+                        debug_print!("  Broadcasting compatible: {}", compatible);
+                        compatible
+                    };
+
+                    // Use Expand for broadcasting, Reshape for arbitrary shape changes
+                    let op_type = if is_broadcast_compatible {
+                        "Expand"
+                    } else {
+                        debug_print!(
+                            "[FIX] Using Reshape instead of Expand for {} -> {:?}",
+                            op_name,
+                            shape_values
+                        );
+                        "Reshape"
+                    };
+
                     let shape_name = format!("{}_shape", op_name);
                     inputs.push(shape_name.clone());
+
+                    // Update operand_shapes with the output shape before moving shape_values
+                    if let Some(output_id) = op.output_operand {
+                        let output_shape: Vec<u32> =
+                            shape_values.iter().map(|&v| v as u32).collect();
+                        operand_shapes.insert(output_id, output_shape);
+                    }
 
                     // Add shape as an initializer (constant tensor)
                     initializers.push(TensorProto {
@@ -1684,8 +2330,8 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             op.output_operand.expect("Single-output operation expected"),
                         )],
                         name: op_name,
-                        op_type: "Expand".to_string(),
-                        attribute: vec![], // No attributes for Expand
+                        op_type: op_type.to_string(),
+                        attribute: vec![], // No attributes for Expand or Reshape
                         ..Default::default()
                     });
                 } else {
@@ -1859,9 +2505,10 @@ impl crate::converters::GraphConverter for OnnxConverter {
                 let mut ends = parse_attr_i64("ends").unwrap_or_default();
                 let sizes = parse_attr_i64("sizes").unwrap_or_default();
 
-                // Special case: 0D tensor with empty starts/sizes is a no-op
-                // Use Identity node instead of Slice (ONNX Runtime doesn't support slicing scalars)
-                if is_0d && starts.is_empty() && sizes.is_empty() {
+                // Special case: 0D tensor (scalar) cannot be sliced
+                // Use Identity node instead (ONNX Runtime doesn't support slicing scalars)
+                // A scalar has no axes, so any slice operation should just return the scalar unchanged
+                if is_0d {
                     nodes.push(NodeProto {
                         input: vec![inputs[0].clone()],
                         output: vec![operand_name(
@@ -2572,6 +3219,111 @@ impl crate::converters::GraphConverter for OnnxConverter {
                     op_type: "Mul".to_string(),
                     ..Default::default()
                 });
+            } else if op.op_type == "unsqueeze" || op.op_type == "squeeze" {
+                // Unsqueeze/Squeeze operations - in ONNX opset 13+, axes must be provided as input tensor
+                let mut inputs: Vec<String> = op
+                    .input_operands
+                    .iter()
+                    .map(|id| operand_name(graph, *id))
+                    .collect();
+
+                // Get axes from attributes and create as input tensor
+                if let Some(axes_i64) = Self::parse_i64_array(op, "axes") {
+                    let axes_name = format!("{}_axes", op_name);
+                    inputs.push(axes_name.clone());
+
+                    initializers.push(TensorProto {
+                        name: axes_name,
+                        data_type: ProtoDataType::Int64 as i32,
+                        dims: vec![axes_i64.len() as i64],
+                        int64_data: axes_i64,
+                        ..Default::default()
+                    });
+                }
+
+                nodes.push(NodeProto {
+                    input: inputs,
+                    output: vec![operand_name(
+                        graph,
+                        op.output_operand.expect("Single-output operation expected"),
+                    )],
+                    name: op_name,
+                    op_type: Self::onnx_op_type(&op.op_type),
+                    attribute: vec![], // No attributes for Unsqueeze/Squeeze in opset 13+
+                    ..Default::default()
+                });
+            } else if op.op_type.eq_ignore_ascii_case("scatternd") {
+                // ScatterND requires int64 indices - insert Cast if needed
+                let mut inputs: Vec<String> = Vec::new();
+
+                // Debug: print shapes of all inputs
+                debug_print!("[SCATTERND DEBUG] Operation: {}", op_name);
+                for (i, &input_id) in op.input_operands.iter().enumerate() {
+                    let shape = operand_shapes.get(&input_id);
+                    let desc_shape = graph.operand(input_id).map(|o| &o.descriptor.shape);
+                    debug_print!(
+                        "  Input {}: operand_id={}, tracked_shape={:?}, descriptor_shape={:?}",
+                        i,
+                        input_id,
+                        shape,
+                        desc_shape
+                    );
+                }
+
+                // Input 0: data
+                if let Some(&data_id) = op.input_operands.first() {
+                    inputs.push(operand_name(graph, data_id));
+                }
+
+                // Input 1: indices - must be int64
+                if let Some(&indices_id) = op.input_operands.get(1) {
+                    if let Some(indices_operand) = graph.operand(indices_id) {
+                        let indices_dtype = type_overrides
+                            .get(&indices_id)
+                            .copied()
+                            .unwrap_or(indices_operand.descriptor.data_type);
+
+                        if !matches!(indices_dtype, DataType::Int64) {
+                            // Insert Cast node to convert indices to int64
+                            let cast_output = format!("{}_indices_cast", op_name);
+                            nodes.push(NodeProto {
+                                input: vec![operand_name(graph, indices_id)],
+                                output: vec![cast_output.clone()],
+                                name: format!("{}_cast_indices", op_name),
+                                op_type: "Cast".to_string(),
+                                attribute: vec![AttributeProto {
+                                    name: "to".to_string(),
+                                    r#type: AttributeType::Int as i32,
+                                    i: ProtoDataType::Int64 as i32 as i64,
+                                    ..Default::default()
+                                }],
+                                ..Default::default()
+                            });
+                            inputs.push(cast_output);
+                        } else {
+                            inputs.push(operand_name(graph, indices_id));
+                        }
+                    } else {
+                        inputs.push(operand_name(graph, indices_id));
+                    }
+                }
+
+                // Input 2: updates
+                if let Some(&updates_id) = op.input_operands.get(2) {
+                    inputs.push(operand_name(graph, updates_id));
+                }
+
+                nodes.push(NodeProto {
+                    input: inputs,
+                    output: vec![operand_name(
+                        graph,
+                        op.output_operand.expect("Single-output operation expected"),
+                    )],
+                    name: op_name,
+                    op_type: "ScatterND".to_string(),
+                    attribute: vec![],
+                    ..Default::default()
+                });
             } else {
                 // Check if operation requires float types (ONNX limitation)
                 let has_float_inputs = op.input_operands.iter().any(|&input_id| {
@@ -2720,7 +3472,11 @@ impl crate::converters::GraphConverter for OnnxConverter {
                         input: op
                             .input_operands
                             .iter()
-                            .map(|id| operand_name(graph, *id))
+                            .map(|id| {
+                                // Resolve remapping for skipped concat outputs
+                                let resolved_id = operand_remapping.get(id).copied().unwrap_or(*id);
+                                operand_name(graph, resolved_id)
+                            })
                             .collect(),
                         output: vec![operand_name(
                             graph,
@@ -2735,35 +3491,35 @@ impl crate::converters::GraphConverter for OnnxConverter {
             }
         }
 
-        // Add value_info for operands where we have inferred shapes
+        // Add value_info ONLY for operands where we have explicit shape/type tracking
+        // This provides guidance to ONNX Runtime for operations we explicitly handle
+        // (concat, unsqueeze, binary ops) while letting it infer shapes for others
         let mut seen_names = std::collections::HashSet::new();
         for vi in inputs_val.iter().chain(outputs_val.iter()) {
             if !vi.name.is_empty() {
                 seen_names.insert(vi.name.clone());
             }
         }
+
         for (idx, operand) in graph.operands.iter().enumerate() {
+            let operand_id = idx as u32;
             let name = operand
                 .name
                 .clone()
-                .unwrap_or_else(|| format!("operand_{}", idx as u32));
+                .unwrap_or_else(|| format!("operand_{}", operand_id));
+
             if seen_names.contains(&name) {
                 continue;
             }
 
-            // Prefer shape_overrides, otherwise use any known operand_shapes entry
-            let shape_override = shape_overrides
-                .get(&(idx as u32))
-                .cloned()
-                .or_else(|| operand_shapes.get(&(idx as u32)).cloned());
-
-            if let Some(shape) = shape_override
-                && !shape.is_empty()
-            {
+            // Only add value_info if we have explicit shape tracking
+            // ONNX Runtime can infer types but struggles with shapes, so shape guidance is critical
+            if let Some(tracked_shape) = shape_overrides.get(&operand_id) {
                 let mut desc = operand.descriptor.clone();
-                desc.shape = shape;
-                if let Some(dt) = type_overrides.get(&(idx as u32)) {
-                    desc.data_type = *dt;
+                desc.shape = tracked_shape.clone();
+                // Use tracked type if available, otherwise use descriptor type
+                if let Some(&tracked_type) = type_overrides.get(&operand_id) {
+                    desc.data_type = tracked_type;
                 }
                 value_infos.push(value_info(&name, &desc));
             }
@@ -2780,13 +3536,13 @@ impl crate::converters::GraphConverter for OnnxConverter {
         };
 
         let model = ModelProto {
-            ir_version: 7, // IR version 7 = ONNX 1.6-1.9 (supports opset 12-13)
+            ir_version: 8, // IR version 8 = ONNX 1.10+ (supports opset 14-15)
             model_version: 1,
             producer_name: "rustnn".to_string(),
             producer_version: "0.1.0".to_string(),
             graph: Some(graph_proto),
             opset_import: vec![OperatorSetIdProto {
-                version: 13,
+                version: 14,            // Opset 14 adds Trilu support
                 domain: "".to_string(), // Empty string = default ONNX domain
             }],
             ..Default::default()
