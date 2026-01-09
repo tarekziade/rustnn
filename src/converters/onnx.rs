@@ -2230,11 +2230,12 @@ impl crate::converters::GraphConverter for OnnxConverter {
                             .constant_operand_ids_to_handles
                             .contains_key(&input_id);
 
-                        // Scalars (rank 0) from constants need special handling:
+                        // Scalars (rank 0) need special handling regardless of whether they're constants:
                         // Reshape to target rank with all 1s, then expand will broadcast properly
-                        if input_rank == 0 && is_constant {
+                        if input_rank == 0 {
                             debug_print!(
-                                "  Scalar constant input - will reshape to match target rank with all 1s"
+                                "  Scalar input (constant={}) - will reshape to match target rank with all 1s",
+                                is_constant
                             );
 
                             // Step 1: Reshape scalar to [1,1,...,1] with same rank as target
@@ -2267,11 +2268,6 @@ impl crate::converters::GraphConverter for OnnxConverter {
 
                             // Now it's compatible for expand (from [1,1,...,1] to target shape)
                             compatible = true;
-                        } else if input_rank == 0 {
-                            // Non-constant scalar - runtime shape may differ from static descriptor
-                            // Use Reshape to handle arbitrary shape changes
-                            debug_print!("  Scalar runtime value - using Reshape for shape change");
-                            compatible = false;
                         } else {
                             // Align from right and check each dimension
                             for i in 0..input_rank.min(target_rank) {
