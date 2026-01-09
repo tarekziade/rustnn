@@ -1,4 +1,5 @@
 pub mod converters;
+pub mod debug;
 pub mod error;
 pub mod executors;
 pub mod graph;

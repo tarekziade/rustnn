@@ -78,7 +78,7 @@ pub fn run_onnx_zeroed(
         .map_err(|e| GraphError::OnnxRuntimeFailed {
             reason: format!("session builder failed: {e}"),
         })?
-        .with_optimization_level(GraphOptimizationLevel::Level1)
+        .with_optimization_level(GraphOptimizationLevel::Disable)
         .map_err(|e| GraphError::OnnxRuntimeFailed {
             reason: format!("set opt level failed: {e}"),
         })?
@@ -165,7 +165,7 @@ pub fn run_onnx_with_inputs(
         .map_err(|e| GraphError::OnnxRuntimeFailed {
             reason: format!("session builder failed: {e}"),
         })?
-        .with_optimization_level(GraphOptimizationLevel::Level1)
+        .with_optimization_level(GraphOptimizationLevel::Disable)
         .map_err(|e| GraphError::OnnxRuntimeFailed {
             reason: format!("set opt level failed: {e}"),
         })?

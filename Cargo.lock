@@ -1689,7 +1689,7 @@ dependencies = [
 [[package]]
 name = "webnn-graph"
 version = "0.2.1"
-source = "git+https://github.com/rustnn/webnn-graph?branch=main#ba5e56ebd5e8e48426072b88b069361499352daf"
+source = "git+https://github.com/rustnn/webnn-graph?branch=main#de2047b3a2d85b9e9384196dbc9da6197e5ba30c"
 dependencies = [
  "anyhow",
  "base64",

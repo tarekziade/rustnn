@@ -1,3 +1,4 @@
+use crate::debug_print;
 use crate::error::GraphError;
 use crate::graph::{
     ConstantData, DataType, GraphInfo, Operand, OperandDescriptor, OperandKind, Operation,
@@ -397,8 +398,13 @@ fn infer_output_shapes(graph: &mut GraphInfo) -> Result<(), GraphError> {
     }
 
     // Run multiple passes until no more shapes can be inferred
+    debug_print!(
+        "[SHAPE INFERENCE] Starting shape inference with {} operations",
+        graph.operations.len()
+    );
     let max_passes = 10; // Prevent infinite loops
-    for _pass in 0..max_passes {
+    for pass_num in 0..max_passes {
+        debug_print!("[SHAPE INFERENCE] Pass {}/{}", pass_num + 1, max_passes);
         let mut made_progress = false;
 
         // Process operations in order (assumed to be in dependency order from WebNN parser)
@@ -467,11 +473,33 @@ fn infer_output_shapes(graph: &mut GraphInfo) -> Result<(), GraphError> {
 
                 // Concat
                 "concat" => {
-                    if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_u64()) {
-                        if input_shapes.iter().all(|s| s.is_empty()) && axis == 0 {
+                    let axis_u32 =
+                        if let Some(axis) = op.attributes.get("axis").and_then(|v| v.as_i64()) {
+                            // Convert to u32, handling negative indices
+                            if axis < 0 {
+                                // Negative index: convert relative to rank
+                                if !input_shapes.is_empty() {
+                                    let rank = input_shapes[0].len() as i64;
+                                    if axis + rank >= 0 {
+                                        Some((axis + rank) as u32)
+                                    } else {
+                                        None // Invalid negative index
+                                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                Some(axis as u32)
+                            }
+                        } else {
+                            None
+                        };
+
+                    if let Some(axis_val) = axis_u32 {
+                        if input_shapes.iter().all(|s| s.is_empty()) && axis_val == 0 {
                             Some(vec![input_shapes.len() as u32])
                         } else {
-                            infer_concat_shape(&input_shapes, axis as u32).ok()
+                            infer_concat_shape(&input_shapes, axis_val).ok()
                         }
                     } else {
                         None
@@ -798,6 +826,25 @@ fn infer_output_shapes(graph: &mut GraphInfo) -> Result<(), GraphError> {
         // Stop if no progress was made this pass
         if !made_progress {
             break;
+        }
+    }
+
+    // Summary: count operands with empty shapes
+    let empty_shape_count = graph
+        .operands
+        .iter()
+        .filter(|op| op.descriptor.shape.is_empty())
+        .count();
+    debug_print!(
+        "[SHAPE INFERENCE] Completed: {} operands still have empty shapes",
+        empty_shape_count
+    );
+    if empty_shape_count > 0 {
+        debug_print!("[SHAPE INFERENCE] WARNING: Some operands could not have shapes inferred!");
+        for (idx, op) in graph.operands.iter().enumerate() {
+            if op.descriptor.shape.is_empty() {
+                debug_print!("  operand_{}: name={:?}, kind={:?}", idx, op.name, op.kind);
+            }
         }
     }
 

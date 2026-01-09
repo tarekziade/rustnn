@@ -9,6 +9,7 @@ use super::graph_builder::PyMLGraphBuilder;
 use super::operand::parse_data_type;
 use super::tensor::PyMLTensor;
 use crate::converters::GraphConverter;
+use crate::debug_print;
 use crate::graph::OperandDescriptor;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -1104,8 +1105,10 @@ impl PyMLContext {
         graph: &PyMLGraph,
         inputs: &Bound<'_, PyDict>,
     ) -> PyResult<Py<PyDict>> {
+        debug_print!("[COMPUTE] compute_onnx called, converting graph to ONNX");
         // Convert graph to ONNX
         let converter = crate::converters::OnnxConverter;
+        debug_print!("[COMPUTE] about to call converter.convert()");
         let converted = converter.convert(&graph.graph_info).map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!("ONNX conversion failed: {}", e))
         })?;
@@ -1128,6 +1131,19 @@ impl PyMLContext {
 
             let default_name = format!("input_{}", input_id);
             let input_name = input_op.name.as_deref().unwrap_or(&default_name);
+
+            // Skip empty KV cache inputs (past_sequence_length=0)
+            // These will be removed by the converter, so don't expect them in inputs dict
+            let has_empty_dimension = input_op.descriptor.shape.iter().any(|&dim| dim == 0);
+            let is_kv_input = input_name.starts_with("past_key_values_");
+            if has_empty_dimension && is_kv_input {
+                debug_print!(
+                    "[COMPUTE] Skipping empty KV input: {} (shape: {:?})",
+                    input_name,
+                    input_op.descriptor.shape
+                );
+                continue;
+            }
 
             // Get the numpy array from inputs dict
             let array = inputs.get_item(input_name)?.ok_or_else(|| {
@@ -1270,6 +1286,19 @@ impl PyMLContext {
 
             let default_name = format!("input_{}", input_id);
             let input_name = input_op.name.as_deref().unwrap_or(&default_name);
+
+            // Skip empty KV cache inputs (past_sequence_length=0)
+            // These will be removed by the converter, so don't expect them in inputs dict
+            let has_empty_dimension = input_op.descriptor.shape.iter().any(|&dim| dim == 0);
+            let is_kv_input = input_name.starts_with("past_key_values_");
+            if has_empty_dimension && is_kv_input {
+                debug_print!(
+                    "[COMPUTE] Skipping empty KV input: {} (shape: {:?})",
+                    input_name,
+                    input_op.descriptor.shape
+                );
+                continue;
+            }
 
             // Get the numpy array from inputs dict
             let array = inputs.get_item(input_name)?.ok_or_else(|| {
@@ -1416,6 +1445,19 @@ impl PyMLContext {
 
             let default_name = format!("input_{}", input_id);
             let input_name = input_op.name.as_deref().unwrap_or(&default_name);
+
+            // Skip empty KV cache inputs (past_sequence_length=0)
+            // These will be removed by the converter, so don't expect them in inputs dict
+            let has_empty_dimension = input_op.descriptor.shape.iter().any(|&dim| dim == 0);
+            let is_kv_input = input_name.starts_with("past_key_values_");
+            if has_empty_dimension && is_kv_input {
+                debug_print!(
+                    "[COMPUTE] Skipping empty KV input: {} (shape: {:?})",
+                    input_name,
+                    input_op.descriptor.shape
+                );
+                continue;
+            }
 
             // Get the numpy array from inputs dict
             let array = inputs.get_item(input_name)?.ok_or_else(|| {
