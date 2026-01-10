@@ -12,7 +12,8 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use prost::Message;
 use webnn_onnx_utils::{
-    attributes::AttrBuilder, data_types as utils_data_types, tensor_data::TensorData,
+    attributes::AttrBuilder, data_types as utils_data_types, operation_names::mapper,
+    tensor_data::TensorData,
 };
 
 #[derive(Default)]
@@ -86,122 +87,12 @@ impl OnnxConverter {
     }
 
     fn onnx_op_type(op_type: &str) -> String {
-        // Handle special cases
-        if op_type.eq_ignore_ascii_case("matmul") {
-            return "MatMul".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("conv2d") {
-            return "Conv".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("convTranspose2d") {
-            return "ConvTranspose".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("averagePool2d") {
-            return "AveragePool".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("maxPool2d") {
-            return "MaxPool".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("globalAveragePool") {
-            return "GlobalAveragePool".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("globalMaxPool") {
-            return "GlobalMaxPool".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("batchNormalization") {
-            return "BatchNormalization".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("instanceNormalization") {
-            return "InstanceNormalization".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("layerNormalization") {
-            return "LayerNormalization".to_string();
-        }
-        // Reduction operations
-        if op_type.eq_ignore_ascii_case("reduceSum") {
-            return "ReduceSum".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("reduceMean") {
-            return "ReduceMean".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("reduceMax") {
-            return "ReduceMax".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("reduceMin") {
-            return "ReduceMin".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("reduceProduct") {
-            return "ReduceProd".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("reduceL1") {
-            return "ReduceL1".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("reduceL2") {
-            return "ReduceL2".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("reduceLogSum") {
-            return "ReduceLogSum".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("reduceLogSumExp") {
-            return "ReduceLogSumExp".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("reduceSumSquare") {
-            return "ReduceSumSquare".to_string();
-        }
-        // Logic operations
-        if op_type.eq_ignore_ascii_case("equal") {
-            return "Equal".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("greater") {
-            return "Greater".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("greaterOrEqual") {
-            return "GreaterOrEqual".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("lesser") {
-            return "Less".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("lesserOrEqual") {
-            return "LessOrEqual".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("logicalNot") {
-            return "Not".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("logicalAnd") {
-            return "And".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("logicalOr") {
-            return "Or".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("logicalXor") {
-            return "Xor".to_string();
-        }
-        // Quantization operations
-        if op_type.eq_ignore_ascii_case("dequantizeLinear") {
-            return "DequantizeLinear".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("quantizeLinear") {
-            return "QuantizeLinear".to_string();
-        }
-        // Tensor operations
-        if op_type.eq_ignore_ascii_case("triangular") {
-            return "Trilu".to_string(); // ONNX Trilu (triangle lower/upper)
-        }
-        // Specialized activation functions
-        if op_type.eq_ignore_ascii_case("prelu") {
-            return "PRelu".to_string(); // ONNX uses PRelu (not Prelu)
-        }
-        if op_type.eq_ignore_ascii_case("leakyRelu") {
-            return "LeakyRelu".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("clamp") {
-            return "Clip".to_string();
-        }
-        if op_type.eq_ignore_ascii_case("gemm") {
-            return "Gemm".to_string();
+        // Use shared operation name mapper from webnn-onnx-utils
+        if let Some(onnx_name) = mapper().webnn_to_onnx(op_type) {
+            return onnx_name.to_string();
         }
 
-        // Default: capitalize first letter
+        // Fallback: capitalize first letter for unmapped operations
         let mut chars = op_type.chars();
         if let Some(first) = chars.next() {
             let mut s = first.to_ascii_uppercase().to_string();
