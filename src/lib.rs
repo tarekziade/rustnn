@@ -23,6 +23,8 @@ pub use coreml::{CoremlOutput, CoremlRunAttempt, run_coreml_zeroed, run_coreml_z
 pub use error::GraphError;
 #[cfg(feature = "onnx-runtime")]
 pub use executors::onnx::{OnnxOutput, run_onnx_zeroed};
+#[cfg(feature = "trtx-runtime")]
+pub use executors::trtx::{TrtxOutput, run_trtx_zeroed};
 pub use graph::{
     ConstantData, DataType, GraphInfo, Operand, OperandDescriptor, OperandKind, Operation,
 };
