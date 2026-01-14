@@ -174,7 +174,6 @@ fn run() -> Result<(), GraphError> {
                 );
             }
         }
-
     }
     Ok(())
 }
