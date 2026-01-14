@@ -125,19 +125,12 @@ jobs:
 
       - name: Build and install package
         run: make python-dev
-        env:
-          ORT_TARBALL: onnxruntime-linux-x64-1.23.2.tgz
-          ORT_DIR_NAME: onnxruntime-linux-x64-1.23.2
 
       - name: Run Python tests
         run: make python-test
-        env:
-          ORT_DIR_NAME: onnxruntime-linux-x64-1.23.2
 
       - name: Run all demos
         run: make run-all-demos
-        env:
-          ORT_DIR_NAME: onnxruntime-linux-x64-1.23.2
 
   # Documentation build test
   docs-test:

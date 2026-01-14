@@ -12,28 +12,46 @@ COREML_PATH ?= target/graph.mlmodel
 COREMLC_PATH ?= target/graph.mlmodelc
 ORT_VERSION ?= 1.23.2
 ORT_BASE ?= https://github.com/microsoft/onnxruntime/releases/download/v$(ORT_VERSION)
-ORT_TARBALL ?= onnxruntime-osx-arm64-$(ORT_VERSION).tgz
-ORT_DIR_NAME_TMP := $(ORT_TARBALL:.tgz=)
-ORT_DIR_NAME_TMP := $(ORT_DIR_NAME_TMP:.tar.gz=)
-ORT_DIR_NAME ?= $(ORT_DIR_NAME_TMP:.zip=)
 ORT_DIR ?= target/onnxruntime
-ORT_LIB_DIR ?= $(ORT_DIR)/$(ORT_DIR_NAME)/lib
-ORT_LIB_LOCATION ?= $(ORT_LIB_DIR)
 MATURIN_ARGS ?=
+
+# Platform detection
 UNAME_S := $(shell uname)
+UNAME_M := $(shell uname -m)
+
+# Set platform-specific ONNX Runtime tarball name
 ifeq ($(UNAME_S),Darwin)
+	ifeq ($(UNAME_M),arm64)
+		ORT_TARBALL ?= onnxruntime-osx-arm64-$(ORT_VERSION).tgz
+	else
+		ORT_TARBALL ?= onnxruntime-osx-x86_64-$(ORT_VERSION).tgz
+	endif
 	ORT_SHARED_GLOB ?= $(ORT_LIB_DIR)/libonnxruntime*.dylib
 	ORT_DYLIB_FILE ?= $(ORT_LIB_DIR)/libonnxruntime.$(ORT_VERSION).dylib
 	ORT_ENV_VARS := ORT_DYLIB_PATH=$(ORT_DYLIB_FILE)
 else ifeq ($(OS),Windows_NT)
+	ORT_TARBALL ?= onnxruntime-win-x64-$(ORT_VERSION).zip
 	ORT_SHARED_GLOB ?= $(ORT_LIB_DIR)/onnxruntime.dll
 	ORT_DYLIB_FILE ?= $(ORT_LIB_DIR)/onnxruntime.dll
 	ORT_ENV_VARS := ORT_DYLIB_PATH=$(ORT_DYLIB_FILE)
 else
+	# Linux (including WSL)
+	ifeq ($(UNAME_M),aarch64)
+		ORT_TARBALL ?= onnxruntime-linux-aarch64-$(ORT_VERSION).tgz
+	else
+		ORT_TARBALL ?= onnxruntime-linux-x64-$(ORT_VERSION).tgz
+	endif
 	ORT_SHARED_GLOB ?= $(ORT_LIB_DIR)/libonnxruntime*.so*
 	ORT_DYLIB_FILE ?= $(ORT_LIB_DIR)/libonnxruntime.so.$(ORT_VERSION)
 	ORT_ENV_VARS := ORT_DYLIB_PATH=$(ORT_DYLIB_FILE) LD_LIBRARY_PATH=$(ORT_LIB_DIR):$$LD_LIBRARY_PATH
 endif
+
+# Derived paths (must come after ORT_TARBALL is set)
+ORT_DIR_NAME_TMP := $(ORT_TARBALL:.tgz=)
+ORT_DIR_NAME_TMP := $(ORT_DIR_NAME_TMP:.tar.gz=)
+ORT_DIR_NAME ?= $(ORT_DIR_NAME_TMP:.zip=)
+ORT_LIB_DIR ?= $(ORT_DIR)/$(ORT_DIR_NAME)/lib
+ORT_LIB_LOCATION ?= $(ORT_LIB_DIR)
 .PHONY: build test fmt run viz onnx coreml coreml-validate onnx-validate validate-all-env \
 	python-dev python-build python-test python-test-fast python-test-wpt python-test-wpt-onnx python-test-wpt-coreml \
 	python-ty-check python-perf python-perf-full python-clean python-example \
