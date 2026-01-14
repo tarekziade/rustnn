@@ -9,8 +9,8 @@
 - Converts WebNN graphs to ONNX (cross-platform) and CoreML (macOS) formats
 - Executes models on various backends: TensorRT (NVIDIA GPU), ONNX Runtime (CPU/GPU), and CoreML (macOS: GPU/Neural Engine)
 - Visualizes graph structures using Graphviz DOT format
-- Provides CLI tool, Rust library API, and Python bindings (PyO3)
-- **Python bindings** implement the W3C WebNN API specification with full spec compliance
+- Provides CLI tool and Rust library API
+- **Python bindings** are available in the separate [pywebnn](https://github.com/rustnn/pywebnn) package
 
 ## Architecture
 
@@ -18,29 +18,30 @@
 
 ```
 
- CLI (main.rs) / Library API (lib.rs) / Python API (PyO3)    
+ CLI (main.rs) / Library API (lib.rs)
 
-               
-    
-                                                        
-            
-Loader    Validator    Context    Backend     
-(JSON)       (graph.rs)       (selects)       Selection   
-            
-                                                         
-                                                         
-                                      
-                                   Builder        Converter   
-                                  (backend-       (Runtime)   
-                                  agnostic)                   
-                                      
-                                                        
-                                                        
-                                 
-                                MLGraph        ONNX / CoreML  
-                              (immutable)        Execution    
-                                 
+
+
+
+
+Loader    Validator    Backend
+(JSON)       (graph.rs)       Selection
+
+
+
+
+                                   Converter
+                                  (Runtime)
+
+
+
+
+                                ONNX / CoreML
+                                Execution
+
 ```
+
+**Note:** Python bindings are now in [pywebnn](https://github.com/rustnn/pywebnn), which uses rustnn as its core library.
 
 ### Key Architectural Principles
 
@@ -117,35 +118,13 @@ Loader    Validator    Context    Backend
 - **ONNX Runtime**: `run_onnx_with_inputs()` - executes with actual tensor I/O (cross-platform)
 - **CoreML Runtime**: `run_coreml_zeroed_cached()` - macOS only via Objective-C FFI
 
-#### **python/context.rs** - Backend Selection & Execution
-- **Backend Enum**: Tracks selected backend (TensorRT, OnnxCpu, OnnxGpu, CoreML, None)
-- **Context Creation**: `PyMLContext::new()` implements [WebNN Device Selection Explainer](https://github.com/webmachinelearning/webnn/blob/main/device-selection-explainer.md)
-  - Takes `accelerated` (bool) and `power_preference` (str) hints
-  - Returns `(Backend, accelerated_available)` tuple
-  - `accelerated` property indicates actual platform capability
-- **Backend Selection**: `select_backend()` maps hints to available backend using platform autonomy
-  - No explicit device types - uses hints and availability
-  - Platform decides actual device allocation
-- **Compute Routing**: `compute()` routes to appropriate backend method
-  - `compute_trtx()` - TensorRT execution (feature-gated)
-  - `compute_onnx()` - ONNX Runtime execution (feature-gated)
-  - `compute_coreml()` - CoreML execution (feature-gated)
-  - `compute_fallback()` - Fallback when no backend available
-- **Tensor Management**: Implements [WebNN MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md)
-  - `create_tensor()` - Creates MLTensor with descriptor flags
-  - `read_tensor()` / `write_tensor()` - Synchronous I/O with permission checks
-  - `dispatch()` - Async execution with MLTensor inputs/outputs
+#### **Backend Selection**
+- Backend selection follows [W3C WebNN Device Selection Explainer](https://github.com/webmachinelearning/webnn/blob/main/device-selection-explainer.md)
+- Selection based on `accelerated` (bool) and `power_preference` (str) hints
+- Platform autonomously selects optimal backend based on availability
+- Supports: TensorRT (NVIDIA GPU), ONNX Runtime (CPU/GPU), CoreML (macOS)
 
-#### **python/tensor.rs** - MLTensor Implementation
-- **MLTensorDescriptor**: Descriptor with usage flags following [WebNN MLTensor Explainer](https://github.com/webmachinelearning/webnn/blob/main/mltensor-explainer.md)
-  - `readable` - Can read tensor data back to CPU
-  - `writable` - Can write tensor data from CPU
-  - `exportable_to_gpu` - Can export as GPU texture (future use)
-- **PyMLTensor**: Opaque typed tensor with explicit resource management
-  - Properties: `shape`, `data_type`, `size`, `readable`, `writable`, `exportable_to_gpu`
-  - Methods: `destroy()` for explicit cleanup
-  - Permission enforcement: read/write operations check descriptor flags
-  - Lifecycle tracking: prevents use after destroy()
+**For Python API documentation**, see [pywebnn](https://github.com/rustnn/pywebnn)
 
 #### **graphviz.rs** - Visualization
 - Generates DOT format for graph visualization
@@ -310,24 +289,16 @@ src/
     trtx.rs         # TensorRT runtime
     onnx.rs         # ONNX runtime
     coreml.rs       # CoreML runtime
- python/             # Python bindings (PyO3)
-     mod.rs          # Python module definition
-     context.rs      # ML and MLContext classes
-     graph_builder.rs # MLGraphBuilder class
-     graph.rs        # MLGraph class
-     operand.rs      # MLOperand class
-
-python/webnn/           # Python package
- __init__.py         # Package exports
- __init__.pyi        # Type stubs
-
-tests/
- test_python_api.py  # Python API tests
 
 examples/
- python_simple.py    # Basic Python example
- python_matmul.py    # Matrix multiplication example
+ sample_graph.json   # Sample WebNN graph
+ # Python examples in pywebnn repository
+
+tests/
+ # Python tests in pywebnn repository
 ```
+
+**For Python bindings**, see the [pywebnn repository](https://github.com/rustnn/pywebnn).
 
 ## Adding New Features
 
@@ -545,76 +516,30 @@ cargo test && python -m pytest tests/      # DON'T USE - use `make test && make 
 
 ## Python Integration
 
-### Python Bindings (WebNN API)
+Python bindings for rustnn are available in the separate **[pywebnn](https://github.com/rustnn/pywebnn)** package.
 
-The project includes full Python bindings implementing the W3C WebNN API specification.
+The pywebnn package provides:
+- Full W3C WebNN API implementation
+- PyO3-based bindings to rustnn's core functionality
+- ONNX Runtime and CoreML backend support
+- NumPy array integration
+- Comprehensive test suite and examples
 
 **Installation:**
 ```bash
-# Development mode
-maturin develop --features python
-
-# Or build a wheel
-maturin build --release --features python
-pip install target/wheels/webnn-*.whl
+pip install pywebnn
 ```
 
-**Quick Example:**
+**Usage:**
 ```python
 import webnn
-import numpy as np
-
-# Create context and builder
 ml = webnn.ML()
-context = ml.create_context(device_type="cpu")
+context = ml.create_context(accelerated=False)
 builder = context.create_graph_builder()
-
-# Build graph: output = relu(x + y)
-x = builder.input("x", [2, 3], "float32")
-y = builder.input("y", [2, 3], "float32")
-z = builder.add(x, y)
-output = builder.relu(z)
-
-# Compile and execute
-graph = builder.build({"output": output})
-context.convert_to_onnx(graph, "model.onnx")
+# ... build and execute graphs
 ```
 
-**API Classes:**
-- `webnn.ML` - Entry point
-- `webnn.MLContext` - Execution context
-- `webnn.MLGraphBuilder` - Graph construction
-- `webnn.MLGraph` - Compiled graph
-- `webnn.MLOperand` - Tensor operands
-
-See **README.md** (Python API Reference section) for complete documentation and examples.
-
-### Python-Rust Integration Architecture
-
-**Important:** The Python API is a thin wrapper around the Rust implementation. All core functionality is implemented in Rust:
-
-**Execution Flow:**
-```
-Python compute() → Rust OnnxConverter → Rust run_onnx_with_inputs() → Results to Python
-```
-
-**Key Integration Points:**
-- `context.rs:79` - Uses Rust `OnnxConverter.convert()` to convert graphs
-- `context.rs:129` - Calls Rust `run_onnx_with_inputs()` executor
-- Data conversion: NumPy arrays → Rust Vec<f32> → ONNX Runtime → Rust Vec<f32> → NumPy arrays
-
-**Benefits:**
-- Python provides W3C WebNN API interface
-- Rust provides performance-critical validation, conversion, and execution
-- Zero-copy operations where possible for efficiency
-- Native ONNX Runtime integration through Rust bindings
-
-### ONNX to WebNN Converter Script
-
-The `scripts/convert_onnx_to_webnn.py` script converts ONNX models to WebNN JSON format:
-- Uses `huningxin/onnx2webnn` package
-- Includes preprocessing and optimization
-- Handles operator normalization
+For complete Python API documentation, examples, and development instructions, see the [pywebnn repository](https://github.com/rustnn/pywebnn).
 
 ## Claude Code - Approved Permissions
 

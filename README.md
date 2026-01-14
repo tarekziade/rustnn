@@ -1,9 +1,9 @@
 <div align="center">
   <img src="logo/rustnn.png" alt="rustnn logo" width="200"/>
 
-  # rustnn / PyWebNN
+  # rustnn
 
-  A Rust implementation of WebNN graph handling with Python bindings that implement the W3C WebNN API specification.
+  A Rust implementation of the W3C WebNN specification for neural network graph validation and backend conversion.
 </div>
 
 ---
@@ -16,74 +16,65 @@ This is an early-stage experimental implementation for research and exploration.
 
 ## What is rustnn?
 
-rustnn provides:
+rustnn is a Rust library that provides:
 
-- **Rust Library**: Validates WebNN graphs and converts to ONNX/CoreML formats
-- **Python API**: Complete W3C WebNN API implementation via PyO3 bindings
-- **Runtime Backends**: Execute on CPU, GPU, or Neural Engine with backend selection at context creation
-- **Real Examples**: Complete MobileNetV2 (99.60% accuracy) and Transformer text generation
+- **WebNN Graph Validation**: Validates WebNN graph structures against the W3C specification
+- **Backend Conversion**: Converts WebNN graphs to ONNX and CoreML formats
+- **Runtime Backends**: Executes graphs on CPU, GPU, or Neural Engine
+- **Shape Inference**: Automatic tensor shape computation
+- **Operation Support**: 88 WebNN operations (84% spec coverage)
 
-## Installation
+## Python Bindings
 
-### Python Package (PyWebNN)
+Python users should use **[pywebnn](https://github.com/rustnn/pywebnn)** - a separate package that provides full W3C WebNN API Python bindings using rustnn as the core library.
 
-**PyPI Package (v0.4.0+):**
+**Install Python package:**
 ```bash
-# Install with bundled ONNX Runtime - no additional dependencies needed
 pip install pywebnn
-
-# Works immediately with actual execution (no zeros)
 ```
 
-**Build from Source (For Development):**
-```bash
-git clone https://github.com/tarekziade/rustnn.git
-cd rustnn
-make python-dev  # Sets up venv and builds with ONNX Runtime + CoreML
-source .venv-webnn/bin/activate
-```
+See the [pywebnn repository](https://github.com/rustnn/pywebnn) for Python documentation and examples.
 
-**Requirements:** Python 3.11+, NumPy 1.20+
+## Rust Library Installation
 
-**Note:** Version 0.4.0+ includes bundled ONNX Runtime. Earlier versions (0.3.0 and below) had no backends and returned zeros.
-
-### Rust Library
+Add rustnn to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rustnn = "0.1"
+rustnn = { git = "https://github.com/rustnn/rustnn" }
+
+# Optional: Enable runtime backends
+rustnn = { git = "https://github.com/rustnn/rustnn", features = ["onnx-runtime"] }
 ```
 
-## Quick Start
+**Features:**
+- `onnx-runtime` - ONNX Runtime execution (CPU/GPU)
+- `coreml-runtime` - CoreML execution (macOS only)
+- `trtx-runtime` - TensorRT execution (Linux/Windows with NVIDIA GPU)
 
-```python
-import webnn
-import numpy as np
+## Quick Start (Rust)
 
-# Create ML context with device hints
-ml = webnn.ML()
-context = ml.create_context(accelerated=False)  # CPU execution
-builder = context.create_graph_builder()
+```rust
+use rustnn::graph::GraphInfo;
+use rustnn::converters::{GraphConverter, OnnxConverter};
+use rustnn::validator::GraphValidator;
 
-# Build a simple graph: output = relu(x + y)
-x = builder.input("x", [2, 3], "float32")
-y = builder.input("y", [2, 3], "float32")
-z = builder.add(x, y)
-output = builder.relu(z)
+// Load a WebNN graph from JSON
+let graph: GraphInfo = serde_json::from_str(&json_string)?;
 
-# Compile the graph
-graph = builder.build({"output": output})
+// Validate the graph
+let validator = GraphValidator::new();
+let artifacts = validator.validate(&graph)?;
 
-# Execute with real data
-x_data = np.array([[1, -2, 3], [4, -5, 6]], dtype=np.float32)
-y_data = np.array([[-1, 2, -3], [-4, 5, -6]], dtype=np.float32)
-results = context.compute(graph, {"x": x_data, "y": y_data})
+// Convert to ONNX
+let converter = OnnxConverter;
+let onnx_model = converter.convert(&graph)?;
 
-print(results["output"])  # [[0. 0. 0.] [0. 0. 0.]]
-
-# Optional: Export to ONNX
-context.convert_to_onnx(graph, "model.onnx")
+// Save ONNX model
+std::fs::write("model.onnx", onnx_model.data)?;
 ```
+
+**For Python examples**, see the [pywebnn repository](https://github.com/rustnn/pywebnn).
 
 ## Backend Selection
 
