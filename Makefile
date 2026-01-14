@@ -28,12 +28,14 @@ ifeq ($(UNAME_S),Darwin)
 	endif
 	ORT_SHARED_GLOB ?= $(ORT_LIB_DIR)/libonnxruntime*.dylib
 	ORT_DYLIB_FILE ?= $(ORT_LIB_DIR)/libonnxruntime.$(ORT_VERSION).dylib
-	ORT_ENV_VARS := ORT_DYLIB_PATH=$(ORT_DYLIB_FILE)
+	# Defer ORT_ENV_VARS assignment until after ORT_LIB_DIR is defined
+	ORT_ENV_VARS_DEFERRED := 1
 else ifeq ($(OS),Windows_NT)
 	ORT_TARBALL ?= onnxruntime-win-x64-$(ORT_VERSION).zip
 	ORT_SHARED_GLOB ?= $(ORT_LIB_DIR)/onnxruntime.dll
 	ORT_DYLIB_FILE ?= $(ORT_LIB_DIR)/onnxruntime.dll
-	ORT_ENV_VARS := ORT_DYLIB_PATH=$(ORT_DYLIB_FILE)
+	# Defer ORT_ENV_VARS assignment until after ORT_LIB_DIR is defined
+	ORT_ENV_VARS_DEFERRED := 1
 else
 	# Linux (including WSL)
 	ifeq ($(UNAME_M),aarch64)
@@ -43,7 +45,8 @@ else
 	endif
 	ORT_SHARED_GLOB ?= $(ORT_LIB_DIR)/libonnxruntime*.so*
 	ORT_DYLIB_FILE ?= $(ORT_LIB_DIR)/libonnxruntime.so.$(ORT_VERSION)
-	ORT_ENV_VARS := ORT_DYLIB_PATH=$(ORT_DYLIB_FILE) LD_LIBRARY_PATH=$(ORT_LIB_DIR):$$LD_LIBRARY_PATH
+	# Use absolute path for LD_LIBRARY_PATH (will be set after ORT_LIB_DIR_ABS is defined)
+	ORT_ENV_VARS_NEEDS_ABS := 1
 endif
 
 # Derived paths (must come after ORT_TARBALL is set)
@@ -52,6 +55,19 @@ ORT_DIR_NAME_TMP := $(ORT_DIR_NAME_TMP:.tar.gz=)
 ORT_DIR_NAME ?= $(ORT_DIR_NAME_TMP:.zip=)
 ORT_LIB_DIR ?= $(ORT_DIR)/$(ORT_DIR_NAME)/lib
 ORT_LIB_LOCATION ?= $(ORT_LIB_DIR)
+
+# Absolute path for library directory (needed for LD_LIBRARY_PATH on Linux)
+ORT_LIB_DIR_ABS := $(shell pwd)/$(ORT_LIB_DIR)
+
+# Set ORT_ENV_VARS now that paths are defined
+ifeq ($(ORT_ENV_VARS_NEEDS_ABS),1)
+	# Linux: Use absolute path in LD_LIBRARY_PATH for dynamic linker
+	ORT_ENV_VARS := LD_LIBRARY_PATH=$(ORT_LIB_DIR_ABS):$$LD_LIBRARY_PATH ORT_DYLIB_PATH=$(ORT_DYLIB_FILE)
+else ifeq ($(ORT_ENV_VARS_DEFERRED),1)
+	# macOS/Windows: Use ORT_DYLIB_PATH with relative path
+	ORT_ENV_VARS := ORT_DYLIB_PATH=$(ORT_DYLIB_FILE)
+endif
+
 .PHONY: build test fmt run viz onnx coreml coreml-validate onnx-validate validate-all-env \
 	python-dev python-build python-test python-test-fast python-test-wpt python-test-wpt-onnx python-test-wpt-coreml \
 	python-ty-check python-perf python-perf-full python-clean python-example \
