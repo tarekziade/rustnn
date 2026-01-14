@@ -33,6 +33,9 @@ struct Cli {
     #[cfg(feature = "onnx-runtime")]
     #[arg(long, requires = "convert")]
     run_onnx: bool,
+    #[cfg(feature = "trtx-runtime")]
+    #[arg(long, requires = "convert")]
+    run_trtx: bool,
 }
 
 fn run() -> Result<(), GraphError> {
@@ -153,6 +156,25 @@ fn run() -> Result<(), GraphError> {
                 );
             }
         }
+
+        #[cfg(feature = "trtx-runtime")]
+        if cli.run_trtx {
+            if converted.format != "onnx" {
+                return Err(GraphError::UnsupportedRuntimeFormat {
+                    format: converted.format.to_string(),
+                });
+            }
+            let outputs =
+                rustnn::run_trtx_zeroed(&converted.data, &artifacts.input_names_to_descriptors)?;
+            println!("Executed ONNX model with zeroed inputs (TRT-RTX):");
+            for out in outputs {
+                println!(
+                    "  - {}: shape={:?} type={}",
+                    out.name, out.shape, out.data_type
+                );
+            }
+        }
+
     }
     Ok(())
 }
