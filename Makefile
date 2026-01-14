@@ -430,15 +430,23 @@ run-all-demos: python-dev
 	@echo "Running All Demos (quantization=$(RUN_ALL_DEMOS_LEVELS))"
 	@echo "========================================================================"
 	@echo ""
-	@echo "Demo 1/3: MiniLM Embeddings (Hugging Face Hub)"
+	@echo "Demo 1/4: Quantization Round-Trip Test"
+	@echo "------------------------------------------------------------------------"
+	@if [ -f .venv-webnn/bin/python ]; then \
+		RUN_ALL_DEMOS_LEVELS='$(RUN_ALL_DEMOS_LEVELS)' .venv-webnn/bin/python examples/test_quantization_roundtrip.py; \
+	else \
+		RUN_ALL_DEMOS_LEVELS='$(RUN_ALL_DEMOS_LEVELS)' python examples/test_quantization_roundtrip.py; \
+	fi
+	@echo ""
+	@echo "Demo 2/4: MiniLM Embeddings (Hugging Face Hub)"
 	@echo "------------------------------------------------------------------------"
 	@RUN_ALL_DEMOS_LEVELS='$(RUN_ALL_DEMOS_LEVELS)' $(MAKE) minilm-demo-hub
 	@echo ""
-	@echo "Demo 2/3: MobileNetV2 Image Classification (Hugging Face Hub)"
+	@echo "Demo 3/4: MobileNetV2 Image Classification (Hugging Face Hub)"
 	@echo "------------------------------------------------------------------------"
 	@RUN_ALL_DEMOS_LEVELS='$(RUN_ALL_DEMOS_LEVELS)' $(MAKE) mobilenet-demo-hub
 	@echo ""
-	@echo "Demo 3/3: KV Cache with Device Tensors"
+	@echo "Demo 4/4: KV Cache with Device Tensors"
 	@echo "------------------------------------------------------------------------"
 	@if [ -f .venv-webnn/bin/python ]; then \
 		$(ORT_ENV_VARS) RUN_ALL_DEMOS_LEVELS='$(RUN_ALL_DEMOS_LEVELS)' .venv-webnn/bin/python examples/kv_cache_device_tensors.py; \
