@@ -1204,7 +1204,7 @@ mod tests {
         ];
 
         for dtype in types {
-            let graph = build_quantized_graph_info(dtype.clone());
+            let graph = build_quantized_graph_info(dtype);
             let json = to_graph_json(&graph, false).expect("to_graph_json");
             let back = from_graph_json(&json).expect("from_graph_json");
 
@@ -1214,5 +1214,387 @@ mod tests {
                 dtype
             );
         }
+    }
+
+    #[test]
+    fn test_scalar_constant_float16() {
+        let mut consts = BTreeMap::new();
+        consts.insert(
+            "scale".to_string(),
+            ConstDecl {
+                data_type: webnn_graph::ast::DataType::Float16,
+                shape: vec![1],
+                init: ConstInit::Scalar {
+                    value: serde_json::json!(2.5),
+                },
+            },
+        );
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs: BTreeMap::new(),
+            consts,
+            nodes: vec![],
+            outputs: BTreeMap::new(),
+        };
+
+        let graph_info = from_graph_json(&graph_json).expect("from_graph_json");
+        assert_eq!(
+            graph_info.operands[0].descriptor.data_type,
+            DataType::Float16
+        );
+        assert!(graph_info.constant_operand_ids_to_handles.contains_key(&0));
+    }
+
+    #[test]
+    fn test_scalar_constant_int_types() {
+        // Test Int32
+        let mut consts = BTreeMap::new();
+        consts.insert(
+            "int_val".to_string(),
+            ConstDecl {
+                data_type: webnn_graph::ast::DataType::Int32,
+                shape: vec![1],
+                init: ConstInit::Scalar {
+                    value: serde_json::json!(42),
+                },
+            },
+        );
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs: BTreeMap::new(),
+            consts: consts.clone(),
+            nodes: vec![],
+            outputs: BTreeMap::new(),
+        };
+
+        let result = from_graph_json(&graph_json);
+        assert!(result.is_ok());
+
+        // Test Uint32, Int64, Uint64, Int8, Uint8
+        let types_to_test = vec![
+            webnn_graph::ast::DataType::Uint32,
+            webnn_graph::ast::DataType::Int64,
+            webnn_graph::ast::DataType::Uint64,
+            webnn_graph::ast::DataType::Int8,
+            webnn_graph::ast::DataType::Uint8,
+        ];
+
+        for dtype in types_to_test {
+            let mut consts = BTreeMap::new();
+            consts.insert(
+                "val".to_string(),
+                ConstDecl {
+                    data_type: dtype.clone(),
+                    shape: vec![1],
+                    init: ConstInit::Scalar {
+                        value: serde_json::json!(10),
+                    },
+                },
+            );
+
+            let graph_json = GraphJson {
+                name: Some("test".to_string()),
+                format: "webnn-graph-json".to_string(),
+                version: 2,
+                quantized: false,
+                inputs: BTreeMap::new(),
+                consts,
+                nodes: vec![],
+                outputs: BTreeMap::new(),
+            };
+
+            let result = from_graph_json(&graph_json);
+            assert!(result.is_ok(), "Failed for type {:?}", dtype);
+        }
+    }
+
+    #[test]
+    fn test_scalar_constant_int4_error() {
+        let mut consts = BTreeMap::new();
+        consts.insert(
+            "int4_val".to_string(),
+            ConstDecl {
+                data_type: webnn_graph::ast::DataType::Int4,
+                shape: vec![1],
+                init: ConstInit::Scalar {
+                    value: serde_json::json!(1),
+                },
+            },
+        );
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs: BTreeMap::new(),
+            consts,
+            nodes: vec![],
+            outputs: BTreeMap::new(),
+        };
+
+        let result = from_graph_json(&graph_json);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            GraphError::ConversionFailed { reason, .. } => {
+                assert!(reason.contains("int4/uint4"));
+            }
+            _ => panic!("Expected ConversionFailed error"),
+        }
+    }
+
+    #[test]
+    fn test_scalar_constant_invalid_value() {
+        let mut consts = BTreeMap::new();
+        consts.insert(
+            "bad_val".to_string(),
+            ConstDecl {
+                data_type: webnn_graph::ast::DataType::Float32,
+                shape: vec![1],
+                init: ConstInit::Scalar {
+                    value: serde_json::json!({"not": "a number"}),
+                },
+            },
+        );
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs: BTreeMap::new(),
+            consts,
+            nodes: vec![],
+            outputs: BTreeMap::new(),
+        };
+
+        let result = from_graph_json(&graph_json);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            GraphError::ConversionFailed { reason, .. } => {
+                assert!(reason.contains("Cannot parse scalar value"));
+            }
+            _ => panic!("Expected ConversionFailed error"),
+        }
+    }
+
+    #[test]
+    fn test_weights_reference_constant() {
+        let mut consts = BTreeMap::new();
+        consts.insert(
+            "weight_ref".to_string(),
+            ConstDecl {
+                data_type: webnn_graph::ast::DataType::Float32,
+                shape: vec![2, 2],
+                init: ConstInit::Weights {
+                    r#ref: "model_weight".to_string(),
+                },
+            },
+        );
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs: BTreeMap::new(),
+            consts,
+            nodes: vec![],
+            outputs: BTreeMap::new(),
+        };
+
+        let graph_info = from_graph_json(&graph_json).expect("from_graph_json");
+        assert_eq!(graph_info.operands.len(), 1);
+        assert!(matches!(graph_info.operands[0].kind, OperandKind::Constant));
+        // Weight references should create empty data (to be filled by loader)
+        let const_data = graph_info.constant_operand_ids_to_handles.get(&0).unwrap();
+        assert_eq!(const_data.data.len(), 0);
+    }
+
+    #[test]
+    fn test_operation_missing_input() {
+        let mut inputs = BTreeMap::new();
+        inputs.insert(
+            "x".to_string(),
+            OperandDesc {
+                data_type: webnn_graph::ast::DataType::Float32,
+                shape: vec![2],
+            },
+        );
+
+        let nodes = vec![Node {
+            id: "relu_0".to_string(),
+            op: "relu".to_string(),
+            inputs: vec!["missing_input".to_string()],
+            options: serde_json::Map::new(),
+            outputs: None,
+        }];
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs,
+            consts: BTreeMap::new(),
+            nodes,
+            outputs: BTreeMap::new(),
+        };
+
+        let result = from_graph_json(&graph_json);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            GraphError::ConversionFailed { reason, .. } => {
+                assert!(reason.contains("not found"));
+            }
+            _ => panic!("Expected ConversionFailed error"),
+        }
+    }
+
+    #[test]
+    fn test_operation_with_none_outputs() {
+        let mut inputs = BTreeMap::new();
+        inputs.insert(
+            "x".to_string(),
+            OperandDesc {
+                data_type: webnn_graph::ast::DataType::Float32,
+                shape: vec![2],
+            },
+        );
+
+        let nodes = vec![Node {
+            id: "relu_output".to_string(),
+            op: "relu".to_string(),
+            inputs: vec!["x".to_string()],
+            options: serde_json::Map::new(),
+            outputs: None, // Will default to node.id
+        }];
+
+        let mut outputs = BTreeMap::new();
+        outputs.insert("result".to_string(), "relu_output".to_string());
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs,
+            consts: BTreeMap::new(),
+            nodes,
+            outputs,
+        };
+
+        let graph_info = from_graph_json(&graph_json).expect("from_graph_json");
+        // Should create an output operand named after the node.id
+        assert!(
+            graph_info
+                .operands
+                .iter()
+                .any(|op| op.name.as_deref() == Some("relu_output"))
+        );
+    }
+
+    #[test]
+    fn test_scalar_with_i64_value() {
+        let mut consts = BTreeMap::new();
+        consts.insert(
+            "int_val".to_string(),
+            ConstDecl {
+                data_type: webnn_graph::ast::DataType::Int32,
+                shape: vec![1],
+                init: ConstInit::Scalar {
+                    value: serde_json::json!(42_i64),
+                },
+            },
+        );
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs: BTreeMap::new(),
+            consts,
+            nodes: vec![],
+            outputs: BTreeMap::new(),
+        };
+
+        let result = from_graph_json(&graph_json);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_scalar_with_u64_value() {
+        let mut consts = BTreeMap::new();
+        consts.insert(
+            "uint_val".to_string(),
+            ConstDecl {
+                data_type: webnn_graph::ast::DataType::Uint32,
+                shape: vec![1],
+                init: ConstInit::Scalar {
+                    value: serde_json::json!(42_u64),
+                },
+            },
+        );
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs: BTreeMap::new(),
+            consts,
+            nodes: vec![],
+            outputs: BTreeMap::new(),
+        };
+
+        let result = from_graph_json(&graph_json);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_operation_empty_outputs() {
+        let mut inputs = BTreeMap::new();
+        inputs.insert(
+            "x".to_string(),
+            OperandDesc {
+                data_type: webnn_graph::ast::DataType::Float32,
+                shape: vec![2],
+            },
+        );
+
+        let nodes = vec![Node {
+            id: "node_0".to_string(),
+            op: "relu".to_string(),
+            inputs: vec!["x".to_string()],
+            options: serde_json::Map::new(),
+            outputs: Some(vec![]), // Empty outputs vector
+        }];
+
+        let graph_json = GraphJson {
+            name: Some("test".to_string()),
+            format: "webnn-graph-json".to_string(),
+            version: 2,
+            quantized: false,
+            inputs,
+            consts: BTreeMap::new(),
+            nodes,
+            outputs: BTreeMap::new(),
+        };
+
+        let result = from_graph_json(&graph_json);
+        // Should succeed but create no output operands for the operation
+        assert!(result.is_ok());
+        let graph_info = result.unwrap();
+        assert_eq!(graph_info.operations.len(), 1);
+        assert_eq!(graph_info.operations[0].output_operands.len(), 0);
     }
 }

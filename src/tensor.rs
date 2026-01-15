@@ -292,7 +292,7 @@ mod tests {
 
     impl DeviceTensorBackend for MockDeviceTensor {
         fn dtype(&self) -> DataType {
-            self.dtype.clone()
+            self.dtype
         }
 
         fn shape(&self) -> &[usize] {

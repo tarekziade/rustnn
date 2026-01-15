@@ -944,8 +944,10 @@ mod tests {
 
     #[test]
     fn test_tensor_byte_limit_exceeded_fails() {
-        let mut context = ContextProperties::default();
-        context.tensor_byte_length_limit = 10; // Very small limit
+        let context = ContextProperties {
+            tensor_byte_length_limit: 10, // Very small limit
+            ..Default::default()
+        };
 
         let graph = GraphInfo {
             operands: vec![

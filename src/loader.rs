@@ -503,7 +503,7 @@ mod tests {
 
         // The weight constant should have inline bytes instead of a reference
         let graph = result.unwrap();
-        assert!(graph.constant_operand_ids_to_handles.len() > 0);
+        assert!(!graph.constant_operand_ids_to_handles.is_empty());
     }
 
     #[test]
@@ -616,7 +616,7 @@ mod tests {
 
         fs::write(&graph_path, graph_content).unwrap();
         fs::write(&manifest_path, "{ invalid json }").unwrap();
-        fs::write(&weights_path, &[0u8; 8]).unwrap();
+        fs::write(&weights_path, [0u8; 8]).unwrap();
 
         // Should succeed by falling back to non-inlined weights
         let result = load_graph_from_path(&graph_path);
