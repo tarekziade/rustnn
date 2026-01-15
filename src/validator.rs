@@ -609,4 +609,536 @@ mod tests {
             other => panic!("unexpected error {:?}", other),
         }
     }
+
+    #[test]
+    fn test_empty_graph_fails() {
+        let graph = GraphInfo {
+            operands: vec![],
+            input_operands: vec![],
+            output_operands: vec![],
+            operations: vec![],
+            constant_operand_ids_to_handles: HashMap::new(),
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::EmptyGraph));
+    }
+
+    #[test]
+    fn test_missing_input_name_fails() {
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: None, // Missing name
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+            ],
+            input_operands: vec![0],
+            output_operands: vec![1],
+            operations: vec![Operation {
+                op_type: "relu".to_string(),
+                input_operands: vec![0],
+                output_operand: Some(1),
+                output_operands: vec![],
+                attributes: serde_json::json!({}),
+                label: None,
+            }],
+            constant_operand_ids_to_handles: HashMap::new(),
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::MissingInputName { .. }));
+    }
+
+    #[test]
+    fn test_empty_input_name_fails() {
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("".to_string()), // Empty name
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+            ],
+            input_operands: vec![0],
+            output_operands: vec![1],
+            operations: vec![Operation {
+                op_type: "relu".to_string(),
+                input_operands: vec![0],
+                output_operand: Some(1),
+                output_operands: vec![],
+                attributes: serde_json::json!({}),
+                label: None,
+            }],
+            constant_operand_ids_to_handles: HashMap::new(),
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::MissingInputName { .. }));
+    }
+
+    #[test]
+    fn test_duplicate_input_name_fails() {
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("input".to_string()),
+                },
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("input".to_string()), // Duplicate name
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+            ],
+            input_operands: vec![0, 1],
+            output_operands: vec![2],
+            operations: vec![Operation {
+                op_type: "add".to_string(),
+                input_operands: vec![0, 1],
+                output_operand: Some(2),
+                output_operands: vec![],
+                attributes: serde_json::json!({}),
+                label: None,
+            }],
+            constant_operand_ids_to_handles: HashMap::new(),
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::DuplicateInputName { .. }));
+    }
+
+    #[test]
+    fn test_duplicate_output_name_fails() {
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("input".to_string()),
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()), // Duplicate name
+                },
+            ],
+            input_operands: vec![0],
+            output_operands: vec![1, 2],
+            operations: vec![
+                Operation {
+                    op_type: "relu".to_string(),
+                    input_operands: vec![0],
+                    output_operand: Some(1),
+                    output_operands: vec![],
+                    attributes: serde_json::json!({}),
+                    label: None,
+                },
+                Operation {
+                    op_type: "sigmoid".to_string(),
+                    input_operands: vec![0],
+                    output_operand: Some(2),
+                    output_operands: vec![],
+                    attributes: serde_json::json!({}),
+                    label: None,
+                },
+            ],
+            constant_operand_ids_to_handles: HashMap::new(),
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::DuplicateOutputName { .. }));
+    }
+
+    #[test]
+    fn test_missing_constant_data_fails() {
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("input".to_string()),
+                },
+                Operand {
+                    kind: OperandKind::Constant,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![2, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: None,
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+            ],
+            input_operands: vec![0],
+            output_operands: vec![2],
+            operations: vec![Operation {
+                op_type: "add".to_string(),
+                input_operands: vec![0, 1],
+                output_operand: Some(2),
+                output_operands: vec![],
+                attributes: serde_json::json!({}),
+                label: None,
+            }],
+            constant_operand_ids_to_handles: HashMap::new(), // Missing constant data
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::MissingConstantData { .. }));
+    }
+
+    #[test]
+    fn test_constant_length_mismatch_fails() {
+        let constant_descriptor = OperandDescriptor {
+            data_type: DataType::Float32,
+            shape: vec![2, 2],
+            pending_permutation: vec![],
+        };
+
+        let mut constants = HashMap::new();
+        constants.insert(
+            1,
+            ConstantData {
+                data: vec![0u8; 8], // Wrong size - should be 16 bytes (4 floats * 4 bytes)
+                label: None,
+            },
+        );
+
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("input".to_string()),
+                },
+                Operand {
+                    kind: OperandKind::Constant,
+                    descriptor: constant_descriptor,
+                    name: None,
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+            ],
+            input_operands: vec![0],
+            output_operands: vec![2],
+            operations: vec![Operation {
+                op_type: "add".to_string(),
+                input_operands: vec![0, 1],
+                output_operand: Some(2),
+                output_operands: vec![],
+                attributes: serde_json::json!({}),
+                label: None,
+            }],
+            constant_operand_ids_to_handles: constants,
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::ConstantLengthMismatch { .. }));
+    }
+
+    #[test]
+    fn test_tensor_byte_limit_exceeded_fails() {
+        let mut context = ContextProperties::default();
+        context.tensor_byte_length_limit = 10; // Very small limit
+
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![100, 100], // 40,000 bytes - exceeds limit
+                        pending_permutation: vec![],
+                    },
+                    name: Some("input".to_string()),
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![100, 100],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+            ],
+            input_operands: vec![0],
+            output_operands: vec![1],
+            operations: vec![Operation {
+                op_type: "relu".to_string(),
+                input_operands: vec![0],
+                output_operand: Some(1),
+                output_operands: vec![],
+                attributes: serde_json::json!({}),
+                label: None,
+            }],
+            constant_operand_ids_to_handles: HashMap::new(),
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, context);
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::TensorLimit { .. }));
+    }
+
+    #[test]
+    fn test_invalid_operand_reference_fails() {
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("input".to_string()),
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+            ],
+            input_operands: vec![0],
+            output_operands: vec![1],
+            operations: vec![Operation {
+                op_type: "relu".to_string(),
+                input_operands: vec![99], // Invalid operand ID
+                output_operand: Some(1),
+                output_operands: vec![],
+                attributes: serde_json::json!({}),
+                label: None,
+            }],
+            constant_operand_ids_to_handles: HashMap::new(),
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::InvalidOperandReference { .. }));
+    }
+
+    #[test]
+    fn test_operand_produced_twice_fails() {
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("input".to_string()),
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+            ],
+            input_operands: vec![0],
+            output_operands: vec![1],
+            operations: vec![
+                Operation {
+                    op_type: "relu".to_string(),
+                    input_operands: vec![0],
+                    output_operand: Some(1),
+                    output_operands: vec![],
+                    attributes: serde_json::json!({}),
+                    label: None,
+                },
+                Operation {
+                    op_type: "sigmoid".to_string(),
+                    input_operands: vec![0],
+                    output_operand: Some(1), // Same output produced twice
+                    output_operands: vec![],
+                    attributes: serde_json::json!({}),
+                    label: None,
+                },
+            ],
+            constant_operand_ids_to_handles: HashMap::new(),
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let err = validator.validate().unwrap_err();
+        assert!(matches!(err, GraphError::OperandProducedTwice { .. }));
+    }
+
+    #[test]
+    fn test_context_properties_default() {
+        let context = ContextProperties::default();
+        assert_eq!(context.tensor_byte_length_limit, 256 * 1024 * 1024);
+        assert!(context.allowed_io_data_types.contains(&DataType::Float32));
+        assert!(context.allowed_io_data_types.contains(&DataType::Int8));
+        assert_eq!(context.allowed_io_data_types.len(), 10);
+    }
+
+    #[test]
+    fn test_validation_artifacts_created() {
+        let graph = GraphInfo {
+            operands: vec![
+                Operand {
+                    kind: OperandKind::Input,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("input".to_string()),
+                },
+                Operand {
+                    kind: OperandKind::Output,
+                    descriptor: OperandDescriptor {
+                        data_type: DataType::Float32,
+                        shape: vec![1, 2],
+                        pending_permutation: vec![],
+                    },
+                    name: Some("output".to_string()),
+                },
+            ],
+            input_operands: vec![0],
+            output_operands: vec![1],
+            operations: vec![Operation {
+                op_type: "relu".to_string(),
+                input_operands: vec![0],
+                output_operand: Some(1),
+                output_operands: vec![],
+                attributes: serde_json::json!({}),
+                label: None,
+            }],
+            constant_operand_ids_to_handles: HashMap::new(),
+            id_to_constant_tensor_operand_map: HashMap::new(),
+            quantized: false,
+        };
+
+        let validator = GraphValidator::new(&graph, ContextProperties::default());
+        let artifacts = validator.validate().unwrap();
+
+        assert_eq!(artifacts.input_names_to_descriptors.len(), 1);
+        assert_eq!(artifacts.output_names_to_descriptors.len(), 1);
+        assert!(artifacts.input_names_to_descriptors.contains_key("input"));
+        assert!(artifacts.output_names_to_descriptors.contains_key("output"));
+        assert!(artifacts.operand_to_dependent_operations.contains_key(&0));
+        assert!(artifacts.operand_to_producing_operation.contains_key(&1));
+    }
 }
