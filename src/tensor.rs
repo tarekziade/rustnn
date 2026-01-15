@@ -196,4 +196,191 @@ mod tests {
         assert_eq!(BackendKind::CoreML.to_string(), "coreml");
         assert_eq!(BackendKind::TensorRT.to_string(), "tensorrt");
     }
+
+    #[test]
+    fn test_device_kind_display_all_variants() {
+        assert_eq!(DeviceKind::Cpu.to_string(), "cpu");
+        assert_eq!(DeviceKind::Cuda.to_string(), "cuda");
+        assert_eq!(DeviceKind::DirectML.to_string(), "directml");
+        assert_eq!(DeviceKind::CoreML.to_string(), "coreml");
+    }
+
+    #[test]
+    fn test_device_kind_equality() {
+        assert_eq!(DeviceKind::Cpu, DeviceKind::Cpu);
+        assert_eq!(DeviceKind::Cuda, DeviceKind::Cuda);
+        assert_ne!(DeviceKind::Cpu, DeviceKind::Cuda);
+        assert_ne!(DeviceKind::CoreML, DeviceKind::Cuda);
+    }
+
+    #[test]
+    fn test_backend_kind_equality() {
+        assert_eq!(BackendKind::OnnxCpu, BackendKind::OnnxCpu);
+        assert_eq!(BackendKind::TensorRT, BackendKind::TensorRT);
+        assert_ne!(BackendKind::OnnxCpu, BackendKind::OnnxGpu);
+        assert_ne!(BackendKind::CoreML, BackendKind::TensorRT);
+    }
+
+    #[test]
+    fn test_host_tensor_element_count_scalar() {
+        let tensor = HostTensor::new(vec![], DataType::Float32);
+        assert_eq!(tensor.element_count(), 1); // Scalar has 1 element
+    }
+
+    #[test]
+    fn test_host_tensor_element_count_1d() {
+        let tensor = HostTensor::new(vec![5], DataType::Float32);
+        assert_eq!(tensor.element_count(), 5);
+    }
+
+    #[test]
+    fn test_host_tensor_element_count_3d() {
+        let tensor = HostTensor::new(vec![2, 3, 4], DataType::Float32);
+        assert_eq!(tensor.element_count(), 24);
+    }
+
+    #[test]
+    fn test_host_tensor_element_count_4d() {
+        let tensor = HostTensor::new(vec![1, 3, 224, 224], DataType::Float32);
+        assert_eq!(tensor.element_count(), 150528);
+    }
+
+    #[test]
+    fn test_host_tensor_clone() {
+        let original = HostTensor::from_data(vec![1.0, 2.0, 3.0], vec![3], DataType::Float32);
+        let cloned = original.clone();
+
+        assert_eq!(cloned.shape, original.shape);
+        assert_eq!(cloned.data, original.data);
+        assert_eq!(cloned.dtype, original.dtype);
+    }
+
+    #[test]
+    fn test_host_tensor_different_data_types() {
+        let f32_tensor = HostTensor::new(vec![2, 2], DataType::Float32);
+        assert_eq!(f32_tensor.dtype, DataType::Float32);
+
+        let f16_tensor = HostTensor::new(vec![2, 2], DataType::Float16);
+        assert_eq!(f16_tensor.dtype, DataType::Float16);
+
+        let int8_tensor = HostTensor::new(vec![2, 2], DataType::Int8);
+        assert_eq!(int8_tensor.dtype, DataType::Int8);
+    }
+
+    #[test]
+    fn test_tensor_value_host_variant() {
+        let host_tensor = HostTensor::new(vec![2, 2], DataType::Float32);
+        let tensor_value = TensorValue::Host(host_tensor);
+
+        match tensor_value {
+            TensorValue::Host(t) => {
+                assert_eq!(t.shape, vec![2, 2]);
+                assert_eq!(t.dtype, DataType::Float32);
+            }
+            _ => panic!("Expected Host variant"),
+        }
+    }
+
+    // Mock DeviceTensorBackend for testing
+    #[derive(Debug)]
+    struct MockDeviceTensor {
+        dtype: DataType,
+        shape: Vec<usize>,
+        device: DeviceKind,
+        backend: BackendKind,
+    }
+
+    impl DeviceTensorBackend for MockDeviceTensor {
+        fn dtype(&self) -> DataType {
+            self.dtype.clone()
+        }
+
+        fn shape(&self) -> &[usize] {
+            &self.shape
+        }
+
+        fn device_kind(&self) -> DeviceKind {
+            self.device
+        }
+
+        fn backend_kind(&self) -> BackendKind {
+            self.backend
+        }
+
+        fn read_to_host(&self) -> Result<Vec<f32>, GraphError> {
+            Ok(vec![0.0; self.shape.iter().product()])
+        }
+
+        fn write_from_host(&mut self, _data: &[f32]) -> Result<(), GraphError> {
+            Ok(())
+        }
+
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+    }
+
+    #[test]
+    fn test_device_tensor_handle_creation() {
+        let mock = MockDeviceTensor {
+            dtype: DataType::Float32,
+            shape: vec![2, 3],
+            device: DeviceKind::Cuda,
+            backend: BackendKind::OnnxGpu,
+        };
+
+        let handle = DeviceTensorHandle::new(Box::new(mock));
+
+        assert_eq!(handle.dtype, DataType::Float32);
+        assert_eq!(handle.shape, vec![2, 3]);
+        assert_eq!(handle.device_kind(), DeviceKind::Cuda);
+        assert_eq!(handle.backend_kind(), BackendKind::OnnxGpu);
+    }
+
+    #[test]
+    fn test_tensor_value_device_variant() {
+        let mock = MockDeviceTensor {
+            dtype: DataType::Float32,
+            shape: vec![1, 1],
+            device: DeviceKind::Cpu,
+            backend: BackendKind::OnnxCpu,
+        };
+
+        let handle = DeviceTensorHandle::new(Box::new(mock));
+        let tensor_value = TensorValue::Device(handle);
+
+        match tensor_value {
+            TensorValue::Device(h) => {
+                assert_eq!(h.dtype, DataType::Float32);
+                assert_eq!(h.device_kind(), DeviceKind::Cpu);
+            }
+            _ => panic!("Expected Device variant"),
+        }
+    }
+
+    #[test]
+    fn test_host_tensor_zero_initialization() {
+        let tensor = HostTensor::new(vec![3, 3], DataType::Float32);
+
+        // Verify all elements are initialized to 0.0
+        for &val in &tensor.data {
+            assert_eq!(val, 0.0);
+        }
+    }
+
+    #[test]
+    fn test_device_kind_debug() {
+        // Test that Debug is implemented
+        let device = DeviceKind::Cuda;
+        let debug_str = format!("{:?}", device);
+        assert!(debug_str.contains("Cuda"));
+    }
+
+    #[test]
+    fn test_backend_kind_debug() {
+        // Test that Debug is implemented
+        let backend = BackendKind::TensorRT;
+        let debug_str = format!("{:?}", backend);
+        assert!(debug_str.contains("TensorRT"));
+    }
 }
