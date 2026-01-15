@@ -47,6 +47,9 @@ webnn-onnx-utils = { git = "https://github.com/rustnn/webnn-onnx-utils", branch 
 [build-dependencies]
 prost-build = "0.12"
 
+[dev-dependencies]
+tempfile = "3.8"
+
 [lib]
 name = "rustnn"
 crate-type = ["rlib"]

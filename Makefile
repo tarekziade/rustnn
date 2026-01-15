@@ -66,6 +66,7 @@ endif
 
 .PHONY: build test fmt run viz onnx coreml coreml-validate onnx-validate validate-all-env \
 	docs-serve docs-build docs-clean ci-docs \
+	coverage coverage-html coverage-lcov coverage-open coverage-clean \
 	help clean-all
 
 clean:
@@ -85,6 +86,34 @@ test:
 
 fmt:
 	$(CARGO) fmt
+
+# ==============================================================================
+# Code Coverage Targets
+# ==============================================================================
+
+coverage:
+	@echo "Running tests with coverage instrumentation..."
+	cargo llvm-cov --all-features --workspace --lib
+
+coverage-html:
+	@echo "Generating HTML coverage report..."
+	cargo llvm-cov --all-features --workspace --lib --html
+	@echo "[OK] HTML coverage report generated in target/llvm-cov/html/"
+
+coverage-lcov:
+	@echo "Generating LCOV coverage report..."
+	cargo llvm-cov --all-features --workspace --lib --lcov --output-path target/llvm-cov/lcov.info
+	@echo "[OK] LCOV coverage report generated at target/llvm-cov/lcov.info"
+
+coverage-open: coverage-html
+	@echo "Opening coverage report in browser..."
+	open target/llvm-cov/html/index.html
+
+coverage-clean:
+	@echo "Cleaning coverage artifacts..."
+	cargo llvm-cov clean --workspace
+	rm -rf target/llvm-cov/
+	@echo "[OK] Coverage artifacts cleaned"
 
 run:
 	$(CARGO) run -- examples/sample_graph.json
@@ -158,7 +187,7 @@ docs-clean:
 # Comprehensive Clean
 # ==============================================================================
 
-clean-all: clean docs-clean
+clean-all: clean docs-clean coverage-clean
 	@echo "All build artifacts cleaned."
 
 # ==============================================================================
@@ -175,6 +204,13 @@ help:
 	@echo "  fmt                - Format Rust code"
 	@echo "  run                - Run with sample graph"
 	@echo "  clean              - Clean Rust build artifacts"
+	@echo ""
+	@echo "Code Coverage:"
+	@echo "  coverage           - Run tests with coverage (text output)"
+	@echo "  coverage-html      - Generate HTML coverage report"
+	@echo "  coverage-lcov      - Generate LCOV report (for CI)"
+	@echo "  coverage-open      - Generate and open HTML report in browser"
+	@echo "  coverage-clean     - Clean coverage artifacts"
 	@echo ""
 	@echo "Visualization:"
 	@echo "  viz                - Generate and open graph visualization"

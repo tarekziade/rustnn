@@ -149,14 +149,28 @@ make python-test             # Python tests
 make validate-all-env        # Build, test, convert, validate
 ```
 
-### 4. Build and Test Python Package
+### 4. Check Code Coverage
+
+```bash
+# Generate coverage report
+make coverage                # Text output
+make coverage-html           # HTML report
+make coverage-open           # HTML report + open in browser
+
+# For CI/CD
+make coverage-lcov           # LCOV format for upload to coverage services
+```
+
+See [Code Coverage Guide](code-coverage.md) for detailed coverage analysis and best practices.
+
+### 5. Build and Test Python Package
 
 ```bash
 make python-dev              # Install in development mode
 make python-test             # Run all tests
 ```
 
-### 5. Update Documentation
+### 6. Update Documentation
 
 Edit files in `docs/` and preview:
 
