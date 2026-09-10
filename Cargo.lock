@@ -1294,6 +1294,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hiai-rs"
+version = "0.1.0"
+source = "git+https://github.com/rustnn/hiai-rs?rev=6c93e1b#6c93e1bc0f1ee4daddb6d776d24c21c8c3d99705"
+dependencies = [
+ "hiai-rs-sys",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "hiai-rs-sys"
+version = "0.1.0"
+source = "git+https://github.com/rustnn/hiai-rs?rev=6c93e1b#6c93e1bc0f1ee4daddb6d776d24c21c8c3d99705"
+dependencies = [
+ "bindgen",
+ "cc",
+]
+
+[[package]]
 name = "hmac"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2946,6 +2964,7 @@ dependencies = [
  "flatbuffers",
  "futures-util",
  "half",
+ "hiai-rs",
  "image",
  "insta",
  "js-sys",

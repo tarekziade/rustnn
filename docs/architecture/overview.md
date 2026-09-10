@@ -191,7 +191,6 @@ src/
 │   ├── mod.rs          # Conditional compilation
 │   ├── onnx.rs         # ONNX runtime
 │   ├── coreml.rs       # CoreML runtime
-│   ├── cann_shim.rs    # CANN shim (libloading wrapper)
 │   └── coreml_shim.mm  # CoreML shim (ObjC++)
 └── python/             # Python bindings (PyO3)
     ├── mod.rs          # Python module definition

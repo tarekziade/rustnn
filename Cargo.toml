@@ -37,7 +37,7 @@ trtx-runtime-mock = ["trtx/mock", "cudarc"]
 trtx-enterprise = ["trtx-runtime", "trtx/enterprise"]
 zstd-cache-compression = ["dep:zstd"]
 litert-runtime = ["litert", "litert-sys", "dep:flatbuffers"]
-cann-runtime = ["dep:libloading"]
+cann-runtime = ["dep:hiai-rs"]
 cann-runtime-mock = []
 native-examples = []
 webnn-wpt-tests = []
@@ -146,6 +146,7 @@ litert = { version = "0.2.1", optional = true }
 litert-sys = { version = "0.2.1", optional = true }
 flatbuffers = { version = "25.12", optional = true }
 regex = "1.11"
+hiai-rs = { git = "https://github.com/rustnn/hiai-rs", rev = "6c93e1b", optional = true }
 webnn-graph = { git = "https://github.com/rustnn/webnn-graph", branch = "main" }
 webnn-onnx-utils = { git = "https://github.com/rustnn/webnn-onnx-utils", branch = "main" }
 

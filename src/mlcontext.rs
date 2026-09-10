@@ -97,10 +97,7 @@ pub(crate) enum MLBackendGraph<'context> {
     #[cfg(feature = "litert-runtime")]
     LiteRtGraph(crate::backends::litert::LiteRtGraph),
     #[cfg(any(feature = "cann-runtime", feature = "cann-runtime-mock"))]
-    CannGraph {
-        graph: crate::backends::cann::CannGraph,
-        _phantom: std::marker::PhantomData<&'context ()>,
-    },
+    CannEngine(crate::backends::cann::CannGraph),
     PhantomData(PhantomData<&'context u8>),
 }
 

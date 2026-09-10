@@ -8,6 +8,8 @@ COREML_PATH ?= target/graph.mlmodel
 COREMLC_PATH ?= target/graph.mlmodelc
 LITERT_PATH ?= target/graph.tflite
 CANN_PATH ?= target/graph.cann
+OHOS_SDK_NATIVE ?=
+
 ORT_VERSION ?= 1.29.0
 ORT_BASE ?= https://github.com/microsoft/onnxruntime/releases/download/v$(ORT_VERSION)
 ORT_DIR ?= target/onnxruntime
@@ -68,7 +70,19 @@ else ifeq ($(ORT_ENV_VARS_DEFERRED),1)
 	ORT_ENV_VARS := ORT_DYLIB_PATH=$(ORT_DYLIB_FILE)
 endif
 
-.PHONY: build test fmt run viz onnx coreml coreml-validate onnx-validate litert cann validate-all-env \
+# Bundled OHOS cross-compilation environment
+# CANN_DDK points at the Huawei CANN-Kit DDK root (.../CANN-Kit-next/ddk/).
+CANN_DDK ?=
+CANN_CROSS_ENV = CC_aarch64_unknown_linux_ohos=$(OHOS_SDK_NATIVE)/llvm/bin/clang \
+	CXX_aarch64_unknown_linux_ohos=$(OHOS_SDK_NATIVE)/llvm/bin/clang++ \
+	AR_aarch64_unknown_linux_ohos=$(OHOS_SDK_NATIVE)/llvm/bin/llvm-ar \
+	CFLAGS_aarch64_unknown_linux_ohos="--target=aarch64-linux-ohos --sysroot=$(OHOS_SDK_NATIVE)/sysroot" \
+	CXXFLAGS_aarch64_unknown_linux_ohos="--target=aarch64-linux-ohos --sysroot=$(OHOS_SDK_NATIVE)/sysroot -std=c++17" \
+	CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_LINKER=$(OHOS_SDK_NATIVE)/llvm/bin/clang \
+	CANN_DDK=$(CANN_DDK) \
+	RUSTFLAGS="-Clink-arg=--target=aarch64-linux-ohos -Clink-arg=--sysroot=$(OHOS_SDK_NATIVE)/sysroot"
+
+.PHONY: build test fmt run viz onnx coreml coreml-validate onnx-validate litert cann cann-build cann-device-test validate-cann-env validate-all-env \
 	docs-serve docs-build docs-clean ci-docs docs-backend-ops docs-backend-ops-check \
 	fmt-check lint \
 	coverage coverage-html coverage-lcov coverage-open coverage-clean \
@@ -258,6 +272,30 @@ litert:
 cann:
 	$(CARGO) run --features cann-runtime -- $(GRAPH_FILE) --convert cann --convert-output $(CANN_PATH)
 
+validate-cann-env:
+	@if ! rustup target list --installed | grep -qx aarch64-unknown-linux-ohos; then \
+	    echo "Error: Rust target 'aarch64-unknown-linux-ohos' is not installed."; \
+	    echo "  Install it with:  rustup target add aarch64-unknown-linux-ohos"; \
+	    exit 1; \
+	fi
+	@if [ -z "$(OHOS_SDK_NATIVE)" ]; then \
+	    echo "Error: OHOS_SDK_NATIVE not set. export OHOS_SDK_NATIVE=/path/to/OpenHarmony/<version>/sdk/native"; \
+	    exit 1; \
+	fi
+	@if [ -z "$(CANN_DDK)" ]; then \
+	    echo "Error: CANN_DDK not set. export CANN_DDK=/path/to/CANN-Kit-next/ddk/"; \
+	    exit 1; \
+	fi
+
+cann-build: validate-cann-env
+	$(CANN_CROSS_ENV) $(CARGO) build --target aarch64-unknown-linux-ohos --features cann-runtime --release
+
+cann-device-test: validate-cann-env
+	$(CANN_CROSS_ENV) $(CARGO) test --test test_cann_execution --no-run \
+		--target aarch64-unknown-linux-ohos --features cann-runtime --release
+	CANN_DDK=$(CANN_DDK) \
+	./scripts/ohos-test-helper.sh $(filter-out $@,$(MAKECMDGOALS))
+
 validate-all-env: build test onnx-validate coreml-validate
 	@echo "Full pipeline (build/test/convert/validate) completed."
 
@@ -350,8 +388,10 @@ help:
 	@echo "LiteRT Conversion:"
 	@echo "  litert             - Convert graph to LiteRT/TFLite format"
 	@echo ""
-	@echo "CANN Conversion:"
+	@echo "CANN:"
 	@echo "  cann               - Convert graph to CANN/HiAI format"
+	@echo "  cann-build    		- Cross-compile rustnn for OHOS via cargo"
+	@echo "  cann-device-test   - Test on device via scripts/ohos-test-helper.sh"
 	@echo ""
 	@echo "Documentation:"
 	@echo "  docs-serve         - Serve documentation with live reload"

@@ -2267,13 +2267,11 @@ impl<'context, 'builder> MLGraphBuilder<'context, 'builder> {
         todo!("not implemented yet. requires backend integration")
     }
 
-    #[expect(unreachable_code, unused_variables)]
     pub fn constant_from_vec<T: NoUninit>(
         &mut self,
         descriptor: &MLOperandDescriptor,
         values: Vec<T>,
     ) -> crate::error::Result<MLOperand> {
-        panic!("needs bytemuck::cast_vec fix");
         let required_size = descriptor.rustnn_required_bytes();
         let provided_size = std::mem::size_of_val(values.as_slice());
         if required_size != provided_size {
@@ -2304,8 +2302,7 @@ impl<'context, 'builder> MLGraphBuilder<'context, 'builder> {
         graph.constant_operand_ids_to_handles.insert(
             id as u32,
             crate::ConstantData {
-                // TODO: can't do this cast because of mismatched alignment
-                data: bytemuck::cast_vec::<T, u8>(values),
+                data: bytemuck::cast_slice(values.as_slice()).to_vec(),
                 label: None,
             },
         );

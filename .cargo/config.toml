@@ -1,0 +1,9 @@
+# OpenHarmony cross-compilation configuration.
+# The linker is set by Makefile's cann-build target via CARGO_TARGET_*_LINKER.
+
+[target.aarch64-unknown-linux-ohos]
+rustflags = [
+    "-C", "link-arg=-fuse-ld=lld",
+    "-C", "link-arg=--unwindlib=libunwind",
+    "-C", "link-arg=--rtlib=compiler-rt",
+]
