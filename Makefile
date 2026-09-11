@@ -68,12 +68,14 @@ else ifeq ($(ORT_ENV_VARS_DEFERRED),1)
 	ORT_ENV_VARS := ORT_DYLIB_PATH=$(ORT_DYLIB_FILE)
 endif
 
-.PHONY: build test fmt run viz onnx coreml coreml-validate onnx-validate litert cann validate-all-env \
-	docs-serve docs-build docs-clean ci-docs docs-backend-ops docs-backend-ops-check \
-	fmt-check lint \
+.PHONY: build test fmt fmt-check lint run viz clean clean-all help \
 	coverage coverage-html coverage-lcov coverage-open coverage-clean \
-	help clean-all
-	webnn-chromedriver require-wpt-cache test-webnn-wpt-chrome test-webnn-wpt-chrome-headless
+	docs-serve docs-build docs-clean ci-docs docs-backend-ops docs-backend-ops-check \
+	fetch-wpt require-wpt-cache test-wpt test-wpt-trtx test-wpt-litert test-wpt-coreml \
+	test-wpt-coreml-report test-wpt-op test-wpt-report \
+	wpt-sync-onnx wpt-sync-litert wpt-sync-coreml wpt-sync-trtx \
+	webnn-chromedriver test-webnn-wpt-chrome test-webnn-wpt-chrome-headless \
+	onnxruntime-download onnx onnx-validate coreml coreml-validate litert cann validate-all-env
 
 clean:
 	$(CARGO) clean
@@ -176,6 +178,29 @@ test-wpt-report: fetch-wpt onnxruntime-download
 	LD_LIBRARY_PATH="$$LITERT_LIB_DIR:$$LD_LIBRARY_PATH" \
 	LIBRARY_PATH="$$LITERT_LIB_DIR:$$LIBRARY_PATH" \
 	RUST_BACKTRACE=1 WPT_REPORT_JSON=reports/wpt-conformance.json $(ORT_ENV_VARS) $(CARGO) test --test run_wpt_conformance --features $(WPT_BACKEND)-runtime -- --test-threads 1
+
+# WPT snapshot + expected-failure sync (per backend).
+wpt-sync-onnx: fetch-wpt
+	INSTA_UPDATE=always $(MAKE) test-wpt 2>&1 | tee /tmp/wpt-onnx.log || true
+	@grep -q -F '[WPT] result:' /tmp/wpt-onnx.log
+	node scripts/prune_wpt_snapshots.mjs onnx
+
+# LiteRT: PASS snapshots + litert_expected_failures.txt.
+wpt-sync-litert: fetch-wpt
+	INSTA_UPDATE=always ./scripts/update_expected_failures.sh litert 2>&1 | tee /tmp/wpt-litert.log || true
+	@grep -q -F '[WPT] result:' /tmp/wpt-litert.log
+	node scripts/prune_wpt_snapshots.mjs litert
+
+# CoreML: coreml_expected_failures.txt only (macOS; no snapshots).
+wpt-sync-coreml: fetch-wpt
+	./scripts/update_expected_failures.sh coreml 2>&1 | tee /tmp/wpt-coreml.log || true
+	@grep -q -F '[WPT] result:' /tmp/wpt-coreml.log
+
+# TensorRT: PASS snapshots only (requires an NVIDIA GPU; not run in CI).
+wpt-sync-trtx: fetch-wpt
+	INSTA_UPDATE=always $(MAKE) test-wpt-trtx 2>&1 | tee /tmp/wpt-trtx.log || true
+	@grep -q -F '[WPT] result:' /tmp/wpt-trtx.log
+	node scripts/prune_wpt_snapshots.mjs trtx
 
 fmt:
 	$(CARGO) fmt
@@ -339,6 +364,10 @@ help:
 	@echo "  test-wpt-op OP=... - Run filtered WPT trials"
 	@echo "  test-wpt-report    - Run full WPT suite and write JSON/HTML reports (ignores trial failures)"
 	@echo "  test-wpt-trtx      - Run WPT suite via TensorRT (skips when GPU unavailable)"
+	@echo "  wpt-sync-onnx      - Regenerate ONNX PASS snapshots"
+	@echo "  wpt-sync-litert    - Regenerate LiteRT PASS snapshots + expected-failures"
+	@echo "  wpt-sync-coreml    - Regenerate CoreML expected-failures (macOS)"
+	@echo "  wpt-sync-trtx      - Regenerate TensorRT PASS snapshots (requires GPU)"
 	@echo "  webnn-chromedriver - Download a ChromeDriver compatible with installed Chrome"
 	@echo "  test-webnn-wpt-chrome - Run browser WebNN WPT graph-build tests in Chrome"
 	@echo "  test-webnn-wpt-chrome-headless - Run the browser WebNN WPT tests headlessly"

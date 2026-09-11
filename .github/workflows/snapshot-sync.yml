@@ -1,0 +1,155 @@
+name: WPT Snapshot Sync
+
+on:
+  schedule:
+    # Weekly on Monday at 03:00 UTC.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: wpt-snapshot-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  linux-sync:
+    name: Sync ONNX + LiteRT (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.97.0
+
+      - name: Install protobuf compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          protoc --version
+
+      - name: Install flatc
+        run: |
+          curl -sSL "https://github.com/google/flatbuffers/releases/download/v25.12.19/Linux.flatc.binary.clang++-18.zip" -o /tmp/flatc.zip
+          sudo unzip -o /tmp/flatc.zip flatc -d /usr/local/bin
+          sudo chmod +x /usr/local/bin/flatc
+          flatc --version
+
+      - name: Cache WPT checkout
+        uses: actions/cache@v4
+        with:
+          path: .cache/wpt
+          key: wpt-linux-${{ hashFiles('scripts/fetch_wpt.mjs') }}
+          restore-keys: |
+            wpt-linux-
+
+      - name: Cache litert-sys libraries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/litert-sys
+          key: linux-litert-sys
+
+      - name: Sync LiteRT snapshots + expected failures
+        run: make wpt-sync-litert
+
+      - name: Sync ONNX snapshots
+        run: make wpt-sync-onnx
+
+      - name: Generate patch
+        run: |
+          git add -A tests/snapshots tests/wpt_conformance/litert_expected_failures.txt
+          git diff --cached --binary > linux-sync.patch
+          echo "linux-sync patch: $(wc -c < linux-sync.patch) bytes"
+
+      - name: Upload patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-sync-patch
+          path: linux-sync.patch
+
+  coreml-sync:
+    name: Sync CoreML (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.97.0
+
+      - name: Install protobuf/flatbuffer compiler
+        run: |
+          brew install protobuf flatbuffers
+          protoc --version
+
+      - name: Cache WPT checkout
+        uses: actions/cache@v4
+        with:
+          path: .cache/wpt
+          key: wpt-macos-${{ hashFiles('scripts/fetch_wpt.mjs') }}
+          restore-keys: |
+            wpt-macos-
+
+      - name: Sync CoreML expected failures
+        run: make wpt-sync-coreml
+
+      - name: Generate patch
+        run: |
+          git add -A tests/wpt_conformance/coreml_expected_failures.txt
+          git diff --cached --binary > coreml-sync.patch
+          echo "coreml-sync patch: $(wc -c < coreml-sync.patch) bytes"
+
+      - name: Upload patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: coreml-sync-patch
+          path: coreml-sync.patch
+
+  aggregate:
+    name: Open sync PR
+    needs: [linux-sync, coreml-sync]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download patches
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/patches
+
+      - name: Apply patches
+        run: |
+          for f in /tmp/patches/*/*.patch; do
+            if [ -s "$f" ]; then
+              echo "applying $(basename "$f")"
+              git apply --whitespace=nowarn "$f"
+            fi
+          done
+
+      - name: Generate PR body
+        run: node scripts/summarize_wpt_changes.mjs > pr-body.md
+
+      - name: Create or update pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/wpt-snapshot-sync
+          commit-message: "chore(wpt): sync snapshots with latest WPT"
+          title: "chore(wpt): sync snapshots with latest WPT"
+          body-path: pr-body.md
+          delete-branch: true
+          add-paths: |
+            tests/snapshots
+            tests/wpt_conformance

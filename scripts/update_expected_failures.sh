@@ -59,7 +59,7 @@ set -e
 
 # ---- Extract failures from log ----
 
-grep -oP "^\s{4,}\K${BACKEND}::\S+" "$WPT_LOG" | sort -u > "$FAILURES"
+sed -nE "s/^[[:space:]]{4,}(${BACKEND}::[^[:space:]]+).*/\1/p" "$WPT_LOG" | sort -u > "$FAILURES"
 num_failing=$(wc -l < "$FAILURES")
 
 # ---- Rebuild (or create) expected-failures.txt ----
