@@ -41,8 +41,6 @@ coreml::pad::pad_int64_2D_tensor_with_options_value_as_bigint
 coreml::qdq_subgraph::quantized_convTranspose2d
 coreml::relu::relu_int32_4D_tensor
 coreml::relu::relu_int64_4D_tensor
-coreml::resample2d::resample2d_upsample__float32_4D_tensor_options_axes__0__1_
-coreml::resample2d::resample2d_upsample__float32_4D_tensor_options_axes__1__0_
 coreml::reshape::reshape__unsqueeze__float16_5D_tensor_by_adding_4th_dimension
 coreml::reshape::reshape__unsqueeze__float32_5D_tensor_by_adding_4th_dimension
 coreml::scatterND::scatterND_2D_int8_tensors_with_index_out_of_bound
