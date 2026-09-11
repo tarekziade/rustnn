@@ -429,7 +429,7 @@ impl GraphInfo {
                 items.sort_unstable();
                 for constant_id in items.iter() {
                     self.constant_operand_ids_to_handles
-                        .get(&constant_id)
+                        .get(constant_id)
                         .hash(&mut hasher);
                 }
             }

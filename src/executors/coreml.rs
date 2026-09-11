@@ -939,11 +939,7 @@ fn normalize_dtype_code(code: i32) -> i32 {
 fn convert_multiarray_bytes(actual_bytes: Vec<u8>, actual_code: i32, target: DataType) -> Vec<u8> {
     let canonical_code = normalize_dtype_code(actual_code);
     let actual_elem = ml_dtype_code_element_size(canonical_code).unwrap_or(4);
-    let count = if actual_elem > 0 {
-        actual_bytes.len() / actual_elem
-    } else {
-        0
-    };
+    let count = actual_bytes.len().checked_div(actual_elem).unwrap_or(0);
 
     match canonical_code {
         32 => {
